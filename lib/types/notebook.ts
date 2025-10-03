@@ -186,6 +186,7 @@ export interface GridRow {
   isDirty?: boolean
   description?: string
   level: number // for hierarchy display
+  depth: number
 }
 
 // ============================================================================

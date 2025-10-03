@@ -1,4 +1,4 @@
-import { Notebook, Metric, Category, SimulationResult } from "@/lib/types/notebook"
+import { Category, Metric, Notebook, SimulationResult } from "@/lib/types/notebook"
 
 // Factory constants
 export const FACTORY_VARS = {
@@ -109,6 +109,17 @@ export const mockMetrics: Metric[] = [
     description: "Rate at which saved time is re-deployed as productive work",
     unit: "%",
     distribution: { min: 0.3, mode: 0.5, max: 0.7 },
+    categoryId: "cat-time-savings",
+  },
+  {
+    id: "time_savings_monetary_value",
+    name: "Time Savings Monetary Value",
+    description: "Annualized value created from reallocated hours",
+    unit: "$/year",
+    value: 0,
+    distribution: null,
+    formula:
+      "weekly_hours_saved_per_employee * number_of_employees * 48 * (avg_yearly_cost_per_employee / (48 * 40)) * productivity_conversion_rate",
     categoryId: "cat-time-savings",
   },
 

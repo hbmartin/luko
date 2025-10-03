@@ -1,172 +1,227 @@
 "use client"
 
+import { useMemo, useState } from "react"
+
+const complexityOptions = [
+  { value: "1", label: "Level 1: Executive Summary", sections: ["Cover Page", "Executive Summary", "Key Metrics"] },
+  {
+    value: "2",
+    label: "Level 2: Management Brief",
+    sections: ["Cover Page", "Executive Summary", "NPV Analysis", "Key Assumptions", "Sensitivity Analysis"],
+  },
+  {
+    value: "3",
+    label: "Level 3: Detailed Analysis",
+    sections: [
+      "Cover Page",
+      "Executive Summary",
+      "NPV Analysis",
+      "Scenario Comparison",
+      "Category Waterfall",
+      "Methodology",
+    ],
+  },
+  {
+    value: "4",
+    label: "Level 4: Complete Financial Model",
+    sections: [
+      "Cover Page",
+      "Executive Summary",
+      "NPV Analysis",
+      "Scenario Comparison",
+      "Category Waterfall",
+      "Methodology",
+      "Full Assumption Tables",
+      "Raw Monte Carlo Samples",
+    ],
+  },
+]
+
+const formatLabels: Record<string, string> = {
+  pptx: "PowerPoint (.pptx)",
+  pdf: "PDF Document",
+  html: "Web Page (HTML)",
+}
+
 export function ExportTab() {
+  const [complexity, setComplexity] = useState("2")
+  const [format, setFormat] = useState<"pptx" | "pdf" | "html">("pdf")
+  const [companyName, setCompanyName] = useState("")
+  const [primaryColor, setPrimaryColor] = useState("#3b82f6")
+  const [options, setOptions] = useState({ methodology: true, citations: true, rawTables: false })
+  const [isGenerating, setIsGenerating] = useState(false)
+  const [lastExport, setLastExport] = useState<{ timestamp: string; format: string; pages: number } | null>(null)
+
+  const sections = useMemo(() => {
+    const selected = complexityOptions.find((option) => option.value === complexity)
+    return selected ? selected.sections : []
+  }, [complexity])
+
+  const handleGenerate = () => {
+    setIsGenerating(true)
+    setTimeout(() => {
+      setLastExport({
+        timestamp: new Date().toISOString(),
+        format,
+        pages: sections.length + (options.rawTables ? 2 : 0) + (options.methodology ? 1 : 0),
+      })
+      setIsGenerating(false)
+    }, 900)
+  }
+
   return (
-    <div className="mx-auto max-w-[1200px] p-6">
-      <div className="rounded-lg border border-gray-200 bg-white p-8 shadow-sm">
-        <h2 className="mb-6 text-2xl font-semibold text-gray-900">Export Settings</h2>
+    <div className="mx-auto max-w-[1200px] space-y-6 p-6">
+      <div className="rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface-elevated)] p-8 shadow-sm">
+        <h2 className="mb-6 text-2xl font-semibold text-[var(--color-text-primary)]">Export Settings</h2>
 
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
-          {/* Left Column - Settings */}
           <div className="space-y-6">
-            {/* Complexity Level */}
             <div>
-              <label className="mb-2 block text-sm font-medium text-gray-700">
-                Complexity Level
-              </label>
-              <select className="w-full rounded-md border border-gray-300 bg-white px-4 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500">
-                <option>Level 1: Executive Summary</option>
-                <option selected>Level 2: Management Brief</option>
-                <option>Level 3: Detailed Analysis</option>
-                <option>Level 4: Complete Financial Model</option>
+              <label className="mb-2 block text-sm font-medium text-[var(--color-text-primary)]">Complexity Level</label>
+              <select
+                value={complexity}
+                onChange={(event) => setComplexity(event.target.value)}
+                className="w-full rounded-md border border-[var(--color-border-soft)] bg-white px-4 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              >
+                {complexityOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
               </select>
-              <p className="mt-1 text-xs text-gray-500">
-                Controls the level of detail in your export
-              </p>
+              <p className="mt-1 text-xs text-[var(--color-text-muted)]">Controls the depth of detail included in the export.</p>
             </div>
 
-            {/* Format Selection */}
             <div>
-              <label className="mb-2 block text-sm font-medium text-gray-700">Format</label>
+              <label className="mb-2 block text-sm font-medium text-[var(--color-text-primary)]">Format</label>
               <div className="space-y-2">
-                <label className="flex items-center gap-2">
-                  <input
-                    type="radio"
-                    name="format"
-                    className="size-4 text-blue-600 focus:ring-blue-500"
-                  />
-                  <span className="text-sm text-gray-700">PowerPoint (.pptx)</span>
-                </label>
-                <label className="flex items-center gap-2">
-                  <input
-                    type="radio"
-                    name="format"
-                    defaultChecked
-                    className="size-4 text-blue-600 focus:ring-blue-500"
-                  />
-                  <span className="text-sm text-gray-700">PDF Document</span>
-                </label>
-                <label className="flex items-center gap-2">
-                  <input
-                    type="radio"
-                    name="format"
-                    className="size-4 text-blue-600 focus:ring-blue-500"
-                  />
-                  <span className="text-sm text-gray-700">Web Page (HTML)</span>
-                </label>
+                {Object.entries(formatLabels).map(([value, label]) => (
+                  <label key={value} className="flex items-center gap-2 text-sm text-[var(--color-text-primary)]">
+                    <input
+                      type="radio"
+                      name="export-format"
+                      value={value}
+                      checked={format === value}
+                      onChange={(event) => setFormat(event.target.value as typeof format)}
+                      className="size-4 text-blue-600 focus:ring-blue-500"
+                    />
+                    {label}
+                  </label>
+                ))}
               </div>
             </div>
 
-            {/* White-Labeling */}
             <div>
-              <label className="mb-2 block text-sm font-medium text-gray-700">White-Labeling</label>
+              <label className="mb-2 block text-sm font-medium text-[var(--color-text-primary)]">White-Labeling</label>
               <div className="space-y-3">
                 <div>
-                  <label className="mb-1 block text-xs text-gray-600">Company Logo</label>
-                  <div className="flex items-center gap-2">
-                    <button className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm hover:bg-gray-50">
-                      Upload Logo
-                    </button>
-                    <span className="text-xs text-gray-500">PNG or SVG, max 500KB</span>
-                  </div>
-                </div>
-                <div>
-                  <label className="mb-1 block text-xs text-gray-600">Company Name</label>
+                  <label className="mb-1 block text-xs text-[var(--color-text-muted)]">Company Name</label>
                   <input
                     type="text"
-                    placeholder="Your Company Name"
-                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    value={companyName}
+                    onChange={(event) => setCompanyName(event.target.value)}
+                    placeholder="Prospect Inc."
+                    className="w-full rounded-md border border-[var(--color-border-soft)] px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs text-gray-600">Primary Brand Color</label>
+                  <label className="mb-1 block text-xs text-[var(--color-text-muted)]">Primary Brand Color</label>
                   <div className="flex items-center gap-2">
                     <input
                       type="color"
-                      defaultValue="#3b82f6"
-                      className="size-10 rounded border border-gray-300"
+                      value={primaryColor}
+                      onChange={(event) => setPrimaryColor(event.target.value)}
+                      className="size-10 rounded border border-[var(--color-border-soft)]"
                     />
                     <input
                       type="text"
-                      defaultValue="#3b82f6"
-                      className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      value={primaryColor}
+                      onChange={(event) => setPrimaryColor(event.target.value)}
+                      className="flex-1 rounded-md border border-[var(--color-border-soft)] px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                     />
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Additional Options */}
             <div>
-              <label className="mb-2 block text-sm font-medium text-gray-700">
-                Additional Options
-              </label>
+              <label className="mb-2 block text-sm font-medium text-[var(--color-text-primary)]">Additional Options</label>
               <div className="space-y-2">
-                <label className="flex items-center gap-2">
+                <label className="flex items-center gap-2 text-sm text-[var(--color-text-primary)]">
                   <input
                     type="checkbox"
-                    defaultChecked
+                    checked={options.methodology}
+                    onChange={(event) => setOptions((prev) => ({ ...prev, methodology: event.target.checked }))}
                     className="size-4 rounded text-blue-600 focus:ring-blue-500"
                   />
-                  <span className="text-sm text-gray-700">Include methodology section</span>
+                  Include methodology section
                 </label>
-                <label className="flex items-center gap-2">
+                <label className="flex items-center gap-2 text-sm text-[var(--color-text-primary)]">
                   <input
                     type="checkbox"
-                    defaultChecked
+                    checked={options.citations}
+                    onChange={(event) => setOptions((prev) => ({ ...prev, citations: event.target.checked }))}
                     className="size-4 rounded text-blue-600 focus:ring-blue-500"
                   />
-                  <span className="text-sm text-gray-700">Include assumption citations</span>
+                  Include assumption citations
                 </label>
-                <label className="flex items-center gap-2">
+                <label className="flex items-center gap-2 text-sm text-[var(--color-text-primary)]">
                   <input
                     type="checkbox"
+                    checked={options.rawTables}
+                    onChange={(event) => setOptions((prev) => ({ ...prev, rawTables: event.target.checked }))}
                     className="size-4 rounded text-blue-600 focus:ring-blue-500"
                   />
-                  <span className="text-sm text-gray-700">Include raw data tables</span>
+                  Include raw data tables
                 </label>
               </div>
             </div>
 
-            {/* Action Buttons */}
             <div className="flex gap-3 pt-4">
-              <button className="flex-1 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
-                Generate Export
+              <button
+                onClick={handleGenerate}
+                disabled={isGenerating}
+                className={`flex-1 rounded-md px-4 py-2 text-sm font-medium text-white transition ${
+                  isGenerating ? "cursor-wait bg-blue-400" : "bg-blue-600 hover:bg-blue-700"
+                }`}
+              >
+                {isGenerating ? "Generating…" : "Generate Export"}
               </button>
-              <button className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
-                Preview
+              <button className="rounded-md border border-[var(--color-border-soft)] bg-white px-4 py-2 text-sm font-medium text-[var(--color-text-primary)] hover:bg-[var(--color-surface-muted)]">
+                Preview Settings
               </button>
             </div>
+
+            {lastExport && (
+              <div className="rounded-xl border border-[var(--color-border-soft)] bg-[var(--color-surface-muted)]/60 p-4 text-xs text-[var(--color-text-muted)]">
+                <div className="font-semibold text-[var(--color-text-primary)]">Last export</div>
+                <p className="mt-1">
+                  {new Date(lastExport.timestamp).toLocaleString()} • {formatLabels[lastExport.format]} • ~{lastExport.pages} pages
+                </p>
+              </div>
+            )}
           </div>
 
-          {/* Right Column - Preview */}
-          <div className="rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 p-6">
+          <div className="rounded-2xl border-2 border-dashed border-[var(--color-border-soft)] bg-[var(--color-surface-muted)]/40 p-6">
             <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-sm font-medium text-gray-700">Export Preview</h3>
-              <span className="rounded bg-gray-200 px-2 py-1 text-xs text-gray-600">
-                Level 2: Management Brief
+              <h3 className="text-sm font-medium text-[var(--color-text-primary)]">Export Preview</h3>
+              <span className="rounded bg-[var(--color-surface-elevated)] px-2 py-1 text-xs text-[var(--color-text-muted)]">
+                {complexityOptions.find((option) => option.value === complexity)?.label}
               </span>
             </div>
 
             <div className="space-y-3">
-              {/* Mock preview pages */}
-              {[
-                { title: "Cover Page", pages: "1" },
-                { title: "Executive Summary", pages: "2" },
-                { title: "NPV Analysis", pages: "3" },
-                { title: "Key Assumptions", pages: "4" },
-                { title: "Sensitivity Analysis", pages: "5" },
-              ].map((section, i) => (
-                <div
-                  key={i}
-                  className="flex items-center gap-3 rounded-lg border border-gray-200 bg-white p-3"
-                >
-                  <div className="flex size-12 items-center justify-center rounded bg-gray-100 text-xs font-medium text-gray-600">
-                    {section.pages}
+              {sections.map((title, index) => (
+                <div key={title} className="flex items-center gap-3 rounded-xl border border-[var(--color-border-soft)] bg-white p-3">
+                  <div
+                    className="flex size-12 items-center justify-center rounded"
+                    style={{ backgroundColor: `${primaryColor}20`, color: primaryColor }}
+                  >
+                    {index + 1}
                   </div>
                   <div className="flex-1">
-                    <div className="text-sm font-medium text-gray-900">{section.title}</div>
-                    <div className="text-xs text-gray-500">Page {section.pages}</div>
+                    <div className="text-sm font-medium text-[var(--color-text-primary)]">{title}</div>
+                    <div className="text-xs text-[var(--color-text-muted)]">Section {index + 1}</div>
                   </div>
                 </div>
               ))}
@@ -175,21 +230,17 @@ export function ExportTab() {
             <div className="mt-6 rounded-lg bg-blue-50 p-4 text-xs text-blue-700">
               <p className="font-medium">Export includes:</p>
               <ul className="mt-2 list-inside list-disc space-y-1">
-                <li>Key results and NPV summary</li>
-                <li>Primary visualizations</li>
-                <li>Top 5 assumptions listed</li>
-                <li>Methodology overview</li>
+                <li>{formatLabels[format]}</li>
+                <li>Branded for {companyName || "your prospect"}</li>
+                <li>Sections: {sections.length}</li>
+                {options.rawTables && <li>Raw assumption data tables</li>}
               </ul>
             </div>
           </div>
         </div>
 
-        {/* Footer Note */}
-        <div className="mt-6 rounded-lg border border-gray-200 bg-gray-50 p-4 text-xs text-gray-600">
-          <p>
-            All exports include the footer:{" "}
-            <span className="font-medium">&quot;Powered by Value Impact Calculator&quot;</span>
-          </p>
+        <div className="mt-6 rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface-muted)]/60 p-4 text-xs text-[var(--color-text-muted)]">
+          All exports append the footer “Powered by Value Impact Calculator”.
         </div>
       </div>
     </div>

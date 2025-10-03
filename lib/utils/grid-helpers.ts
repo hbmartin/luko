@@ -1,4 +1,4 @@
-import { Notebook, Metric, Category, GridRow } from "@/lib/types/notebook"
+import { GridRow, Metric, Notebook } from "@/lib/types/notebook"
 
 /**
  * Converts notebook data to flattened grid rows for react-data-grid
@@ -18,6 +18,8 @@ export function notebookToGridRows(notebook: Notebook): GridRow[] {
       name: category.name,
       isExpanded: category.isExpanded,
       level: 0,
+      depth: 0,
+      description: category.description,
     })
 
     // Add metric rows if category is expanded
@@ -52,6 +54,7 @@ export function metricToGridRow(metric: Metric, dirtyMetrics: string[]): GridRow
     isDirty: dirtyMetrics.includes(metric.id),
     description: metric.description,
     level: 1,
+    depth: 1,
   }
 }
 
