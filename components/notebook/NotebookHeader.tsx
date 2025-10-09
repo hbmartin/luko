@@ -2,7 +2,9 @@
 
 import { CircleUserRound, CircleX, Settings, X } from "lucide-react"
 import Image from "next/image"
-import { Notebook, SimulationResult } from "@/lib/types/notebook"
+import Link from "next/link"
+import { usePathname } from "next/navigation"
+import { useNotebook } from "./NotebookProvider"
 import { formatAbbreviatedNumber } from "@/lib/utils/grid-helpers"
 
 const dateFormatter = new Intl.DateTimeFormat("en-US", {
@@ -15,26 +17,23 @@ const dateFormatter = new Intl.DateTimeFormat("en-US", {
 const numberFormatter = new Intl.NumberFormat("en-US", { notation: "compact" })
 
 interface NotebookHeaderProps {
-  notebook: Notebook
-  simulationResult: SimulationResult | null
-  onRunSimulation: () => void
-  isSimulating: boolean
-  onToggleTheme: () => void
-  onToggleDensity: () => void
-  theme: "light" | "dark"
-  density: "comfortable" | "compact"
+  notebookId: string
 }
 
-export function NotebookHeader({
-  notebook,
-  simulationResult,
-  onRunSimulation,
-  isSimulating,
-  onToggleTheme,
-  onToggleDensity,
-  theme,
-  density,
-}: NotebookHeaderProps) {
+export function NotebookHeader({ notebookId }: NotebookHeaderProps) {
+  const pathname = usePathname()
+  const {
+    notebook,
+    simulationResult,
+    handleRunSimulation,
+    isSimulating,
+    theme,
+    setTheme,
+    density,
+    setDensity,
+  } = useNotebook()
+
+  const currentPage = pathname.split('/').pop() || 'results'
   return (
     <header className="from-background border-b border-[var(--color-border-soft)] bg-gradient-to-b to-(--secondary)/[10%]">
       <div className="bg-secondary text-secondary-foreground py-1 text-center text-sm">
@@ -47,35 +46,53 @@ export function NotebookHeader({
       </div>
       <div className="mx-auto flex items-center justify-center gap-6 px-[var(--space-500)] py-2">
         <div className="flex items-center gap-16">
-          <div className="text-accent-foreground flex items-center gap-3 text-sm">
+          <Link
+            href={`/notebook/${notebookId}/worksheet`}
+            className={`text-accent-foreground flex items-center gap-3 text-sm transition-opacity hover:opacity-80 ${
+              currentPage === 'worksheet' ? 'opacity-100' : 'opacity-60'
+            }`}
+          >
             <Image src="/worksheet.png" alt="worksheet" width={64} height={64} />
             <div className="gap-1/2 flex flex-col">
+              <p className="font-semibold">Worksheet</p>
               <p>{notebook.metrics.length} metrics</p>
               <p>{notebook.categories.length} categories</p>
-              <p>{dateFormatter.format(new Date(notebook.updatedAt))}</p>
+              <p className="text-xs">{dateFormatter.format(new Date(notebook.updatedAt))}</p>
             </div>
-          </div>
-          <div className="text-accent-foreground flex items-center gap-3 text-sm">
+          </Link>
+          <Link
+            href={`/notebook/${notebookId}/results`}
+            className={`text-accent-foreground flex items-center gap-3 text-sm transition-opacity hover:opacity-80 ${
+              currentPage === 'results' || currentPage === notebookId ? 'opacity-100' : 'opacity-60'
+            }`}
+          >
             <Image src="/results.png" alt="results" width={64} height={64} />
             <div className="gap-1/2 flex flex-col">
+              <p className="font-semibold">Results</p>
               <p>
                 {notebook.dirtyMetrics.length} change
                 {notebook.dirtyMetrics.length !== 1 ? "s" : ""}
               </p>
               <p>{numberFormatter.format(simulationResult?.metadata.iterations ?? 0)} iterations</p>
-              <p>
+              <p className="text-xs">
                 {simulationResult ? dateFormatter.format(new Date(simulationResult.metadata.timestamp)) : "Not yet run"}
               </p>
             </div>
-          </div>
-          <div className="text-accent-foreground flex items-center gap-3 text-sm">
+          </Link>
+          <Link
+            href={`/notebook/${notebookId}/export`}
+            className={`text-accent-foreground flex items-center gap-3 text-sm transition-opacity hover:opacity-80 ${
+              currentPage === 'export' ? 'opacity-100' : 'opacity-60'
+            }`}
+          >
             <Image src="/export.png" alt="download" width={64} height={64} />
             <div className="gap-1/2 flex flex-col">
+              <p className="font-semibold">Export</p>
               <p>2 teams sharing</p>
               <p>10 recent changes</p>
-              <p>7 past exports</p>
+              <p className="text-xs">7 past exports</p>
             </div>
-          </div>
+          </Link>
         </div>
         {/* 
         <div className="flex shrink-0 items-center gap-3">
