@@ -33,7 +33,7 @@ export function NotebookLayout({ notebook: initialNotebook }: NotebookLayoutProp
 
   const handleRenameScenario = (scenarioId: string, name: string) => {
     setScenarios((prev) =>
-      prev.map((scenario) => (scenario.id === scenarioId ? { ...scenario, name: name || scenario.name } : scenario)),
+      prev.map((scenario) => (scenario.id === scenarioId ? { ...scenario, name: name || scenario.name } : scenario))
     )
   }
 
@@ -101,7 +101,7 @@ export function NotebookLayout({ notebook: initialNotebook }: NotebookLayoutProp
         badge: "Beta",
       },
     ],
-    [notebook.metrics.length, simulationResult],
+    [notebook.metrics.length, simulationResult]
   )
 
   return (
@@ -112,76 +112,11 @@ export function NotebookLayout({ notebook: initialNotebook }: NotebookLayoutProp
         onRunSimulation={handleRunSimulation}
         isSimulating={isSimulating}
         onToggleTheme={() => setTheme((current) => (current === "light" ? "dark" : "light"))}
-        onToggleDensity={() =>
-          setDensity((current) => (current === "comfortable" ? "compact" : "comfortable"))
-        }
+        onToggleDensity={() => setDensity((current) => (current === "comfortable" ? "compact" : "comfortable"))}
         theme={theme}
         density={density}
       />
       <div className="flex flex-1">
-        <aside className="hidden w-72 flex-col border-r border-[var(--color-border-soft)] bg-[var(--color-surface-muted)]/60 px-[var(--space-400)] py-[var(--space-500)] lg:flex">
-          <div className="mb-[var(--space-500)] rounded-2xl bg-[var(--color-surface-elevated)] p-[var(--space-400)] shadow-sm">
-            <h2 className="text-sm font-semibold text-[var(--color-text-primary)]">Simulation health</h2>
-            <dl className="mt-[var(--space-300)] space-y-3 text-xs text-[var(--color-text-muted)]">
-              <div className="flex items-center justify-between">
-                <dt>Dirty metrics</dt>
-                <dd className="font-semibold text-[var(--color-text-primary)]">
-                  {notebook.dirtyMetrics.length}
-                </dd>
-              </div>
-              <div className="flex items-center justify-between">
-                <dt>Last simulation</dt>
-                <dd>
-                  {simulationResult
-                    ? new Date(simulationResult.metadata.timestamp).toLocaleString()
-                    : "Pending"}
-                </dd>
-              </div>
-              <div className="flex items-center justify-between">
-                <dt>Iterations</dt>
-                <dd>
-                  {simulationResult
-                    ? simulationResult.metadata.iterations.toLocaleString()
-                    : "–"}
-                </dd>
-              </div>
-            </dl>
-          </div>
-
-          <nav aria-label="Notebook sections" className="flex-1 space-y-2">
-            {navigationItems.map((item) => {
-              const isActive = activeTab === item.id
-              return (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => setActiveTab(item.id)}
-                  disabled={item.id === "results" && !simulationResult}
-                  className={`w-full rounded-2xl border px-[var(--space-400)] py-[var(--space-300)] text-left transition ${
-                    isActive
-                      ? "border-blue-400 bg-white shadow-sm"
-                      : "border-transparent bg-[var(--color-surface-elevated)]/60 hover:border-[var(--color-border-soft)]"
-                  } ${
-                    item.id === "results" && !simulationResult
-                      ? "cursor-not-allowed opacity-70"
-                      : ""
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className={`text-sm font-semibold ${isActive ? "text-blue-700" : "text-[var(--color-text-primary)]"}`}>
-                      {item.label}
-                    </span>
-                    <span className="rounded-full bg-[var(--color-surface-muted)] px-3 py-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
-                      {item.badge}
-                    </span>
-                  </div>
-                  <p className="mt-1 text-xs text-[var(--color-text-muted)]">{item.description}</p>
-                </button>
-              )
-            })}
-          </nav>
-        </aside>
-
         <section className="flex min-w-0 flex-1 flex-col">
           <main className="flex-1 overflow-auto px-[var(--space-500)] py-[var(--space-500)]">
             {activeTab === "worksheet" && (

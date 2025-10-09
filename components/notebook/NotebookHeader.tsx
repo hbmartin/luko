@@ -1,7 +1,18 @@
 "use client"
 
+import { CircleUserRound, CircleX, Settings, X } from "lucide-react"
+import Image from "next/image"
 import { Notebook, SimulationResult } from "@/lib/types/notebook"
 import { formatAbbreviatedNumber } from "@/lib/utils/grid-helpers"
+
+const dateFormatter = new Intl.DateTimeFormat("en-US", {
+  month: "short",
+  day: "numeric",
+  hour: "2-digit",
+  minute: "2-digit",
+})
+
+const numberFormatter = new Intl.NumberFormat("en-US", { notation: "compact" })
 
 interface NotebookHeaderProps {
   notebook: Notebook
@@ -25,59 +36,48 @@ export function NotebookHeader({
   density,
 }: NotebookHeaderProps) {
   return (
-    <header className="border-b border-[var(--color-border-soft)] bg-[var(--color-surface-elevated)] shadow-sm">
-      <div className="mx-auto flex max-w-[1600px] items-center justify-between gap-6 px-[var(--space-500)] py-[var(--space-400)]">
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-3">
-            <div className="rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-700">
-              Monte Carlo Workbook
+    <header className="from-background border-b border-[var(--color-border-soft)] bg-gradient-to-b to-(--secondary)/[10%]">
+      <div className="bg-secondary text-secondary-foreground py-1 text-center text-sm">
+        {notebook.name}
+        <div className="absolute top-0 right-0 flex items-center gap-2 px-4 py-1">
+          <Settings size={18} />
+          <CircleUserRound size={18} />
+          <CircleX size={18} />
+        </div>
+      </div>
+      <div className="mx-auto flex items-center justify-center gap-6 px-[var(--space-500)] py-2">
+        <div className="flex items-center gap-16">
+          <div className="text-accent-foreground flex items-center gap-3 text-sm">
+            <Image src="/worksheet.png" alt="worksheet" width={64} height={64} />
+            <div className="gap-1/2 flex flex-col">
+              <p>{notebook.metrics.length} metrics</p>
+              <p>{notebook.categories.length} categories</p>
+              <p>{dateFormatter.format(new Date(notebook.updatedAt))}</p>
             </div>
-            {notebook.isDirty && (
-              <div className="flex items-center gap-2 text-xs font-medium text-yellow-700">
-                <span className="size-2 rounded-full bg-yellow-400" />
-                {notebook.dirtyMetrics.length} pending change
-                {notebook.dirtyMetrics.length !== 1 ? "s" : ""}
-              </div>
-            )}
           </div>
-          <div className="mt-2 flex flex-wrap items-start justify-between gap-4">
-            <div className="min-w-0">
-              <h1 className="truncate text-2xl font-semibold text-[var(--color-text-primary)]">
-                {notebook.name}
-              </h1>
-              {notebook.description && (
-                <p className="mt-1 max-w-xl text-sm text-[var(--color-text-muted)]">
-                  {notebook.description}
-                </p>
-              )}
+          <div className="text-accent-foreground flex items-center gap-3 text-sm">
+            <Image src="/results.png" alt="results" width={64} height={64} />
+            <div className="gap-1/2 flex flex-col">
+              <p>
+                {notebook.dirtyMetrics.length} change
+                {notebook.dirtyMetrics.length !== 1 ? "s" : ""}
+              </p>
+              <p>{numberFormatter.format(simulationResult?.metadata.iterations ?? 0)} iterations</p>
+              <p>
+                {simulationResult ? dateFormatter.format(new Date(simulationResult.metadata.timestamp)) : "Not yet run"}
+              </p>
             </div>
-            <dl className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm text-[var(--color-text-muted)]">
-              <div>
-                <dt className="text-xs uppercase tracking-wide">Categories</dt>
-                <dd className="font-medium text-[var(--color-text-primary)]">
-                  {notebook.categories.length}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-xs uppercase tracking-wide">Metrics</dt>
-                <dd className="font-medium text-[var(--color-text-primary)]">{notebook.metrics.length}</dd>
-              </div>
-              <div>
-                <dt className="text-xs uppercase tracking-wide">Last updated</dt>
-                <dd>{new Date(notebook.updatedAt).toLocaleString()}</dd>
-              </div>
-              <div>
-                <dt className="text-xs uppercase tracking-wide">Simulation status</dt>
-                <dd className="font-medium text-[var(--color-text-primary)]">
-                  {simulationResult
-                    ? formatAbbreviatedNumber(simulationResult.npv.p50)
-                    : "Not yet run"}
-                </dd>
-              </div>
-            </dl>
+          </div>
+          <div className="text-accent-foreground flex items-center gap-3 text-sm">
+            <Image src="/export.png" alt="download" width={64} height={64} />
+            <div className="gap-1/2 flex flex-col">
+              <p>2 teams sharing</p>
+              <p>10 recent changes</p>
+              <p>7 past exports</p>
+            </div>
           </div>
         </div>
-
+        {/* 
         <div className="flex shrink-0 items-center gap-3">
           <div className="flex items-center gap-2 rounded-full border border-[var(--color-border-soft)] bg-[var(--color-surface-muted)] p-[var(--space-200)]">
             <button
@@ -151,7 +151,7 @@ export function NotebookHeader({
               </>
             )}
           </button>
-        </div>
+        </div> */}
       </div>
     </header>
   )

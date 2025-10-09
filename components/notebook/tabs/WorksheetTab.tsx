@@ -122,7 +122,7 @@ export function WorksheetTab({ notebook, onNotebookChange, density, simulationRe
       historyIndexRef.current = historyRef.current.length - 1
       onNotebookChange(timestamped)
     },
-    [onNotebookChange],
+    [onNotebookChange]
   )
 
   const undo = useCallback(() => {
@@ -166,13 +166,13 @@ export function WorksheetTab({ notebook, onNotebookChange, density, simulationRe
         isDirty: true,
       })
     },
-    [commitNotebook, notebook],
+    [commitNotebook, notebook]
   )
 
   const handleCategoryToggle = useCallback(
     (categoryId: string) => {
       const categories = notebook.categories.map((category) =>
-        category.id === categoryId ? { ...category, isExpanded: !category.isExpanded } : category,
+        category.id === categoryId ? { ...category, isExpanded: !category.isExpanded } : category
       )
 
       commitNotebook({
@@ -180,7 +180,7 @@ export function WorksheetTab({ notebook, onNotebookChange, density, simulationRe
         categories,
       })
     },
-    [commitNotebook, notebook],
+    [commitNotebook, notebook]
   )
 
   const handleRowReorder = useCallback(
@@ -193,7 +193,7 @@ export function WorksheetTab({ notebook, onNotebookChange, density, simulationRe
           (category, index) => ({
             ...category,
             order: index,
-          }),
+          })
         )
 
         commitNotebook({
@@ -211,9 +211,7 @@ export function WorksheetTab({ notebook, onNotebookChange, density, simulationRe
         const targetMetric = notebook.metrics[targetMetricIndex]
         if (sourceMetric.categoryId !== targetMetric.categoryId) return
 
-        const metricsWithinCategory = notebook.metrics.filter(
-          (metric) => metric.categoryId === sourceMetric.categoryId,
-        )
+        const metricsWithinCategory = notebook.metrics.filter((metric) => metric.categoryId === sourceMetric.categoryId)
         const sourcePosition = metricsWithinCategory.findIndex((metric) => metric.id === sourceId)
         const targetPosition = metricsWithinCategory.findIndex((metric) => metric.id === targetId)
         if (sourcePosition === -1 || targetPosition === -1) return
@@ -235,7 +233,7 @@ export function WorksheetTab({ notebook, onNotebookChange, density, simulationRe
         })
       }
     },
-    [commitNotebook, notebook],
+    [commitNotebook, notebook]
   )
 
   const handleResetMetric = useCallback(
@@ -253,7 +251,7 @@ export function WorksheetTab({ notebook, onNotebookChange, density, simulationRe
         isDirty: dirtyMetrics.length > 0,
       })
     },
-    [commitNotebook, notebook],
+    [commitNotebook, notebook]
   )
 
   const handleZeroMetric = useCallback(
@@ -280,12 +278,12 @@ export function WorksheetTab({ notebook, onNotebookChange, density, simulationRe
         isDirty: true,
       })
     },
-    [commitNotebook, notebook],
+    [commitNotebook, notebook]
   )
 
   const activeMetric = useMemo(
     () => notebook.metrics.find((metric) => metric.id === selectedMetricId) ?? null,
-    [notebook.metrics, selectedMetricId],
+    [notebook.metrics, selectedMetricId]
   )
 
   return (
@@ -300,14 +298,12 @@ export function WorksheetTab({ notebook, onNotebookChange, density, simulationRe
             onCategoryToggle={handleCategoryToggle}
             onRowReorder={handleRowReorder}
             onOpenDetails={setSelectedMetricId}
-            onContextRequest={({ rowId, clientX, clientY }) =>
-              setContextMenu({ rowId, x: clientX, y: clientY })
-            }
+            onContextRequest={({ rowId, clientX, clientY }) => setContextMenu({ rowId, x: clientX, y: clientY })}
           />
         </div>
         <div className="w-80 shrink-0">
           <SimulationSummaryPanel notebook={notebook} result={simulationResult ?? null} />
-          <div className="mt-[var(--space-400)] rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface-elevated)] p-[var(--space-400)] text-xs text-[var(--color-text-muted)]">
+          <div className="mt-[var(--space-400)] border border-[var(--color-border-soft)] bg-[var(--color-surface-elevated)] p-[var(--space-400)] text-xs text-[var(--color-text-muted)]">
             <div className="flex items-center justify-between">
               <span className="font-semibold text-[var(--color-text-primary)]">History</span>
               <div className="flex items-center gap-2 text-[var(--color-text-primary)]">

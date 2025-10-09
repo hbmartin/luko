@@ -1,5 +1,12 @@
 {
-  "tailwindCSS.experimental.classRegex": [
-    ["cva(?:<[^>]*>)?(([^)]*))", "[\"'`]([^\"'`]*).*?[\"'`]", "(?:twMerge|twJoin)\\(([^\\);]*)[\\);]"]
-  ]
+  "typescript.tsdk": "node_modules/typescript/lib",
+  "eslint.enable": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.formatOnSave": true,
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit"
+  },
+  "eslint.options": {
+    "overrideConfigFile": "./eslint.config.mjs"
+  }
 }
