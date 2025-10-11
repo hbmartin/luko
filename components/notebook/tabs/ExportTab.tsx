@@ -77,11 +77,13 @@ export function ExportTab() {
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
           <div className="space-y-6">
             <div>
-              <label className="mb-2 block text-sm font-medium text-[var(--color-text-primary)]">Complexity Level</label>
+              <label className="mb-2 block text-sm font-medium text-[var(--color-text-primary)]">
+                Complexity Level
+              </label>
               <select
                 value={complexity}
                 onChange={(event) => setComplexity(event.target.value)}
-                className="w-full rounded-md border border-[var(--color-border-soft)] bg-white px-4 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className="w-full rounded-md border border-[var(--color-border-soft)] bg-white px-4 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
               >
                 {complexityOptions.map((option) => (
                   <option key={option.value} value={option.value}>
@@ -89,7 +91,9 @@ export function ExportTab() {
                   </option>
                 ))}
               </select>
-              <p className="mt-1 text-xs text-[var(--color-text-muted)]">Controls the depth of detail included in the export.</p>
+              <p className="mt-1 text-xs text-[var(--color-text-muted)]">
+                Controls the depth of detail included in the export.
+              </p>
             </div>
 
             <div>
@@ -121,7 +125,7 @@ export function ExportTab() {
                     value={companyName}
                     onChange={(event) => setCompanyName(event.target.value)}
                     placeholder="Prospect Inc."
-                    className="w-full rounded-md border border-[var(--color-border-soft)] px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    className="w-full rounded-md border border-[var(--color-border-soft)] px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
                   />
                 </div>
                 <div>
@@ -137,7 +141,7 @@ export function ExportTab() {
                       type="text"
                       value={primaryColor}
                       onChange={(event) => setPrimaryColor(event.target.value)}
-                      className="flex-1 rounded-md border border-[var(--color-border-soft)] px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      className="flex-1 rounded-md border border-[var(--color-border-soft)] px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
                     />
                   </div>
                 </div>
@@ -145,7 +149,9 @@ export function ExportTab() {
             </div>
 
             <div>
-              <label className="mb-2 block text-sm font-medium text-[var(--color-text-primary)]">Additional Options</label>
+              <label className="mb-2 block text-sm font-medium text-[var(--color-text-primary)]">
+                Additional Options
+              </label>
               <div className="space-y-2">
                 <label className="flex items-center gap-2 text-sm text-[var(--color-text-primary)]">
                   <input
@@ -182,7 +188,7 @@ export function ExportTab() {
                 onClick={handleGenerate}
                 disabled={isGenerating}
                 className={`flex-1 rounded-md px-4 py-2 text-sm font-medium text-white transition ${
-                  isGenerating ? "cursor-wait bg-blue-400" : "bg-blue-600 hover:bg-blue-700"
+                  isGenerating ? "bg-primary cursor-wait" : "bg-primary hover:bg-primary/80"
                 }`}
               >
                 {isGenerating ? "Generating…" : "Generate Export"}
@@ -196,7 +202,8 @@ export function ExportTab() {
               <div className="rounded-xl border border-[var(--color-border-soft)] bg-[var(--color-surface-muted)]/60 p-4 text-xs text-[var(--color-text-muted)]">
                 <div className="font-semibold text-[var(--color-text-primary)]">Last export</div>
                 <p className="mt-1">
-                  {new Date(lastExport.timestamp).toLocaleString()} • {formatLabels[lastExport.format]} • ~{lastExport.pages} pages
+                  {new Date(lastExport.timestamp).toLocaleString()} • {formatLabels[lastExport.format]} • ~
+                  {lastExport.pages} pages
                 </p>
               </div>
             )}
@@ -212,7 +219,10 @@ export function ExportTab() {
 
             <div className="space-y-3">
               {sections.map((title, index) => (
-                <div key={title} className="flex items-center gap-3 rounded-xl border border-[var(--color-border-soft)] bg-white p-3">
+                <div
+                  key={title}
+                  className="flex items-center gap-3 rounded-xl border border-[var(--color-border-soft)] bg-white p-3"
+                >
                   <div
                     className="flex size-12 items-center justify-center rounded"
                     style={{ backgroundColor: `${primaryColor}20`, color: primaryColor }}

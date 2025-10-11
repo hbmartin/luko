@@ -2,6 +2,7 @@
 
 import { Notebook, SimulationResult } from "@/lib/types/notebook"
 import { formatAbbreviatedNumber } from "@/lib/utils/grid-helpers"
+import { useNotebook } from "./NotebookProvider"
 
 interface SimulationSummaryPanelProps {
   notebook: Notebook
@@ -9,6 +10,7 @@ interface SimulationSummaryPanelProps {
 }
 
 export function SimulationSummaryPanel({ notebook, result }: SimulationSummaryPanelProps) {
+  const { handleRunSimulation, isSimulating } = useNotebook()
   return (
     <div className="rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface-elevated)] p-[var(--space-400)] shadow-sm">
       <h3 className="mb-[var(--space-300)] text-lg font-semibold text-[var(--color-text-primary)]">
@@ -17,29 +19,35 @@ export function SimulationSummaryPanel({ notebook, result }: SimulationSummaryPa
 
       {!result ? (
         <div className="rounded-xl bg-[var(--color-surface-muted)] p-4 text-center text-sm text-[var(--color-text-muted)]">
-          <svg
-            className="mx-auto mb-2 size-10 text-[var(--color-border-soft)]"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
+          <button
+            onClick={handleRunSimulation}
+            disabled={isSimulating}
+            className={`bg-primary mx-auto flex items-center gap-2 rounded-full px-5 py-2 text-sm font-medium text-white transition-all ${isSimulating ? "cursor-not-allowed opacity-75" : "hover:scale-105"} `}
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={1.5}
-              d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"
-            />
-          </svg>
-          <p className="font-medium text-[var(--color-text-primary)]">No simulation yet</p>
-          <p className="mt-1 text-xs">Update parameters and run the model to populate results.</p>
+            {isSimulating ? (
+              <>
+                <svg className="size-4 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  ></path>
+                </svg>
+                Running…
+              </>
+            ) : (
+              <>
+                <span>Run Simulation</span>
+              </>
+            )}
+          </button>
         </div>
       ) : (
         <div className="space-y-[var(--space-400)]">
           <div className="rounded-xl bg-blue-50 p-4">
-            <div className="text-xs font-semibold uppercase tracking-wide text-blue-700">Median 3-Year NPV</div>
-            <div className="mt-1 text-2xl font-semibold text-blue-900">
-              {formatAbbreviatedNumber(result.npv.p50)}
-            </div>
+            <div className="text-xs font-semibold tracking-wide text-blue-700 uppercase">Median 3-Year NPV</div>
+            <div className="mt-1 text-2xl font-semibold text-blue-900">{formatAbbreviatedNumber(result.npv.p50)}</div>
             <p className="mt-1 text-xs text-blue-700/70">Mean: {formatAbbreviatedNumber(result.npv.mean)}</p>
           </div>
 
@@ -96,8 +104,8 @@ export function SimulationSummaryPanel({ notebook, result }: SimulationSummaryPa
         <div className="mt-[var(--space-400)] rounded-xl border border-yellow-300 bg-yellow-50 p-3 text-xs">
           <div className="font-semibold text-yellow-800">Unsynced edits</div>
           <p className="mt-1 text-yellow-700">
-            {notebook.dirtyMetrics.length} metric{notebook.dirtyMetrics.length !== 1 ? "s" : ""} changed since
-            last simulation.
+            {notebook.dirtyMetrics.length} metric{notebook.dirtyMetrics.length !== 1 ? "s" : ""} changed since last
+            simulation.
           </p>
         </div>
       )}

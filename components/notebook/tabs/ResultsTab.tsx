@@ -1,12 +1,13 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { SimulationResult } from "@/lib/types/notebook"
 import { formatAbbreviatedNumber } from "@/lib/utils/grid-helpers"
 import { NPVChart, type NPVSeries } from "../charts/NPVChart"
 import { PaybackChart } from "../charts/PaybackChart"
 import { TornadoChart } from "../charts/TornadoChart"
 import { WaterfallChart } from "../charts/WaterfallChart"
+import { useNotebook } from "../NotebookProvider"
 
 interface ScenarioSummary {
   id: string
@@ -25,7 +26,15 @@ interface ResultsTabProps {
 
 const palette = ["#1e40af", "#0f766e", "#9d174d", "#9333ea"]
 
-export function ResultsTab({ simulationResult, scenarios, activeScenarioId, onSelectScenario, onRenameScenario }: ResultsTabProps) {
+export function ResultsTab({
+  simulationResult,
+  scenarios,
+  activeScenarioId,
+  onSelectScenario,
+  onRenameScenario,
+}: ResultsTabProps) {
+  const { handleRunSimulation, isSimulating } = useNotebook()
+
   const [comparisonIds, setComparisonIds] = useState<string[]>([])
   const [editingScenarioId, setEditingScenarioId] = useState<string | null>(null)
   const [draftName, setDraftName] = useState("")
@@ -39,7 +48,7 @@ export function ResultsTab({ simulationResult, scenarios, activeScenarioId, onSe
   }, [activeScenarioId, scenarios])
 
   const comparisonScenarios = scenarios.filter(
-    (scenario) => scenario.id !== activeScenario?.id && comparisonIds.includes(scenario.id),
+    (scenario) => scenario.id !== activeScenario?.id && comparisonIds.includes(scenario.id)
   )
 
   const chartSeries: NPVSeries[] = useMemo(() => {
@@ -59,16 +68,17 @@ export function ResultsTab({ simulationResult, scenarios, activeScenarioId, onSe
     return [base, ...overlays]
   }, [activeScenario, comparisonScenarios])
 
-  if (!simulationResult || !activeScenario) {
+  useEffect(() => {
+    if (!simulationResult || !activeScenario) {
+      handleRunSimulation()
+    }
+  }, [simulationResult, activeScenario])
+
+  if (!simulationResult || !activeScenario || isSimulating) {
     return (
       <div className="flex h-full items-center justify-center">
         <div className="text-center">
-          <svg
-            className="mx-auto mb-4 size-16 text-gray-400"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
+          <svg className="mx-auto mb-4 size-16 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -76,8 +86,7 @@ export function ResultsTab({ simulationResult, scenarios, activeScenarioId, onSe
               d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
             />
           </svg>
-          <h3 className="text-lg font-medium text-gray-900">No simulation results</h3>
-          <p className="mt-2 text-sm text-gray-500">Run a simulation from the Worksheet tab to see results.</p>
+          <h3 className="text-lg font-medium text-gray-900">Running simulation…</h3>
         </div>
       </div>
     )
@@ -118,7 +127,7 @@ export function ResultsTab({ simulationResult, scenarios, activeScenarioId, onSe
                 <div className="flex items-center justify-between">
                   {editingScenarioId === scenario.id ? (
                     <input
-                      className="rounded border border-blue-200 bg-white px-2 py-1 text-xs font-semibold text-[var(--color-text-primary)] focus-visible:data-[focus=strong]"
+                      className="focus-visible:data-[focus=strong] rounded border border-blue-200 bg-white px-2 py-1 text-xs font-semibold text-[var(--color-text-primary)]"
                       value={draftName}
                       autoFocus
                       onClick={(event) => event.stopPropagation()}
@@ -151,7 +160,7 @@ export function ResultsTab({ simulationResult, scenarios, activeScenarioId, onSe
                       {scenario.name}
                     </span>
                   )}
-                  <label className="flex items-center gap-2 text-[10px] uppercase tracking-wide text-[var(--color-text-muted)]">
+                  <label className="flex items-center gap-2 text-[10px] tracking-wide text-[var(--color-text-muted)] uppercase">
                     <input
                       type="checkbox"
                       className="size-3 rounded border border-[var(--color-border-soft)]"
@@ -170,7 +179,8 @@ export function ResultsTab({ simulationResult, scenarios, activeScenarioId, onSe
                   </label>
                 </div>
                 <p className="mt-1 text-xs text-[var(--color-text-muted)]">
-                  {formatAbbreviatedNumber(scenario.result.npv.p50)} median NPV • Payback {scenario.result.paybackPeriod.p50.toFixed(1)} months
+                  {formatAbbreviatedNumber(scenario.result.npv.p50)} median NPV • Payback{" "}
+                  {scenario.result.paybackPeriod.p50.toFixed(1)} months
                 </p>
               </button>
             )
@@ -191,7 +201,8 @@ export function ResultsTab({ simulationResult, scenarios, activeScenarioId, onSe
         <div className="rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface-elevated)] p-4 shadow-sm">
           <div className="text-sm text-[var(--color-text-muted)]">90% Confidence Interval</div>
           <div className="mt-1 text-lg font-semibold text-[var(--color-text-primary)]">
-            {formatAbbreviatedNumber(activeScenario.result.npv.p10)} – {formatAbbreviatedNumber(activeScenario.result.npv.p90)}
+            {formatAbbreviatedNumber(activeScenario.result.npv.p10)} –{" "}
+            {formatAbbreviatedNumber(activeScenario.result.npv.p90)}
           </div>
           <div className="mt-1 text-xs text-[var(--color-text-muted)]">
             Std Dev: {formatAbbreviatedNumber(activeScenario.result.npv.std)}
@@ -220,7 +231,10 @@ export function ResultsTab({ simulationResult, scenarios, activeScenarioId, onSe
           <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">Comparison</h3>
           <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-3">
             {compareSummary.map((entry) => (
-              <div key={entry.id} className="rounded-xl border border-[var(--color-border-soft)] bg-[var(--color-surface-elevated)] p-4 shadow-sm">
+              <div
+                key={entry.id}
+                className="rounded-xl border border-[var(--color-border-soft)] bg-[var(--color-surface-elevated)] p-4 shadow-sm"
+              >
                 <div className="text-sm font-semibold text-[var(--color-text-primary)]">{entry.name}</div>
                 <p className={`mt-1 text-xs ${entry.delta >= 0 ? "text-green-600" : "text-red-500"}`}>
                   NPV delta {formatAbbreviatedNumber(entry.delta)}
@@ -258,9 +272,7 @@ export function ResultsTab({ simulationResult, scenarios, activeScenarioId, onSe
 
       <footer className="rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface-muted)]/60 p-4 text-xs text-[var(--color-text-muted)]">
         <div className="flex flex-wrap items-center justify-between gap-4">
-          <span>
-            Simulation completed: {new Date(activeScenario.result.metadata.timestamp).toLocaleString()}
-          </span>
+          <span>Simulation completed: {new Date(activeScenario.result.metadata.timestamp).toLocaleString()}</span>
           <span>Method: Monte Carlo with Beta PERT sampling</span>
         </div>
       </footer>

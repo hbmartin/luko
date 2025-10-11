@@ -2,7 +2,7 @@ import { Metadata } from "next"
 import Link from "next/link"
 
 export const metadata: Metadata = {
-  title: "Value Impact Calculator - ROI Analysis Tool",
+  title: "Luko",
 }
 
 export default function Home() {
@@ -21,26 +21,26 @@ export default function Home() {
         <div className="mx-auto max-w-7xl px-6 py-12">
           <div className="relative mb-12 overflow-hidden rounded-3xl border border-[var(--color-border-soft)] bg-[var(--color-surface-elevated)] px-8 py-12 text-center shadow-xl">
             <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(120%_90%_at_50%_0%,color-mix(in_oklch,var(--color-primary)_28%,transparent)_0%,transparent_70%)]" />
-            <span className="inline-flex items-center justify-center rounded-full border border-[color-mix(in_oklch,var(--color-primary)_20%,transparent)] bg-[color-mix(in_oklch,var(--color-primary)_12%,transparent)] px-4 py-1.5 text-xs font-semibold uppercase tracking-wide text-[var(--color-primary)]">
+            <span className="inline-flex items-center justify-center rounded-full border border-[color-mix(in_oklch,var(--color-primary)_20%,transparent)] bg-[color-mix(in_oklch,var(--color-primary)_12%,transparent)] px-4 py-1.5 text-xs font-semibold tracking-wide text-[var(--color-primary)] uppercase">
               Monte Carlo NPV engine
             </span>
-            <h2 className="mt-6 text-balance text-4xl font-semibold text-[var(--color-text-primary)] sm:text-5xl">
+            <h2 className="mt-6 text-4xl font-semibold text-balance text-[var(--color-text-primary)] sm:text-5xl">
               ROI analysis made simple
             </h2>
             <p className="mx-auto mt-4 max-w-2xl text-lg text-[var(--color-text-muted)]">
-              Build credible business cases with Monte Carlo simulation. Model uncertainty, visualize
-              outcomes, and share interactive scenarios with stakeholders.
+              Build credible business cases with Monte Carlo simulation. Model uncertainty, visualize outcomes, and
+              share interactive scenarios with stakeholders.
             </p>
             <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
               <Link
                 href="/notebook/1"
-                className="inline-flex items-center justify-center rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground shadow-sm transition hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-surface-elevated)]"
+                className="bg-primary text-primary-foreground inline-flex items-center justify-center rounded-xl px-6 py-3 text-sm font-semibold shadow-sm transition hover:brightness-95 focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-surface-elevated)] focus-visible:outline-none"
               >
                 Open notebook
               </Link>
               <Link
                 href="#features"
-                className="inline-flex items-center justify-center rounded-xl border border-[color-mix(in_oklch,var(--color-primary)_20%,transparent)] bg-[color-mix(in_oklch,var(--color-primary)_5%,transparent)] px-5 py-3 text-sm font-semibold text-[var(--color-text-primary)] transition hover:bg-[color-mix(in_oklch,var(--color-primary)_12%,transparent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-surface-elevated)]"
+                className="inline-flex items-center justify-center rounded-xl border border-[color-mix(in_oklch,var(--color-primary)_20%,transparent)] bg-[color-mix(in_oklch,var(--color-primary)_5%,transparent)] px-5 py-3 text-sm font-semibold text-[var(--color-text-primary)] transition hover:bg-[color-mix(in_oklch,var(--color-primary)_12%,transparent)] focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-surface-elevated)] focus-visible:outline-none"
                 scroll
               >
                 Explore features
@@ -60,7 +60,7 @@ export default function Home() {
               </div>
               <Link
                 href="/notebook/1"
-                className="inline-flex items-center justify-center rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm transition hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-surface-elevated)]"
+                className="bg-primary text-primary-foreground inline-flex items-center justify-center rounded-lg px-5 py-2.5 text-sm font-semibold shadow-sm transition hover:brightness-95 focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-surface-elevated)] focus-visible:outline-none"
               >
                 Launch interactive model
               </Link>
@@ -94,9 +94,7 @@ export default function Home() {
                   />
                 </svg>
               </div>
-              <h4 className="mb-2 text-lg font-semibold text-[var(--color-text-primary)]">
-                Monte Carlo simulation
-              </h4>
+              <h4 className="mb-2 text-lg font-semibold text-[var(--color-text-primary)]">Monte Carlo simulation</h4>
               <p className="text-sm text-[var(--color-text-muted)]">
                 100,000 iterations with Beta PERT distributions to model uncertainty and risk.
               </p>
@@ -113,9 +111,7 @@ export default function Home() {
                   />
                 </svg>
               </div>
-              <h4 className="mb-2 text-lg font-semibold text-[var(--color-text-primary)]">
-                Rich visualizations
-              </h4>
+              <h4 className="mb-2 text-lg font-semibold text-[var(--color-text-primary)]">Rich visualizations</h4>
               <p className="text-sm text-[var(--color-text-muted)]">
                 NPV curves, waterfall charts, tornado diagrams, and payback analysis at a glance.
               </p>
@@ -132,9 +128,7 @@ export default function Home() {
                   />
                 </svg>
               </div>
-              <h4 className="mb-2 text-lg font-semibold text-[var(--color-text-primary)]">
-                Interactive editing
-              </h4>
+              <h4 className="mb-2 text-lg font-semibold text-[var(--color-text-primary)]">Interactive editing</h4>
               <p className="text-sm text-[var(--color-text-muted)]">
                 Inline editing with real-time dirty state tracking and change management.
               </p>

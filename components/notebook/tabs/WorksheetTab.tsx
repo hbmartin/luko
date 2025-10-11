@@ -209,7 +209,7 @@ export function WorksheetTab({ notebook, onNotebookChange, density, simulationRe
       if (sourceMetricIndex !== -1 && targetMetricIndex !== -1) {
         const sourceMetric = notebook.metrics[sourceMetricIndex]
         const targetMetric = notebook.metrics[targetMetricIndex]
-        if (sourceMetric.categoryId !== targetMetric.categoryId) return
+        if (sourceMetric?.categoryId !== targetMetric?.categoryId) return
 
         const metricsWithinCategory = notebook.metrics.filter((metric) => metric.categoryId === sourceMetric.categoryId)
         const sourcePosition = metricsWithinCategory.findIndex((metric) => metric.id === sourceId)
@@ -219,7 +219,7 @@ export function WorksheetTab({ notebook, onNotebookChange, density, simulationRe
         const reorderedWithinCategory = reorder(metricsWithinCategory, sourcePosition, targetPosition)
         const mergedMetrics: Metric[] = []
         notebook.metrics.forEach((metric) => {
-          if (metric.categoryId !== sourceMetric.categoryId) {
+          if (metric.categoryId !== sourceMetric?.categoryId) {
             mergedMetrics.push(metric)
           } else {
             const next = reorderedWithinCategory.shift()
@@ -287,44 +287,40 @@ export function WorksheetTab({ notebook, onNotebookChange, density, simulationRe
   )
 
   return (
-    <Fragment>
-      <div className="flex h-full gap-[var(--space-500)]">
-        <div className="flex-1">
-          <DataGridComponent
-            notebook={notebook}
-            density={density}
-            validationErrors={validationErrors}
-            onMetricChange={handleMetricChange}
-            onCategoryToggle={handleCategoryToggle}
-            onRowReorder={handleRowReorder}
-            onOpenDetails={setSelectedMetricId}
-            onContextRequest={({ rowId, clientX, clientY }) => setContextMenu({ rowId, x: clientX, y: clientY })}
-          />
-        </div>
-        <div className="w-80 shrink-0">
-          <SimulationSummaryPanel notebook={notebook} result={simulationResult ?? null} />
-          <div className="mt-[var(--space-400)] border border-[var(--color-border-soft)] bg-[var(--color-surface-elevated)] p-[var(--space-400)] text-xs text-[var(--color-text-muted)]">
-            <div className="flex items-center justify-between">
-              <span className="font-semibold text-[var(--color-text-primary)]">History</span>
-              <div className="flex items-center gap-2 text-[var(--color-text-primary)]">
-                <button
-                  type="button"
-                  onClick={undo}
-                  className="rounded-full border border-[var(--color-border-soft)] px-3 py-1 text-xs font-medium hover:bg-[var(--color-surface-muted)]"
-                >
-                  Undo
-                </button>
-                <button
-                  type="button"
-                  onClick={redo}
-                  className="rounded-full border border-[var(--color-border-soft)] px-3 py-1 text-xs font-medium hover:bg-[var(--color-surface-muted)]"
-                >
-                  Redo
-                </button>
-              </div>
+    <div className="flex h-full space-y-6 p-6">
+      <DataGridComponent
+        notebook={notebook}
+        density={density}
+        validationErrors={validationErrors}
+        onMetricChange={handleMetricChange}
+        onCategoryToggle={handleCategoryToggle}
+        onRowReorder={handleRowReorder}
+        onOpenDetails={setSelectedMetricId}
+        onContextRequest={({ rowId, clientX, clientY }) => setContextMenu({ rowId, x: clientX, y: clientY })}
+      />
+      <div className="w-80 shrink-0">
+        <SimulationSummaryPanel notebook={notebook} result={simulationResult ?? null} />
+        <div className="mt-[var(--space-400)] border border-[var(--color-border-soft)] bg-[var(--color-surface-elevated)] p-[var(--space-400)] text-xs text-[var(--color-text-muted)]">
+          <div className="flex items-center justify-between">
+            <span className="font-semibold text-[var(--color-text-primary)]">History</span>
+            <div className="flex items-center gap-2 text-[var(--color-text-primary)]">
+              <button
+                type="button"
+                onClick={undo}
+                className="rounded-full border border-[var(--color-border-soft)] px-3 py-1 text-xs font-medium hover:bg-[var(--color-surface-muted)]"
+              >
+                Undo
+              </button>
+              <button
+                type="button"
+                onClick={redo}
+                className="rounded-full border border-[var(--color-border-soft)] px-3 py-1 text-xs font-medium hover:bg-[var(--color-surface-muted)]"
+              >
+                Redo
+              </button>
             </div>
-            <p className="mt-2">Cmd/Ctrl+Z to undo, Cmd/Ctrl+Shift+Z to redo.</p>
           </div>
+          <p className="mt-2">Cmd/Ctrl+Z to undo, Cmd/Ctrl+Shift+Z to redo.</p>
         </div>
       </div>
 
@@ -383,6 +379,6 @@ export function WorksheetTab({ notebook, onNotebookChange, density, simulationRe
           </Fragment>
         ))}
       </div>
-    </Fragment>
+    </div>
   )
 }

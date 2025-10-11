@@ -3,7 +3,7 @@
 import { useCallback } from "react"
 import type { MouseEvent, ReactNode } from "react"
 import { DataGrid } from "react-data-grid"
-import type { ColumnOrColumnGroup, RenderCellProps, RowRendererProps } from "react-data-grid"
+import type { ColumnOrColumnGroup, RenderCellProps, RenderRowProps } from "react-data-grid"
 import "react-data-grid/lib/styles.css"
 
 export interface GridAdapterRow {
@@ -28,7 +28,9 @@ export interface GridAdapterProps<RowType extends GridAdapterRow> {
   onContextMenu?: (event: MouseEvent, row: RowType) => void
 }
 
-function createColumns<RowType extends GridAdapterRow>(columns: GridAdapterColumn<RowType>[]): ColumnOrColumnGroup<RowType>[] {
+function createColumns<RowType extends GridAdapterRow>(
+  columns: GridAdapterColumn<RowType>[]
+): ColumnOrColumnGroup<RowType>[] {
   return columns.map((column) => ({
     key: column.key,
     name: column.name,
@@ -40,9 +42,9 @@ function createColumns<RowType extends GridAdapterRow>(columns: GridAdapterColum
 
 function defaultRowRenderer<RowType extends GridAdapterRow>(
   onRowReorder?: (sourceId: string, targetId: string) => void,
-  onContextMenu?: (event: MouseEvent, row: RowType) => void,
-): React.ComponentType<RowRendererProps<RowType>> {
-  return function RowRenderer(props: RowRendererProps<RowType>) {
+  onContextMenu?: (event: MouseEvent, row: RowType) => void
+): React.ComponentType<RenderRowProps<RowType, unknown>> {
+  return function RowRenderer(props: RenderRowProps<RowType, unknown>) {
     const { row, ...rest } = props
 
     const handleDragStart = useCallback(
@@ -57,7 +59,7 @@ function defaultRowRenderer<RowType extends GridAdapterRow>(
         event.dataTransfer.setDragImage(dragImage, 0, 0)
         setTimeout(() => document.body.removeChild(dragImage), 0)
       },
-      [row.id],
+      [row.id]
     )
 
     const handleDrop = useCallback(
@@ -68,7 +70,7 @@ function defaultRowRenderer<RowType extends GridAdapterRow>(
           onRowReorder?.(sourceId, row.id)
         }
       },
-      [onRowReorder, row.id],
+      [onRowReorder, row.id]
     )
 
     return (
@@ -101,20 +103,21 @@ export function GridAdapter<RowType extends GridAdapterRow>({
 }: GridAdapterProps<RowType>) {
   const resolvedColumns = createColumns(columns)
   const rowHeight = density === "compact" ? 36 : 46
+  const RowRenderer = defaultRowRenderer<RowType>(onRowReorder, onContextMenu)
 
   return (
-    <div className="h-full overflow-hidden rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface-elevated)] shadow-sm">
-      <DataGrid
-        className="rdg-light h-full"
-        columns={resolvedColumns}
-        rows={rows}
-        rowHeight={rowHeight}
-        rowKeyGetter={(row) => row.id}
-        rowClass={(row) => rowClass?.(row) ?? ""}
-        rowRenderer={defaultRowRenderer(onRowReorder, onContextMenu)}
-        defaultColumnOptions={{ resizable: true }}
-      />
-    </div>
+    <DataGrid
+      className="rdg-light"
+      columns={resolvedColumns}
+      rows={rows}
+      rowHeight={rowHeight}
+      rowKeyGetter={(row) => row.id}
+      rowClass={(row) => rowClass?.(row) ?? ""}
+      // renderers={{
+      //   renderRow: (key, props) => <RowRenderer key={key} {...props} />,
+      // }}
+      defaultColumnOptions={{ resizable: true }}
+    />
   )
 }
 

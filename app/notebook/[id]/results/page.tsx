@@ -1,16 +1,10 @@
 "use client"
 
-import { ResultsTab } from "@/components/notebook/tabs/ResultsTab"
 import { useNotebook } from "@/components/notebook/NotebookProvider"
+import { ResultsTab } from "@/components/notebook/tabs/ResultsTab"
 
 export default function ResultsPage() {
-  const {
-    simulationResult,
-    scenarios,
-    activeScenarioId,
-    setActiveScenarioId,
-    handleRenameScenario,
-  } = useNotebook()
+  const { simulationResult, scenarios, activeScenarioId, setActiveScenarioId, handleRenameScenario } = useNotebook()
 
   return (
     <ResultsTab

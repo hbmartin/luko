@@ -1,8 +1,12 @@
-"use client"
+import { Metadata } from "next"
+import { redirect } from "next/navigation"
 
-import { NotebookLayout } from "@/components/notebook/NotebookLayout"
-import { mockNotebook } from "@/lib/mock-data"
+export const metadata: Metadata = {
+  title: "Luko - Notebook",
+}
 
-export default function NotebookPage() {
-  return <NotebookLayout notebook={mockNotebook} />
+export default async function NotebookPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
+  // Redirect to results page by default
+  redirect(`/notebook/${id}/results`)
 }
