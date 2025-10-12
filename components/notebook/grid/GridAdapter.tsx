@@ -6,6 +6,7 @@ import { DataGrid } from "react-data-grid"
 import type {
   CellMouseEventHandler,
   CellSelectArgs,
+  ColSpanArgs,
   ColumnOrColumnGroup,
   RenderCellProps,
   RenderRowProps,
@@ -24,6 +25,7 @@ export interface GridAdapterColumn<RowType extends GridAdapterRow> {
   frozen?: boolean
   cellClass?: string | ((row: RowType) => string | undefined)
   headerCellClass?: string
+  colSpan?: (args: ColSpanArgs<RowType, unknown>) => number | undefined
   render: (context: { row: RowType }) => ReactNode
 }
 
@@ -48,6 +50,7 @@ function createColumns<RowType extends GridAdapterRow>(
     frozen: column.frozen,
     cellClass: column.cellClass,
     headerCellClass: column.headerCellClass,
+    colSpan: column.colSpan,
     renderCell: (props: RenderCellProps<RowType>) => column.render({ row: props.row }),
   }))
 }

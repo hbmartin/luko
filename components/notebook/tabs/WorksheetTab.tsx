@@ -3,7 +3,7 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Metric, Notebook, SimulationResult } from "@/lib/types/notebook"
 import { DataGridComponent } from "../DataGridComponent"
-import { MetricDetailDrawer } from "../MetricDetailDrawer"
+import { MetricDetailPanel } from "../MetricDetailPanel"
 import { SimulationSummaryPanel } from "../SimulationSummaryPanel"
 
 type ValidationState = {
@@ -299,7 +299,7 @@ export function WorksheetTab({ notebook, onNotebookChange, density, simulationRe
         onContextRequest={({ rowId, clientX, clientY }) => setContextMenu({ rowId, x: clientX, y: clientY })}
       />
       <div className="w-80 shrink-0 space-y-4">
-        <MetricDetailDrawer
+        <MetricDetailPanel
           metric={activeMetric}
           validation={activeMetric ? validationErrors[activeMetric.id] : undefined}
         />

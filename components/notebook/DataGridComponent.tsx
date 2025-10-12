@@ -95,7 +95,7 @@ export function DataGridComponent({
       )
     }
 
-    return [
+    const baseColumns: GridAdapterColumn<GridRow>[] = [
       {
         key: "name",
         name: "Metric",
@@ -106,15 +106,18 @@ export function DataGridComponent({
           if (row.type === "category") {
             return (
               <div className="spreadsheet-category">
-                <button
-                  type="button"
-                  onClick={() => onCategoryToggle(row.id)}
-                  className="spreadsheet-category-toggle"
-                  aria-label={row.isExpanded ? "Collapse category" : "Expand category"}
-                >
-                  {row.isExpanded ? "−" : "+"}
-                </button>
-                <span className="spreadsheet-category-label">{row.name}</span>
+                <div className="spreadsheet-category-main">
+                  <button
+                    type="button"
+                    onClick={() => onCategoryToggle(row.id)}
+                    className="spreadsheet-category-toggle"
+                    aria-label={row.isExpanded ? "Collapse category" : "Expand category"}
+                  >
+                    {row.isExpanded ? "−" : "+"}
+                  </button>
+                  <span className="spreadsheet-category-label">{row.name}</span>
+                </div>
+                <span className="spreadsheet-category-status">{row.isExpanded ? "Hide metrics" : "Show metrics"}</span>
               </div>
             )
           }
@@ -167,7 +170,7 @@ export function DataGridComponent({
         cellClass: summaryCellClass,
         render: ({ row }) => {
           if (row.type === "category") {
-            return <div className="spreadsheet-summary">{row.isExpanded ? "Hide metrics" : "Show metrics"}</div>
+            return null
           }
 
           if (row.formula) {
@@ -199,6 +202,13 @@ export function DataGridComponent({
         },
       },
     ]
+
+    baseColumns[0].colSpan = (args) => {
+      if (args.type !== "ROW") return undefined
+      return args.row.type === "category" ? baseColumns.length : undefined
+    }
+
+    return baseColumns
   }, [onCategoryToggle, onMetricChange, validationErrors])
   const rowClass = useCallback((row: GridRow) => {
     const classes = ["spreadsheet-row"]
