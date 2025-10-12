@@ -12,7 +12,7 @@ interface SimulationSummaryPanelProps {
 export function SimulationSummaryPanel({ notebook, result }: SimulationSummaryPanelProps) {
   const { handleRunSimulation, isSimulating } = useNotebook()
   return (
-    <div className="rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface-elevated)] p-[var(--space-400)] shadow-sm">
+    <div className="rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface-elevated)] p-4 shadow-sm">
       <h3 className="mb-[var(--space-300)] text-lg font-semibold text-[var(--color-text-primary)]">
         Simulation Summary
       </h3>

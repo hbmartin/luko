@@ -287,7 +287,7 @@ export function WorksheetTab({ notebook, onNotebookChange, density, simulationRe
   )
 
   return (
-    <div className="flex h-full space-y-6 p-6">
+    <div className="flex h-full gap-4 space-y-6 p-6">
       <DataGridComponent
         notebook={notebook}
         density={density}
@@ -299,8 +299,9 @@ export function WorksheetTab({ notebook, onNotebookChange, density, simulationRe
         onContextRequest={({ rowId, clientX, clientY }) => setContextMenu({ rowId, x: clientX, y: clientY })}
       />
       <div className="w-80 shrink-0">
+        {/* TODO: move MetricDetailDrawer here */}
         <SimulationSummaryPanel notebook={notebook} result={simulationResult ?? null} />
-        <div className="mt-[var(--space-400)] border border-[var(--color-border-soft)] bg-[var(--color-surface-elevated)] p-[var(--space-400)] text-xs text-[var(--color-text-muted)]">
+        <div className="mt-4 rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface-elevated)] p-4 shadow-sm">
           <div className="flex items-center justify-between">
             <span className="font-semibold text-[var(--color-text-primary)]">History</span>
             <div className="flex items-center gap-2 text-[var(--color-text-primary)]">

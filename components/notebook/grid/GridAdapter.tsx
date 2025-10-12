@@ -16,6 +16,8 @@ export interface GridAdapterColumn<RowType extends GridAdapterRow> {
   name: string
   width?: number
   frozen?: boolean
+  cellClass?: string | ((row: RowType) => string | undefined)
+  headerCellClass?: string
   render: (context: { row: RowType }) => ReactNode
 }
 
@@ -36,6 +38,8 @@ function createColumns<RowType extends GridAdapterRow>(
     name: column.name,
     width: column.width,
     frozen: column.frozen,
+    cellClass: column.cellClass,
+    headerCellClass: column.headerCellClass,
     renderCell: (props: RenderCellProps<RowType>) => column.render({ row: props.row }),
   }))
 }
@@ -106,18 +110,21 @@ export function GridAdapter<RowType extends GridAdapterRow>({
   const RowRenderer = defaultRowRenderer<RowType>(onRowReorder, onContextMenu)
 
   return (
-    <DataGrid
-      className="rdg-light"
-      columns={resolvedColumns}
-      rows={rows}
-      rowHeight={rowHeight}
-      rowKeyGetter={(row) => row.id}
-      rowClass={(row) => rowClass?.(row) ?? ""}
-      // renderers={{
-      //   renderRow: (key, props) => <RowRenderer key={key} {...props} />,
-      // }}
-      defaultColumnOptions={{ resizable: true }}
-    />
+    <div className="h-full min-h-0 min-w-0 flex-1">
+      <DataGrid
+        className="rdg-light rdg-spreadsheet h-full w-full"
+        style={{ height: "100%", width: "100%" }}
+        columns={resolvedColumns}
+        rows={rows}
+        rowHeight={rowHeight}
+        rowKeyGetter={(row) => row.id}
+        rowClass={(row) => rowClass?.(row) ?? ""}
+        // renderers={{
+        //   renderRow: (key, props) => <RowRenderer key={key} {...props} />,
+        // }}
+        defaultColumnOptions={{ resizable: true }}
+      />
+    </div>
   )
 }
 
