@@ -1,10 +1,9 @@
 "use client"
 
 import { useCallback, useMemo, useRef } from "react"
+import { type CellMouseArgs, type CellSelectArgs, Column, DataGrid, textEditor } from "react-data-grid"
 import type { GridRow, Notebook } from "@/lib/types/notebook"
 import { formatCurrency, formatNumber, notebookToGridRows } from "@/lib/utils/grid-helpers"
-import { GridAdapter, type GridAdapterColumn } from "./grid/GridAdapter"
-import type { CellMouseArgs, CellSelectArgs } from "react-data-grid"
 
 interface ValidationState {
   min?: string
@@ -30,79 +29,77 @@ export function DataGridComponent({
   validationErrors,
   onMetricChange,
   onCategoryToggle,
-  onRowReorder,
   onOpenDetails,
   onContextRequest,
 }: DataGridComponentProps) {
   const rows = useMemo(() => notebookToGridRows(notebook), [notebook])
-  const columns = useMemo<GridAdapterColumn<GridRow>[]>(() => {
+  const columns = useMemo<Column<GridRow>[]>(() => {
     const numericCellClass = "spreadsheet-cell-numeric"
     const unitCellClass = "spreadsheet-cell-unit"
-    const summaryCellClass = "spreadsheet-cell-summary"
 
-    const renderDistributionInput = (row: GridRow, field: "min" | "max") => {
-      if (row.type === "category") return null
+    // const renderDistributionInput = (row: GridRow, field: "min" | "max") => {
+    //   if (row.type === "category") return null
 
-      if (row.value !== null) {
-        return <span className="spreadsheet-fixed-value">{formatNumber(row.value, 2)}</span>
-      }
+    //   if (row.value !== null) {
+    //     return <span className="spreadsheet-fixed-value">{formatNumber(row.value, 2)}</span>
+    //   }
 
-      const error = validationErrors[row.id]?.[field]
-      const defaultValue = row[field] ?? ""
+    //   const error = validationErrors[row.id]?.[field]
+    //   const defaultValue = row[field] ?? ""
 
-      return (
-        <input
-          type="number"
-          key={`${row.id}-${field}-${defaultValue}`}
-          defaultValue={defaultValue}
-          onBlur={(event) => {
-            const nextValue = Number.parseFloat(event.currentTarget.value)
-            if (!Number.isNaN(nextValue)) {
-              onMetricChange(row.id, field, nextValue)
-            }
-          }}
-          data-validation={error ? "error" : undefined}
-          aria-invalid={Boolean(error)}
-          aria-describedby={error ? `${row.id}-${field}-error` : undefined}
-          className="spreadsheet-input"
-        />
-      )
-    }
+    //   return (
+    //     <input
+    //       type="number"
+    //       key={`${row.id}-${field}-${defaultValue}`}
+    //       defaultValue={defaultValue}
+    //       onBlur={(event) => {
+    //         const nextValue = Number.parseFloat(event.currentTarget.value)
+    //         if (!Number.isNaN(nextValue)) {
+    //           onMetricChange(row.id, field, nextValue)
+    //         }
+    //       }}
+    //       data-validation={error ? "error" : undefined}
+    //       aria-invalid={Boolean(error)}
+    //       aria-describedby={error ? `${row.id}-${field}-error` : undefined}
+    //       className="spreadsheet-input"
+    //     />
+    //   )
+    // }
 
-    const renderModeInput = (row: GridRow) => {
-      if (row.type === "category") return null
+    // const renderModeInput = (row: GridRow) => {
+    //   if (row.type === "category") return null
 
-      const error = validationErrors[row.id]?.mode
-      const isFixed = row.value !== null
-      const defaultValue = (isFixed ? row.value : row.mode) ?? ""
+    //   const error = validationErrors[row.id]?.mode
+    //   const isFixed = row.value !== null
+    //   const defaultValue = (isFixed ? row.value : row.mode) ?? ""
 
-      return (
-        <input
-          type="number"
-          key={`${row.id}-mode-${defaultValue}`}
-          defaultValue={defaultValue}
-          onBlur={(event) => {
-            const nextValue = Number.parseFloat(event.currentTarget.value)
-            if (!Number.isNaN(nextValue)) {
-              onMetricChange(row.id, isFixed ? "value" : "mode", nextValue)
-            }
-          }}
-          data-validation={error ? "error" : undefined}
-          aria-invalid={Boolean(error)}
-          aria-describedby={error ? `${row.id}-mode-error` : undefined}
-          className="spreadsheet-input"
-        />
-      )
-    }
+    //   return (
+    //     <input
+    //       type="number"
+    //       key={`${row.id}-mode-${defaultValue}`}
+    //       defaultValue={defaultValue}
+    //       onBlur={(event) => {
+    //         const nextValue = Number.parseFloat(event.currentTarget.value)
+    //         if (!Number.isNaN(nextValue)) {
+    //           onMetricChange(row.id, isFixed ? "value" : "mode", nextValue)
+    //         }
+    //       }}
+    //       data-validation={error ? "error" : undefined}
+    //       aria-invalid={Boolean(error)}
+    //       aria-describedby={error ? `${row.id}-mode-error` : undefined}
+    //       className="spreadsheet-input"
+    //     />
+    //   )
+    // }
 
-    const baseColumns: GridAdapterColumn<GridRow>[] = [
+    const baseColumns: Column<GridRow>[] = [
       {
         key: "name",
         name: "Metric",
         width: 320,
         frozen: true,
         cellClass: "spreadsheet-cell-name",
-        render: ({ row }) => {
+        renderCell: ({ row }) => {
           if (row.type === "category") {
             return (
               <div className="spreadsheet-category">
@@ -117,7 +114,6 @@ export function DataGridComponent({
                   </button>
                   <span className="spreadsheet-category-label">{row.name}</span>
                 </div>
-                <span className="spreadsheet-category-status">{row.isExpanded ? "Hide metrics" : "Show metrics"}</span>
               </div>
             )
           }
@@ -137,69 +133,31 @@ export function DataGridComponent({
         name: "Unit",
         width: 120,
         cellClass: unitCellClass,
-        render: ({ row }) => {
-          if (row.type === "category" || !row.unit) return null
-          return <span className="spreadsheet-unit">{row.unit}</span>
-        },
+        // renderCell: ({ row }) => {
+        //   if (row.type === "category" || !row.unit) return null
+        //   return <span className="spreadsheet-unit">{row.unit}</span>
+        // },
       },
       {
         key: "min",
         name: "Min",
         width: 120,
         cellClass: numericCellClass,
-        render: ({ row }) => renderDistributionInput(row, "min"),
+        renderEditCell: textEditor,
       },
       {
         key: "mode",
         name: "Most Likely",
         width: 140,
         cellClass: numericCellClass,
-        render: ({ row }) => renderModeInput(row),
+        renderEditCell: textEditor,
       },
       {
         key: "max",
         name: "Max",
         width: 120,
         cellClass: numericCellClass,
-        render: ({ row }) => renderDistributionInput(row, "max"),
-      },
-      {
-        key: "summary",
-        name: "Summary",
-        width: 220,
-        cellClass: summaryCellClass,
-        render: ({ row }) => {
-          if (row.type === "category") {
-            return null
-          }
-
-          if (row.formula) {
-            return (
-              <div className="spreadsheet-summary">
-                Formula
-                <code className="spreadsheet-formula">{row.formula}</code>
-              </div>
-            )
-          }
-
-          if (row.value !== null) {
-            const format = row.unit?.includes("$") ? formatCurrency : formatNumber
-            return (
-              <div className="spreadsheet-summary">
-                Fixed at <span className="spreadsheet-summary-strong">{format(row.value)}</span>
-              </div>
-            )
-          }
-
-          const min = row.min ? formatNumber(row.min) : "—"
-          const mode = row.mode ? formatNumber(row.mode) : "—"
-          const max = row.max ? formatNumber(row.max) : "—"
-          return (
-            <div className="spreadsheet-summary">
-              Range {min} → {mode} → {max}
-            </div>
-          )
-        },
+        renderEditCell: textEditor,
       },
     ]
 
@@ -213,7 +171,7 @@ export function DataGridComponent({
   const rowClass = useCallback((row: GridRow) => {
     const classes = ["spreadsheet-row"]
     if (row.type === "category") classes.push("spreadsheet-row-category")
-    if (row.isDirty) classes.push("spreadsheet-row-dirty")
+    if (row.type === "metric" && row.isDirty) classes.push("spreadsheet-row-dirty")
     return classes.join(" ")
   }, [])
 
@@ -249,20 +207,23 @@ export function DataGridComponent({
   )
 
   return (
-    <GridAdapter
-      density={density}
-      rows={rows}
-      columns={columns}
-      onRowReorder={onRowReorder}
-      onContextMenu={(event, row) => {
-        if (row.type === "metric") {
-          onContextRequest({ rowId: row.id, clientX: event.clientX, clientY: event.clientY })
-        }
-      }}
-      rowClass={rowClass}
-      onCellClick={handleCellClick}
-      onSelectedCellChange={handleCellFocus}
-    />
+    <div className="h-full min-h-0 min-w-0 flex-1">
+      <DataGrid
+        className="rdg-light rdg-spreadsheet h-full w-full"
+        style={{ height: "100%", width: "100%" }}
+        columns={columns}
+        rows={rows}
+        rowHeight={density === "compact" ? 36 : 46}
+        rowKeyGetter={(row) => row.id}
+        rowClass={(row) => rowClass?.(row) ?? ""}
+        // renderers={{
+        //   renderRow: (key, props) => <RowRenderer key={key} {...props} />,
+        // }}
+        defaultColumnOptions={{ resizable: true }}
+        onCellClick={handleCellClick}
+        onSelectedCellChange={handleCellFocus}
+      />
+    </div>
   )
 }
 

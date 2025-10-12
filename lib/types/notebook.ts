@@ -111,7 +111,7 @@ export const SimulationResultSchema = z.object({
         p90: z.number(),
         mean: z.number(),
       }),
-    }),
+    })
   ),
   categoryContributions: z.array(
     z.object({
@@ -119,14 +119,14 @@ export const SimulationResultSchema = z.object({
       categoryName: z.string(),
       contribution: z.number(),
       percentage: z.number(),
-    }),
+    })
   ),
   sensitivityAnalysis: z.array(
     z.object({
       metricId: z.string(),
       metricName: z.string(),
       impact: z.number(), // correlation coefficient
-    }),
+    })
   ),
   metadata: z.object({
     calculationTimeMs: z.number(),
@@ -169,25 +169,39 @@ export type Notebook = z.infer<typeof NotebookSchema>
 // ============================================================================
 // Grid Row Types (for react-data-grid)
 // ============================================================================
-
-export interface GridRow {
+export interface MetricRow {
   id: string
-  type: "category" | "metric"
+  type: "metric"
   name: string
-  unit?: UnitType
-  min?: number | null
-  mode?: number | null
-  max?: number | null
-  value?: number | null
-  formula?: string | null
-  categoryId?: string
-  parentId?: string
-  isExpanded?: boolean
-  isDirty?: boolean
+  unit: UnitType
+  min: number | null
+  mode: number | null
+  max: number | null
+  categoryId: string
+  isDirty: boolean
+  description?: string
+}
+
+export interface CategoryRow {
+  id: string
+  type: "category"
+  name: string
+  isExpanded: boolean
   description?: string
   level: number // for hierarchy display
   depth: number
 }
+
+export interface FormulaRow {
+  id: string
+  type: "formula"
+  name: string
+  formula: string
+  isDirty: boolean
+  description?: string
+}
+
+export type GridRow = MetricRow | CategoryRow | FormulaRow
 
 // ============================================================================
 // Helper Types
