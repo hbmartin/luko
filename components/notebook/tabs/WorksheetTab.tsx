@@ -298,10 +298,13 @@ export function WorksheetTab({ notebook, onNotebookChange, density, simulationRe
         onOpenDetails={setSelectedMetricId}
         onContextRequest={({ rowId, clientX, clientY }) => setContextMenu({ rowId, x: clientX, y: clientY })}
       />
-      <div className="w-80 shrink-0">
-        {/* TODO: move MetricDetailDrawer here */}
+      <div className="w-80 shrink-0 space-y-4">
+        <MetricDetailDrawer
+          metric={activeMetric}
+          validation={activeMetric ? validationErrors[activeMetric.id] : undefined}
+        />
         <SimulationSummaryPanel notebook={notebook} result={simulationResult ?? null} />
-        <div className="mt-4 rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface-elevated)] p-4 shadow-sm">
+        <div className="rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface-elevated)] p-4 shadow-sm">
           <div className="flex items-center justify-between">
             <span className="font-semibold text-[var(--color-text-primary)]">History</span>
             <div className="flex items-center gap-2 text-[var(--color-text-primary)]">
@@ -363,12 +366,6 @@ export function WorksheetTab({ notebook, onNotebookChange, density, simulationRe
           </button>
         </div>
       )}
-
-      <MetricDetailDrawer
-        metric={activeMetric}
-        onClose={() => setSelectedMetricId(null)}
-        validation={activeMetric ? validationErrors[activeMetric.id] : undefined}
-      />
 
       <div className="sr-only" aria-hidden>
         {Object.entries(validationErrors).map(([metricId, errors]) => (

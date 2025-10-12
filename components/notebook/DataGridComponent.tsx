@@ -1,9 +1,10 @@
 "use client"
 
-import { useCallback, useMemo } from "react"
+import { useCallback, useMemo, useRef } from "react"
 import type { GridRow, Notebook } from "@/lib/types/notebook"
 import { formatCurrency, formatNumber, notebookToGridRows } from "@/lib/utils/grid-helpers"
 import { GridAdapter, type GridAdapterColumn } from "./grid/GridAdapter"
+import type { CellMouseArgs, CellSelectArgs } from "react-data-grid"
 
 interface ValidationState {
   min?: string
@@ -124,9 +125,6 @@ export function DataGridComponent({
                 <p className="spreadsheet-metric-name">{row.name}</p>
                 {row.description ? <p className="spreadsheet-metric-description">{row.description}</p> : null}
               </div>
-              <button type="button" onClick={() => onOpenDetails(row.id)} className="spreadsheet-details-trigger">
-                Details
-              </button>
             </div>
           )
         },
@@ -201,13 +199,44 @@ export function DataGridComponent({
         },
       },
     ]
-  }, [onCategoryToggle, onMetricChange, onOpenDetails, validationErrors])
+  }, [onCategoryToggle, onMetricChange, validationErrors])
   const rowClass = useCallback((row: GridRow) => {
     const classes = ["spreadsheet-row"]
     if (row.type === "category") classes.push("spreadsheet-row-category")
     if (row.isDirty) classes.push("spreadsheet-row-dirty")
     return classes.join(" ")
   }, [])
+
+  const lastDetailsTriggerRef = useRef<{ id: string; time: number } | null>(null)
+
+  const triggerDetails = useCallback(
+    (rowId: string) => {
+      const now = Date.now()
+      const lastTrigger = lastDetailsTriggerRef.current
+      if (lastTrigger && lastTrigger.id === rowId && now - lastTrigger.time < 100) {
+        return
+      }
+      lastDetailsTriggerRef.current = { id: rowId, time: now }
+      onOpenDetails(rowId)
+    },
+    [onOpenDetails]
+  )
+
+  const handleCellClick = useCallback(
+    ({ row }: CellMouseArgs<GridRow>) => {
+      if (row.type !== "metric") return
+      triggerDetails(row.id)
+    },
+    [triggerDetails]
+  )
+
+  const handleCellFocus = useCallback(
+    ({ row }: CellSelectArgs<GridRow>) => {
+      if (!row || row.type !== "metric") return
+      triggerDetails(row.id)
+    },
+    [triggerDetails]
+  )
 
   return (
     <GridAdapter
@@ -221,6 +250,8 @@ export function DataGridComponent({
         }
       }}
       rowClass={rowClass}
+      onCellClick={handleCellClick}
+      onSelectedCellChange={handleCellFocus}
     />
   )
 }

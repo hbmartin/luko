@@ -3,7 +3,13 @@
 import { useCallback } from "react"
 import type { MouseEvent, ReactNode } from "react"
 import { DataGrid } from "react-data-grid"
-import type { ColumnOrColumnGroup, RenderCellProps, RenderRowProps } from "react-data-grid"
+import type {
+  CellMouseEventHandler,
+  CellSelectArgs,
+  ColumnOrColumnGroup,
+  RenderCellProps,
+  RenderRowProps,
+} from "react-data-grid"
 import "react-data-grid/lib/styles.css"
 
 export interface GridAdapterRow {
@@ -28,6 +34,8 @@ export interface GridAdapterProps<RowType extends GridAdapterRow> {
   rowClass?: (row: RowType) => string
   onRowReorder?: (sourceId: string, targetId: string) => void
   onContextMenu?: (event: MouseEvent, row: RowType) => void
+  onCellClick?: CellMouseEventHandler<RowType, unknown>
+  onSelectedCellChange?: (args: CellSelectArgs<RowType, unknown>) => void
 }
 
 function createColumns<RowType extends GridAdapterRow>(
@@ -104,6 +112,8 @@ export function GridAdapter<RowType extends GridAdapterRow>({
   rowClass,
   onRowReorder,
   onContextMenu,
+  onCellClick,
+  onSelectedCellChange,
 }: GridAdapterProps<RowType>) {
   const resolvedColumns = createColumns(columns)
   const rowHeight = density === "compact" ? 36 : 46
@@ -123,6 +133,8 @@ export function GridAdapter<RowType extends GridAdapterRow>({
         //   renderRow: (key, props) => <RowRenderer key={key} {...props} />,
         // }}
         defaultColumnOptions={{ resizable: true }}
+        onCellClick={onCellClick}
+        onSelectedCellChange={onSelectedCellChange}
       />
     </div>
   )
