@@ -1,8 +1,9 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { type MouseEvent as ReactMouseEvent, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   type CellMouseArgs,
+  type CellMouseEvent,
   type CellSelectArgs,
   Column,
   type GroupRow,
@@ -103,6 +104,19 @@ export function DataGridComponent({
     })
     return map
   }, [notebook.categories])
+  const handleGroupContextMenu = useCallback(
+    (categoryId: string, categoryName: string, event: ReactMouseEvent) => {
+      if (!categoryId || categoryId === "__ungrouped__") return
+      event.preventDefault()
+      setContextMenuState({
+        kind: "category",
+        categoryId,
+        categoryName,
+      })
+    },
+    []
+  )
+
   const columns = useMemo<Column<GridRow>[]>(() => {
     const numericCellClass = "spreadsheet-cell-numeric"
     const unitCellClass = "spreadsheet-cell-unit"
@@ -115,10 +129,23 @@ export function DataGridComponent({
       renderGroupCell: (props: RenderGroupCellProps<GridRow>) => {
         const rawKey = props.groupKey == null ? "" : String(props.groupKey)
         const label = categoryLabels.get(rawKey) ?? rawKey ?? "Uncategorized"
-        return renderToggleGroup({
-          ...props,
-          groupKey: label,
-        })
+        if (rawKey === "__ungrouped__" || rawKey === "") {
+          return renderToggleGroup({
+            ...props,
+            groupKey: label,
+          })
+        }
+        return (
+          <span
+            onContextMenu={(event) => handleGroupContextMenu(rawKey, label, event)}
+            style={{ display: "contents" }}
+          >
+            {renderToggleGroup({
+              ...props,
+              groupKey: label,
+            })}
+          </span>
+        )
       },
     }
 
@@ -178,7 +205,7 @@ export function DataGridComponent({
     }
 
     return [groupColumn, ...baseColumns]
-  }, [categoryLabels, onCategoryToggle, onMetricChange, validationErrors])
+  }, [categoryLabels, handleGroupContextMenu, onCategoryToggle, onMetricChange, validationErrors])
 
   const rowClass = useCallback((row: GridRow) => {
     const classes = ["spreadsheet-row"]
@@ -263,7 +290,7 @@ export function DataGridComponent({
   )
 
   const handleCellContextMenu = useCallback(
-    ({ row }: CellMouseArgs<GridRow>, event) => {
+    ({ row }: CellMouseArgs<GridRow>, event: CellMouseEvent) => {
       event.preventGridDefault?.()
       event.preventDefault()
 
