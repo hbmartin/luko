@@ -287,7 +287,7 @@ export function WorksheetTab({ notebook, onNotebookChange, density, simulationRe
   )
 
   return (
-    <div className="flex h-full gap-4 space-y-6 p-6">
+    <div className="mx-auto flex h-full min-h-0 flex-1 items-stretch gap-4 p-6">
       <DataGridComponent
         notebook={notebook}
         density={density}
@@ -324,7 +324,6 @@ export function WorksheetTab({ notebook, onNotebookChange, density, simulationRe
               </button>
             </div>
           </div>
-          <p className="mt-2">Cmd/Ctrl+Z to undo, Cmd/Ctrl+Shift+Z to redo.</p>
         </div>
       </div>
 

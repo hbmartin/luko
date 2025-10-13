@@ -174,24 +174,22 @@ export function DataGridComponent({
   )
 
   return (
-    <div className="min-h-0 min-w-0 flex-1">
-      <TreeDataGrid
-        className="rdg-light rdg-spreadsheet w-full"
-        style={{ height: "100%", width: "100%" }}
-        columns={columns}
-        rows={rows}
-        rowHeight={density === "compact" ? 36 : 46}
-        rowKeyGetter={(row) => row.id}
-        rowClass={(row) => rowClass?.(row) ?? ""}
-        defaultColumnOptions={{ resizable: false }}
-        onCellClick={handleCellClick}
-        onSelectedCellChange={handleCellFocus}
-        groupBy={["categoryId"]}
-        rowGrouper={rowGrouper}
-        expandedGroupIds={expandedGroupIds}
-        onExpandedGroupIdsChange={setExpandedGroupIds}
-      />
-    </div>
+    <TreeDataGrid
+      className="rdg-light rdg-spreadsheet"
+      columns={columns}
+      rows={rows}
+      style={{ height: "100%" }}
+      rowHeight={density === "compact" ? 36 : 46}
+      rowKeyGetter={(row) => row.id}
+      rowClass={(row) => rowClass?.(row) ?? ""}
+      defaultColumnOptions={{ resizable: false }}
+      onCellClick={handleCellClick}
+      onSelectedCellChange={handleCellFocus}
+      groupBy={["categoryId"]}
+      rowGrouper={rowGrouper}
+      expandedGroupIds={expandedGroupIds}
+      onExpandedGroupIdsChange={setExpandedGroupIds}
+    />
   )
 }
 function rowGrouper(rows: readonly GridRow[], columnKey: string) {

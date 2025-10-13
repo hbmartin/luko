@@ -1,7 +1,7 @@
 "use client"
 
-import { WorksheetTab } from "@/components/notebook/tabs/WorksheetTab"
 import { useNotebook } from "@/components/notebook/NotebookProvider"
+import { WorksheetTab } from "@/components/notebook/tabs/WorksheetTab"
 
 export default function WorksheetPage() {
   const { notebook, setNotebook, density, simulationResult } = useNotebook()
