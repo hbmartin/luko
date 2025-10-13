@@ -26,7 +26,7 @@ export function NotebookHeader({ notebookId }: NotebookHeaderProps) {
 
   const currentPage = pathname.split("/").pop() || "results"
   return (
-    <header className="from-background border-b border-[var(--color-border-soft)] bg-gradient-to-b to-(--secondary)/[10%]">
+    <header className="from-background absolute top-0 right-0 left-0 border-b border-[var(--color-border-soft)] bg-gradient-to-b to-(--secondary)/[10%]">
       <div className="bg-secondary text-secondary-foreground py-1 text-center text-sm">
         {notebook.name}
         <div className="absolute top-0 right-0 flex items-center gap-2 px-4 py-1">

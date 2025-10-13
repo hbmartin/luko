@@ -44,16 +44,15 @@ export function SimulationSummaryPanel({ notebook, result }: SimulationSummaryPa
           </button>
         </div>
       ) : (
-        <div className="space-y-[var(--space-400)]">
-          <div className="rounded-xl bg-blue-50 p-4">
-            <div className="text-xs font-semibold tracking-wide text-blue-700 uppercase">Median 3-Year NPV</div>
-            <div className="mt-1 text-2xl font-semibold text-blue-900">{formatAbbreviatedNumber(result.npv.p50)}</div>
-            <p className="mt-1 text-xs text-blue-700/70">Mean: {formatAbbreviatedNumber(result.npv.mean)}</p>
+        <div className="space-y-4">
+          <div className="bg-accent rounded-xl p-4">
+            <div className="text-primary text-xs font-semibold tracking-wide uppercase">Median 3-Year NPV</div>
+            <div className="text-primary mt-1 text-2xl font-semibold">{formatAbbreviatedNumber(result.npv.p50)}</div>
           </div>
 
-          <div className="space-y-2 text-sm">
+          <div className="space-y-2 p-4 text-sm">
             <div className="flex items-center justify-between">
-              <span className="text-[var(--color-text-muted)]">Payback Period</span>
+              <span className="text-muted-foreground">Payback Period</span>
               <span className="font-medium text-[var(--color-text-primary)]">
                 {result.paybackPeriod.p50.toFixed(1)} months
               </span>
