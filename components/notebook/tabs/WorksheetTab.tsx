@@ -63,11 +63,6 @@ export function WorksheetTab({ notebook, onNotebookChange, density, simulationRe
   const originalNotebookRef = useRef(notebook)
   const historyRef = useRef<Notebook[]>([notebook])
   const historyIndexRef = useRef(0)
-  const [contextMenu, setContextMenu] = useState<{
-    x: number
-    y: number
-    rowId: string
-  } | null>(null)
   const [selectedMetricId, setSelectedMetricId] = useState<string | null>(null)
 
   useEffect(() => {
@@ -76,12 +71,6 @@ export function WorksheetTab({ notebook, onNotebookChange, density, simulationRe
     historyRef.current = [...historyRef.current.slice(0, historyIndexRef.current + 1), notebook]
     historyIndexRef.current = historyRef.current.length - 1
   }, [notebook])
-
-  useEffect(() => {
-    const closeMenu = () => setContextMenu(null)
-    window.addEventListener("click", closeMenu)
-    return () => window.removeEventListener("click", closeMenu)
-  }, [])
 
   useEffect(() => {
     const handleKey = (event: KeyboardEvent) => {
@@ -236,51 +225,6 @@ export function WorksheetTab({ notebook, onNotebookChange, density, simulationRe
     [commitNotebook, notebook]
   )
 
-  const handleResetMetric = useCallback(
-    (metricId: string) => {
-      const originalMetric = originalNotebookRef.current.metrics.find((metric) => metric.id === metricId)
-      if (!originalMetric) return
-
-      const metrics = notebook.metrics.map((metric) => (metric.id === metricId ? originalMetric : metric))
-      const dirtyMetrics = notebook.dirtyMetrics.filter((id) => id !== metricId)
-
-      commitNotebook({
-        ...notebook,
-        metrics,
-        dirtyMetrics,
-        isDirty: dirtyMetrics.length > 0,
-      })
-    },
-    [commitNotebook, notebook]
-  )
-
-  const handleZeroMetric = useCallback(
-    (metricId: string) => {
-      const metrics = notebook.metrics.map((metric) => {
-        if (metric.id !== metricId) return metric
-        if (metric.distribution) {
-          return {
-            ...metric,
-            distribution: { min: 0, mode: 0, max: 0 },
-          }
-        }
-
-        return { ...metric, value: 0 }
-      })
-
-      const dirtySet = new Set(notebook.dirtyMetrics)
-      dirtySet.add(metricId)
-
-      commitNotebook({
-        ...notebook,
-        metrics,
-        dirtyMetrics: Array.from(dirtySet),
-        isDirty: true,
-      })
-    },
-    [commitNotebook, notebook]
-  )
-
   const activeMetric = useMemo(
     () => notebook.metrics.find((metric) => metric.id === selectedMetricId) ?? null,
     [notebook.metrics, selectedMetricId]
@@ -296,7 +240,6 @@ export function WorksheetTab({ notebook, onNotebookChange, density, simulationRe
         onCategoryToggle={handleCategoryToggle}
         onRowReorder={handleRowReorder}
         onOpenDetails={setSelectedMetricId}
-        onContextRequest={({ rowId, clientX, clientY }) => setContextMenu({ rowId, x: clientX, y: clientY })}
       />
       <div className="w-80 shrink-0 space-y-4">
         <MetricDetailPanel
@@ -326,45 +269,6 @@ export function WorksheetTab({ notebook, onNotebookChange, density, simulationRe
           </div>
         </div>
       </div>
-
-      {contextMenu && (
-        <div
-          role="menu"
-          className="fixed z-30 w-48 rounded-xl border border-[var(--color-border-soft)] bg-[var(--color-surface-elevated)] p-2 shadow-lg"
-          style={{ top: contextMenu.y, left: contextMenu.x }}
-        >
-          <button
-            type="button"
-            className="block w-full rounded-md px-3 py-2 text-left text-sm text-[var(--color-text-primary)] hover:bg-[var(--color-surface-muted)]"
-            onClick={() => {
-              setSelectedMetricId(contextMenu.rowId)
-              setContextMenu(null)
-            }}
-          >
-            View details
-          </button>
-          <button
-            type="button"
-            className="block w-full rounded-md px-3 py-2 text-left text-sm text-[var(--color-text-primary)] hover:bg-[var(--color-surface-muted)]"
-            onClick={() => {
-              handleResetMetric(contextMenu.rowId)
-              setContextMenu(null)
-            }}
-          >
-            Reset to defaults
-          </button>
-          <button
-            type="button"
-            className="block w-full rounded-md px-3 py-2 text-left text-sm text-red-500 hover:bg-red-50"
-            onClick={() => {
-              handleZeroMetric(contextMenu.rowId)
-              setContextMenu(null)
-            }}
-          >
-            Zero out metric
-          </button>
-        </div>
-      )}
 
       <div className="sr-only" aria-hidden>
         {Object.entries(validationErrors).map(([metricId, errors]) => (
