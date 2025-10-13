@@ -68,6 +68,37 @@ export const CategorySchema = z.object({
 export type Category = z.infer<typeof CategorySchema>
 
 // ============================================================================
+// Formula Types
+// ============================================================================
+
+export const FormulaTokenSchema = z.discriminatedUnion("type", [
+  z.object({
+    type: z.literal("metric"),
+    metricId: z.string(),
+  }),
+  z.object({
+    type: z.literal("operator"),
+    value: z.enum(["+", "-", "*", "/"]),
+  }),
+  z.object({
+    type: z.literal("paren"),
+    value: z.enum(["(", ")"]),
+  }),
+])
+
+export type FormulaToken = z.infer<typeof FormulaTokenSchema>
+
+export const FormulaSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  categoryId: z.string(),
+  tokens: z.array(FormulaTokenSchema),
+  updatedAt: z.string(),
+})
+
+export type Formula = z.infer<typeof FormulaSchema>
+
+// ============================================================================
 // Simulation Types
 // ============================================================================
 
@@ -157,11 +188,13 @@ export const NotebookSchema = z.object({
   description: z.string().optional(),
   categories: z.array(CategorySchema),
   metrics: z.array(MetricSchema),
+  formulas: z.array(FormulaSchema),
   lastSimulationId: z.string().nullable(),
   createdAt: z.string(),
   updatedAt: z.string(),
   isDirty: z.boolean().default(false), // has changes since last simulation
   dirtyMetrics: z.array(z.string()).default([]), // IDs of changed metrics
+  dirtyFormulas: z.array(z.string()).default([]),
 })
 
 export type Notebook = z.infer<typeof NotebookSchema>
@@ -196,7 +229,8 @@ export interface FormulaRow {
   id: string
   type: "formula"
   name: string
-  formula: string
+  tokens: FormulaToken[]
+  categoryId: string
   isDirty: boolean
   description?: string
 }
