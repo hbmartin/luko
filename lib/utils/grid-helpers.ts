@@ -1,4 +1,4 @@
-import { GridRow, Metric, Notebook } from "@/lib/types/notebook"
+import { GridRow, Metric, MetricRow, Notebook } from "@/lib/types/notebook"
 
 /**
  * Converts notebook data to flattened grid rows for react-data-grid
@@ -12,24 +12,24 @@ export function notebookToGridRows(notebook: Notebook): GridRow[] {
 
   sortedCategories.forEach((category) => {
     // Add category row
-    rows.push({
-      id: category.id,
-      type: "category",
-      name: category.name,
-      isExpanded: category.isExpanded,
-      level: 0,
-      depth: 0,
-      description: category.description,
-    })
+    // rows.push({
+    //   id: category.id,
+    //   type: "category",
+    //   name: category.name,
+    //   isExpanded: category.isExpanded,
+    //   level: 0,
+    //   depth: 0,
+    //   description: category.description,
+    // })
 
     // Add metric rows if category is expanded
-    if (category.isExpanded) {
-      const categoryMetrics = notebook.metrics.filter((m) => m.categoryId === category.id)
+    // if (category.isExpanded) {
+    const categoryMetrics = notebook.metrics.filter((m) => m.categoryId === category.id)
 
-      categoryMetrics.forEach((metric) => {
-        rows.push(metricToGridRow(metric, notebook.dirtyMetrics))
-      })
-    }
+    categoryMetrics.forEach((metric) => {
+      rows.push(metricToGridRow(metric, notebook.dirtyMetrics))
+    })
+    // }
   })
 
   return rows
@@ -38,7 +38,7 @@ export function notebookToGridRows(notebook: Notebook): GridRow[] {
 /**
  * Converts a single metric to a grid row
  */
-export function metricToGridRow(metric: Metric, dirtyMetrics: string[]): GridRow {
+export function metricToGridRow(metric: Metric, dirtyMetrics: string[]): MetricRow {
   return {
     id: metric.id,
     type: "metric",
@@ -47,14 +47,9 @@ export function metricToGridRow(metric: Metric, dirtyMetrics: string[]): GridRow
     min: metric.distribution?.min ?? null,
     mode: metric.distribution?.mode ?? null,
     max: metric.distribution?.max ?? null,
-    value: metric.value ?? null,
-    formula: metric.formula ?? null,
     categoryId: metric.categoryId,
-    parentId: metric.categoryId,
     isDirty: dirtyMetrics.includes(metric.id),
     description: metric.description,
-    level: 1,
-    depth: 1,
   }
 }
 

@@ -1,7 +1,15 @@
 "use client"
 
-import { useCallback, useMemo, useRef } from "react"
-import { type CellMouseArgs, type CellSelectArgs, Column, DataGrid, textEditor } from "react-data-grid"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import {
+  type CellMouseArgs,
+  type CellSelectArgs,
+  Column,
+  type RenderGroupCellProps,
+  renderToggleGroup,
+  textEditor,
+  TreeDataGrid,
+} from "react-data-grid"
 import type { GridRow, Notebook } from "@/lib/types/notebook"
 import { formatCurrency, formatNumber, notebookToGridRows } from "@/lib/utils/grid-helpers"
 
@@ -32,65 +40,42 @@ export function DataGridComponent({
   onOpenDetails,
   onContextRequest,
 }: DataGridComponentProps) {
+  const [expandedGroupIds, setExpandedGroupIds] = useState<ReadonlySet<unknown>>(
+    () => new Set<unknown>(notebook.categories.map((category) => category.id))
+  )
+  const previousNotebookIdRef = useRef(notebook.id)
+  useEffect(() => {
+    if (previousNotebookIdRef.current !== notebook.id) {
+      previousNotebookIdRef.current = notebook.id
+      setExpandedGroupIds(new Set<unknown>(notebook.categories.map((category) => category.id)))
+    }
+  }, [notebook.categories, notebook.id])
   const rows = useMemo(() => notebookToGridRows(notebook), [notebook])
+  const categoryLabels = useMemo(() => {
+    const map = new Map<string, string>()
+    notebook.categories.forEach((category) => {
+      map.set(category.id, category.name)
+    })
+    return map
+  }, [notebook.categories])
   const columns = useMemo<Column<GridRow>[]>(() => {
     const numericCellClass = "spreadsheet-cell-numeric"
     const unitCellClass = "spreadsheet-cell-unit"
 
-    // const renderDistributionInput = (row: GridRow, field: "min" | "max") => {
-    //   if (row.type === "category") return null
-
-    //   if (row.value !== null) {
-    //     return <span className="spreadsheet-fixed-value">{formatNumber(row.value, 2)}</span>
-    //   }
-
-    //   const error = validationErrors[row.id]?.[field]
-    //   const defaultValue = row[field] ?? ""
-
-    //   return (
-    //     <input
-    //       type="number"
-    //       key={`${row.id}-${field}-${defaultValue}`}
-    //       defaultValue={defaultValue}
-    //       onBlur={(event) => {
-    //         const nextValue = Number.parseFloat(event.currentTarget.value)
-    //         if (!Number.isNaN(nextValue)) {
-    //           onMetricChange(row.id, field, nextValue)
-    //         }
-    //       }}
-    //       data-validation={error ? "error" : undefined}
-    //       aria-invalid={Boolean(error)}
-    //       aria-describedby={error ? `${row.id}-${field}-error` : undefined}
-    //       className="spreadsheet-input"
-    //     />
-    //   )
-    // }
-
-    // const renderModeInput = (row: GridRow) => {
-    //   if (row.type === "category") return null
-
-    //   const error = validationErrors[row.id]?.mode
-    //   const isFixed = row.value !== null
-    //   const defaultValue = (isFixed ? row.value : row.mode) ?? ""
-
-    //   return (
-    //     <input
-    //       type="number"
-    //       key={`${row.id}-mode-${defaultValue}`}
-    //       defaultValue={defaultValue}
-    //       onBlur={(event) => {
-    //         const nextValue = Number.parseFloat(event.currentTarget.value)
-    //         if (!Number.isNaN(nextValue)) {
-    //           onMetricChange(row.id, isFixed ? "value" : "mode", nextValue)
-    //         }
-    //       }}
-    //       data-validation={error ? "error" : undefined}
-    //       aria-invalid={Boolean(error)}
-    //       aria-describedby={error ? `${row.id}-mode-error` : undefined}
-    //       className="spreadsheet-input"
-    //     />
-    //   )
-    // }
+    const groupColumn: Column<GridRow> = {
+      key: "categoryId",
+      name: "",
+      width: 280,
+      frozen: true,
+      renderGroupCell: (props: RenderGroupCellProps<GridRow>) => {
+        const rawKey = props.groupKey == null ? "" : String(props.groupKey)
+        const label = categoryLabels.get(rawKey) ?? rawKey ?? "Uncategorized"
+        return renderToggleGroup({
+          ...props,
+          groupKey: label,
+        })
+      },
+    }
 
     const baseColumns: Column<GridRow>[] = [
       {
@@ -100,29 +85,10 @@ export function DataGridComponent({
         frozen: true,
         cellClass: "spreadsheet-cell-name",
         renderCell: ({ row }) => {
-          if (row.type === "category") {
-            return (
-              <div className="spreadsheet-category">
-                <div className="spreadsheet-category-main">
-                  <button
-                    type="button"
-                    onClick={() => onCategoryToggle(row.id)}
-                    className="spreadsheet-category-toggle"
-                    aria-label={row.isExpanded ? "Collapse category" : "Expand category"}
-                  >
-                    {row.isExpanded ? "−" : "+"}
-                  </button>
-                  <span className="spreadsheet-category-label">{row.name}</span>
-                </div>
-              </div>
-            )
-          }
-
           return (
             <div className="spreadsheet-metric">
               <div>
                 <p className="spreadsheet-metric-name">{row.name}</p>
-                {row.description ? <p className="spreadsheet-metric-description">{row.description}</p> : null}
               </div>
             </div>
           )
@@ -166,8 +132,9 @@ export function DataGridComponent({
       return args.row.type === "category" ? baseColumns.length : undefined
     }
 
-    return baseColumns
-  }, [onCategoryToggle, onMetricChange, validationErrors])
+    return [groupColumn, ...baseColumns]
+  }, [categoryLabels, onCategoryToggle, onMetricChange, validationErrors])
+
   const rowClass = useCallback((row: GridRow) => {
     const classes = ["spreadsheet-row"]
     if (row.type === "category") classes.push("spreadsheet-row-category")
@@ -207,24 +174,36 @@ export function DataGridComponent({
   )
 
   return (
-    <div className="h-full min-h-0 min-w-0 flex-1">
-      <DataGrid
-        className="rdg-light rdg-spreadsheet h-full w-full"
+    <div className="min-h-0 min-w-0 flex-1">
+      <TreeDataGrid
+        className="rdg-light rdg-spreadsheet w-full"
         style={{ height: "100%", width: "100%" }}
         columns={columns}
         rows={rows}
         rowHeight={density === "compact" ? 36 : 46}
         rowKeyGetter={(row) => row.id}
         rowClass={(row) => rowClass?.(row) ?? ""}
-        // renderers={{
-        //   renderRow: (key, props) => <RowRenderer key={key} {...props} />,
-        // }}
-        defaultColumnOptions={{ resizable: true }}
+        defaultColumnOptions={{ resizable: false }}
         onCellClick={handleCellClick}
         onSelectedCellChange={handleCellFocus}
+        groupBy={["categoryId"]}
+        rowGrouper={rowGrouper}
+        expandedGroupIds={expandedGroupIds}
+        onExpandedGroupIdsChange={setExpandedGroupIds}
       />
     </div>
   )
+}
+function rowGrouper(rows: readonly GridRow[], columnKey: string) {
+  return rows.reduce<Record<string, GridRow[]>>((groups, row) => {
+    const rawKey = (row as Record<string, unknown>)[columnKey]
+    const key = rawKey == null ? "__ungrouped__" : String(rawKey)
+    if (!groups[key]) {
+      groups[key] = []
+    }
+    groups[key]!.push(row)
+    return groups
+  }, {})
 }
 
 export default DataGridComponent
