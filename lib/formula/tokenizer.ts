@@ -31,6 +31,9 @@ export function tokenizeFormula(input: string): Token[] {
       index += 1
       continue
     }
+    if (char === undefined) {
+      throw new Error(`Unexpected end of input at position ${index}`)
+    }
 
     if (operatorChars.has(char)) {
       tokens.push({ type: "operator", value: char, index })

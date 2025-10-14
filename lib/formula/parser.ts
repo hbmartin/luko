@@ -123,7 +123,11 @@ export function parseFormula(input: string): FormulaNode {
 
   const ast = parseExpression()
   if (position < tokens.length) {
-    throw new Error(`Unexpected token '${tokens[position].value}' at position ${tokens[position].index}`)
+    const token = tokens[position]
+    if (token === undefined) {
+      throw new Error(`Unexpected end of expression at position ${position}`)
+    }
+    throw new Error(`Unexpected token '${token.value}' at position ${token.index}`)
   }
   return ast
 }

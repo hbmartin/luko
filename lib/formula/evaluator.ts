@@ -1,12 +1,16 @@
 import type { EvaluationContext, FormulaNode } from "./types"
 
-const aggregate = (values: (number | null | undefined)[], reducer: (acc: number, value: number) => number, initial = 0) =>
+const aggregate = (
+  values: (number | null | undefined)[],
+  reducer: (acc: number, value: number) => number,
+  initial = 0
+): number =>
   values.reduce((acc, current) => {
     if (current === null || current === undefined || Number.isNaN(current)) {
       return acc
     }
-    return reducer(acc, current)
-  }, initial)
+    return reducer(acc!, current)
+  }, initial) as number
 
 export function evaluateFormula(node: FormulaNode, context: EvaluationContext): number {
   switch (node.type) {

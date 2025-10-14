@@ -24,7 +24,8 @@ interface ResultsTabProps {
   onRenameScenario: (scenarioId: string, name: string) => void
 }
 
-const palette = ["#1e40af", "#0f766e", "#9d174d", "#9333ea"]
+const primaryColor = "#1e40af"
+const palette = [primaryColor, "#0f766e", "#9d174d", "#9333ea"]
 
 export function ResultsTab({
   simulationResult,
@@ -56,13 +57,13 @@ export function ResultsTab({
     const base: NPVSeries = {
       id: activeScenario.id,
       label: activeScenario.name,
-      color: palette[0],
+      color: primaryColor,
       data: activeScenario.result.yearlyResults,
     }
     const overlays = comparisonScenarios.map((scenario, index) => ({
       id: scenario.id,
       label: scenario.name,
-      color: palette[(index + 1) % palette.length],
+      color: String(palette[(index + 1) % palette.length]),
       data: scenario.result.yearlyResults,
     }))
     return [base, ...overlays]

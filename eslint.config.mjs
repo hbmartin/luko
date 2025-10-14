@@ -1,11 +1,10 @@
-import * as fs from "fs"
-
 // https://github.com/francoismassart/eslint-plugin-tailwindcss/pull/381
 // import eslintPluginTailwindcss from "eslint-plugin-tailwindcss"
-import eslintPluginImport from "eslint-plugin-import"
 import eslintPluginNext from "@next/eslint-plugin-next"
+import eslintPluginImport from "eslint-plugin-import"
 import eslintPluginStorybook from "eslint-plugin-storybook"
 import typescriptEslint from "typescript-eslint"
+import * as fs from "fs"
 
 const eslintIgnore = [
   ".git/",
@@ -46,6 +45,9 @@ const config = typescriptEslint.config(
       "import/resolver": {
         typescript: true,
         node: true,
+      },
+      next: {
+        rootDir: "./",
       },
     },
     rules: {

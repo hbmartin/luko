@@ -6,7 +6,6 @@ import {
   type CellMouseEvent,
   type CellSelectArgs,
   Column,
-  type GroupRow,
   RenderCellProps,
   type RenderGroupCellProps,
   renderToggleGroup,
@@ -26,6 +25,19 @@ import type { CategoryRow, FormulaToken, GridRow, MetricRow, Notebook } from "@/
 import { notebookToGridRows } from "@/lib/utils/grid-helpers"
 import { FormulaRowCell } from "./FormulaRowCell"
 import { Button } from "../ui/button"
+
+// GroupRow type from react-data-grid (not exported)
+interface GroupRow<TRow> {
+  readonly childRows: readonly TRow[]
+  readonly id: string
+  readonly parentId: unknown
+  readonly groupKey: unknown
+  readonly isExpanded: boolean
+  readonly level: number
+  readonly posInSet: number
+  readonly setSize: number
+  readonly startRowIndex: number
+}
 
 interface ValidationState {
   min?: string
@@ -576,7 +588,7 @@ export function DataGridComponent({
 }
 function rowGrouper(rows: readonly GridRow[], columnKey: string) {
   return rows.reduce<Record<string, GridRow[]>>((groups, row) => {
-    const rawKey = (row as Record<string, unknown>)[columnKey]
+    const rawKey = (row as unknown as Record<string, unknown>)[columnKey]
     const key = rawKey == null ? "__ungrouped__" : String(rawKey)
     if (!groups[key]) {
       groups[key] = []
