@@ -1,4 +1,4 @@
-import { GridRow, Metric, MetricRow, Notebook } from "@/lib/types/notebook"
+import { Formula, FormulaRow, GridRow, Metric, MetricRow, Notebook } from "@/lib/types/notebook"
 
 /**
  * Converts notebook data to flattened grid rows for react-data-grid
@@ -11,25 +11,16 @@ export function notebookToGridRows(notebook: Notebook): GridRow[] {
   const sortedCategories = [...notebook.categories].sort((a, b) => a.order - b.order)
 
   sortedCategories.forEach((category) => {
-    // Add category row
-    // rows.push({
-    //   id: category.id,
-    //   type: "category",
-    //   name: category.name,
-    //   isExpanded: category.isExpanded,
-    //   level: 0,
-    //   depth: 0,
-    //   description: category.description,
-    // })
-
-    // Add metric rows if category is expanded
-    // if (category.isExpanded) {
     const categoryMetrics = notebook.metrics.filter((m) => m.categoryId === category.id)
 
     categoryMetrics.forEach((metric) => {
       rows.push(metricToGridRow(metric, notebook.dirtyMetrics))
     })
-    // }
+
+    const categoryFormulas = notebook.formulas.filter((formula) => formula.categoryId === category.id)
+    categoryFormulas.forEach((formula) => {
+      rows.push(formulaToGridRow(formula, notebook.dirtyFormulas))
+    })
   })
 
   return rows
@@ -50,6 +41,17 @@ export function metricToGridRow(metric: Metric, dirtyMetrics: string[]): MetricR
     categoryId: metric.categoryId,
     isDirty: dirtyMetrics.includes(metric.id),
     description: metric.description,
+  }
+}
+
+export function formulaToGridRow(formula: Formula, dirtyFormulas: string[]): FormulaRow {
+  return {
+    id: formula.id,
+    type: "formula",
+    name: formula.name,
+    tokens: formula.tokens,
+    categoryId: formula.categoryId,
+    isDirty: dirtyFormulas.includes(formula.id),
   }
 }
 

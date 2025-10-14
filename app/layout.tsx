@@ -1,4 +1,4 @@
-import "styles/tailwind.css"
+import "@/styles/tailwind.css"
 import "react-data-grid/lib/styles.css"
 import { Lexend } from "next/font/google"
 

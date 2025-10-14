@@ -1,4 +1,4 @@
-import { Category, Metric, Notebook, SimulationResult } from "@/lib/types/notebook"
+import { Category, Formula, Metric, Notebook, SimulationResult } from "@/lib/types/notebook"
 
 // Factory constants
 export const FACTORY_VARS = {
@@ -246,6 +246,41 @@ export const mockMetrics: Metric[] = [
   },
 ]
 
+export const mockFormulas: Formula[] = [
+  {
+    id: "formula-time-savings-total",
+    name: "Total Time Savings",
+    categoryId: "cat-time-savings",
+    tokens: [
+      {
+        type: "metric",
+        metricId: "time_savings_monetary_value",
+      },
+    ],
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: "formula-quality-savings",
+    name: "Quality Savings",
+    categoryId: "cat-quality",
+    tokens: [
+      {
+        type: "metric",
+        metricId: "bug_reduction_rate",
+      },
+      {
+        type: "operator",
+        value: "*",
+      },
+      {
+        type: "metric",
+        metricId: "external_bug_cost",
+      },
+    ],
+    updatedAt: new Date().toISOString(),
+  },
+]
+
 // ============================================================================
 // Mock Notebook
 // ============================================================================
@@ -256,11 +291,13 @@ export const mockNotebook: Notebook = {
   description: "Monte Carlo NPV analysis for AI implementation in DevOps",
   categories: mockCategories,
   metrics: mockMetrics,
+  formulas: mockFormulas,
   lastSimulationId: null,
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),
   isDirty: false,
   dirtyMetrics: [],
+  dirtyFormulas: [],
 }
 
 // ============================================================================

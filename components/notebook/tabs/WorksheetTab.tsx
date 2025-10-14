@@ -1,7 +1,9 @@
 "use client"
 
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { Metric, Notebook, SimulationResult } from "@/lib/types/notebook"
+import { parseFormula } from "@/lib/formula/parser"
+import { FormulaToken, Metric, Notebook, SimulationResult } from "@/lib/types/notebook"
+import { tokensToExpression } from "@/lib/utils/formulaTokens"
 import { DataGridComponent } from "../DataGridComponent"
 import { MetricDetailPanel } from "../MetricDetailPanel"
 import { SimulationSummaryPanel } from "../SimulationSummaryPanel"
@@ -26,6 +28,13 @@ const reorder = <T,>(items: T[], sourceIndex: number, targetIndex: number): T[] 
   const [removed] = next.splice(sourceIndex, 1)
   next.splice(targetIndex, 0, removed)
   return next
+}
+
+const createFormulaId = () => {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID()
+  }
+  return `formula-${Math.random().toString(36).slice(2, 10)}`
 }
 
 const validateMetric = (metric: Metric): ValidationState | undefined => {
@@ -101,6 +110,40 @@ export function WorksheetTab({ notebook, onNotebookChange, density, simulationRe
     return errors
   }, [notebook.metrics])
 
+  const formulaValidation = useMemo(() => {
+    const errors: Record<string, string | null> = {}
+    const metricsById = new Map(notebook.metrics.map((metric) => [metric.id, metric]))
+
+    notebook.formulas.forEach((formula) => {
+      if (!formula.tokens.length) {
+        errors[formula.id] = "Start by selecting a metric"
+        return
+      }
+
+      const missingMetric = formula.tokens.find((token) => token.type === "metric" && !metricsById.has(token.metricId))
+
+      if (missingMetric) {
+        errors[formula.id] = "Referenced metric no longer exists"
+        return
+      }
+
+      const expression = tokensToExpression(formula.tokens)
+      if (!expression) {
+        errors[formula.id] = "Formula is incomplete"
+        return
+      }
+
+      try {
+        parseFormula(expression)
+        errors[formula.id] = null
+      } catch (error) {
+        errors[formula.id] = error instanceof Error ? error.message : "Formula is invalid"
+      }
+    })
+
+    return errors
+  }, [notebook.formulas, notebook.metrics])
+
   const commitNotebook = useCallback(
     (nextNotebook: Notebook) => {
       const timestamped = {
@@ -152,6 +195,74 @@ export function WorksheetTab({ notebook, onNotebookChange, density, simulationRe
         ...notebook,
         metrics,
         dirtyMetrics: Array.from(dirtySet),
+        isDirty: true,
+      })
+    },
+    [commitNotebook, notebook]
+  )
+
+  const handleAddFormula = useCallback(
+    (categoryId: string): string => {
+      const newId = createFormulaId()
+      const formulaCount = notebook.formulas.filter((formula) => formula.categoryId === categoryId).length
+      const newFormula = {
+        id: newId,
+        name: `Formula ${formulaCount + 1}`,
+        categoryId,
+        tokens: [] as FormulaToken[],
+        updatedAt: new Date().toISOString(),
+      }
+
+      const dirtySet = new Set(notebook.dirtyFormulas)
+      dirtySet.add(newId)
+
+      commitNotebook({
+        ...notebook,
+        formulas: [...notebook.formulas, newFormula],
+        dirtyFormulas: Array.from(dirtySet),
+        isDirty: true,
+      })
+
+      return newId
+    },
+    [commitNotebook, notebook]
+  )
+
+  const handleDeleteFormula = useCallback(
+    (formulaId: string) => {
+      const formulas = notebook.formulas.filter((formula) => formula.id !== formulaId)
+      const dirtySet = new Set(notebook.dirtyFormulas)
+      dirtySet.delete(formulaId)
+
+      commitNotebook({
+        ...notebook,
+        formulas,
+        dirtyFormulas: Array.from(dirtySet),
+        isDirty: true,
+      })
+    },
+    [commitNotebook, notebook]
+  )
+
+  const handleFormulaChange = useCallback(
+    (formulaId: string, tokens: FormulaToken[]) => {
+      const formulas = notebook.formulas.map((formula) =>
+        formula.id === formulaId
+          ? {
+              ...formula,
+              tokens,
+              updatedAt: new Date().toISOString(),
+            }
+          : formula
+      )
+
+      const dirtySet = new Set(notebook.dirtyFormulas)
+      dirtySet.add(formulaId)
+
+      commitNotebook({
+        ...notebook,
+        formulas,
+        dirtyFormulas: Array.from(dirtySet),
         isDirty: true,
       })
     },
@@ -240,6 +351,10 @@ export function WorksheetTab({ notebook, onNotebookChange, density, simulationRe
         onCategoryToggle={handleCategoryToggle}
         onRowReorder={handleRowReorder}
         onOpenDetails={setSelectedMetricId}
+        onFormulaChange={handleFormulaChange}
+        formulaValidation={formulaValidation}
+        onAddFormula={handleAddFormula}
+        onDeleteFormula={handleDeleteFormula}
       />
       <div className="w-80 shrink-0 space-y-4">
         <MetricDetailPanel

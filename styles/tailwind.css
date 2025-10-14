@@ -141,6 +141,10 @@ div[role="columnheader"][aria-selected="true"] {
   color: var(--color-text-primary);
 }
 
+.rdg.rdg-spreadsheet .spreadsheet-row-highlight .rdg-cell {
+  background-color: color-mix(in oklch, var(--color-primary) 18%, transparent);
+}
+
 .rdg.rdg-spreadsheet .spreadsheet-row-dirty .spreadsheet-metric-name {
   font-weight: 600;
   color: color-mix(in oklch, var(--color-primary) 65%, var(--color-text-primary) 35%);
@@ -164,6 +168,122 @@ div[role="columnheader"][aria-selected="true"] {
     background-color 120ms ease,
     color 120ms ease;
 } */
+
+.formula-row-cell {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.75rem;
+  border: 1px dashed transparent;
+  background: color-mix(in oklch, var(--color-surface-muted) 70%, transparent);
+  cursor: text;
+}
+
+.formula-row-cell-active {
+  border-color: color-mix(in oklch, var(--color-primary) 55%, transparent);
+  background: color-mix(in oklch, var(--color-primary) 8%, var(--color-surface-muted));
+}
+
+.formula-row-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-text-muted);
+}
+
+.formula-row-editor {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.formula-row-tokens {
+  flex: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  align-items: center;
+  min-height: 1.75rem;
+}
+
+.formula-token {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.55rem;
+  border-radius: 999px;
+  border: none;
+  font-size: 0.75rem;
+  line-height: 1;
+  background: var(--color-surface-muted);
+  color: var(--color-text-primary);
+  cursor: pointer;
+  transition:
+    transform 120ms ease,
+    box-shadow 120ms ease;
+}
+
+.formula-token:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px 0 color-mix(in oklch, var(--color-primary) 15%, transparent);
+}
+
+.formula-token-metric {
+  color: #0f172a;
+}
+
+.formula-token-operator {
+  background: color-mix(in oklch, var(--color-text-muted) 10%, transparent);
+  color: var(--color-text-primary);
+}
+
+.formula-token-remove {
+  font-weight: 600;
+  color: color-mix(in oklch, var(--color-text-primary) 65%, var(--color-text-muted));
+}
+
+.formula-row-input {
+  flex: 1;
+  min-width: 6rem;
+  border: none;
+  background: transparent;
+  padding: 0.2rem 0.25rem;
+  font-size: 0.8125rem;
+  color: var(--color-text-primary);
+}
+
+.formula-row-input:focus {
+  outline: none;
+}
+
+.formula-row-input::placeholder {
+  color: var(--color-text-muted);
+}
+
+.formula-row-submit {
+  display: grid;
+  place-items: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 0.5rem;
+  border: none;
+  background: color-mix(in oklch, var(--color-border-soft) 40%, transparent);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: background-color 120ms ease;
+}
+
+.formula-row-submit:hover {
+  background: color-mix(in oklch, var(--color-primary) 20%, var(--color-border-soft) 60%);
+}
+
+.formula-row-error {
+  font-size: 0.75rem;
+  color: var(--color-destructive);
+}
 
 @layer base {
   :root {
@@ -340,9 +460,13 @@ div[role="columnheader"][aria-selected="true"] {
     color: var(--primary-foreground);
   }
 
+  :focus {
+    outline: none;
+  }
+
   :focus-visible {
     outline: none;
-    box-shadow: 0 0 0 3px var(--ring);
+    box-shadow: none;
   }
 
   :focus-visible[data-focus="strong"] {

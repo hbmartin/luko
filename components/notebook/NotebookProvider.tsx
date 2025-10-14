@@ -89,6 +89,7 @@ export function NotebookProvider({
       ...prev,
       isDirty: false,
       dirtyMetrics: [],
+      dirtyFormulas: [],
       lastSimulationId: scenarioId,
     }))
 
