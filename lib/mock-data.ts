@@ -1,4 +1,4 @@
-import { Category, Formula, Metric, Notebook, SimulationResult } from "@/lib/types/notebook"
+import { Category, Formula, FormulaToken, Metric, Notebook, SimulationResult } from "@/lib/types/notebook"
 
 // Factory constants
 export const FACTORY_VARS = {
@@ -246,37 +246,216 @@ export const mockMetrics: Metric[] = [
   },
 ]
 
+const metricToken = (metricId: string): FormulaToken => ({ type: "metric", metricId })
+const operatorToken = (value: "+" | "-" | "*" | "/"): FormulaToken => ({ type: "operator", value })
+const parenToken = (value: "(" | ")"): FormulaToken => ({ type: "paren", value })
+const wrapTokens = (tokens: FormulaToken[]): FormulaToken[] => [parenToken("("), ...tokens, parenToken(")")]
+
+const timeSavingsExpression: FormulaToken[] = [metricToken("time_savings_monetary_value")]
+
+const qualitySavingsExpression: FormulaToken[] = [
+  metricToken("external_bug_cost"),
+  operatorToken("*"),
+  metricToken("bug_reduction_rate"),
+  operatorToken("+"),
+  metricToken("avg_yearly_cost_per_employee"),
+  operatorToken("*"),
+  metricToken("number_of_employees"),
+  operatorToken("*"),
+  metricToken("bug_time_rate"),
+  operatorToken("*"),
+  metricToken("bug_reduction_rate"),
+]
+
+const revenueImpactExpression: FormulaToken[] = [
+  metricToken("feature_delivery_rate"),
+  operatorToken("*"),
+  metricToken("new_customers_per_year"),
+  operatorToken("*"),
+  metricToken("yearly_customer_value"),
+  operatorToken("*"),
+  metricToken("feature_attribution_factor"),
+]
+
+const retentionSavingsExpression: FormulaToken[] = [
+  metricToken("retention_improvement_rate"),
+  operatorToken("*"),
+  metricToken("current_yearly_turnover_rate"),
+  operatorToken("*"),
+  metricToken("number_of_employees"),
+  operatorToken("*"),
+  metricToken("replacement_cost_per_employee"),
+]
+
+const totalBenefitsExpression: FormulaToken[] = [
+  ...wrapTokens(timeSavingsExpression),
+  operatorToken("+"),
+  ...wrapTokens(qualitySavingsExpression),
+  operatorToken("+"),
+  ...wrapTokens(revenueImpactExpression),
+  operatorToken("+"),
+  ...wrapTokens(retentionSavingsExpression),
+]
+
+const ongoingCostsExpression: FormulaToken[] = [
+  metricToken("yearly_tool_cost"),
+  operatorToken("+"),
+  metricToken("yearly_monitoring_support_cost"),
+  operatorToken("+"),
+  metricToken("yearly_ai_staff_cost"),
+]
+
+const yearOneNetCashFlowExpression: FormulaToken[] = [
+  ...wrapTokens(totalBenefitsExpression),
+  operatorToken("-"),
+  metricToken("first_year_change_management_cost"),
+  operatorToken("-"),
+  metricToken("yearly_tool_cost"),
+  operatorToken("-"),
+  metricToken("yearly_monitoring_support_cost"),
+  operatorToken("-"),
+  metricToken("yearly_ai_staff_cost"),
+]
+
+const yearTwoNetCashFlowExpression: FormulaToken[] = [
+  ...wrapTokens(totalBenefitsExpression),
+  operatorToken("-"),
+  metricToken("yearly_tool_cost"),
+  operatorToken("-"),
+  metricToken("yearly_monitoring_support_cost"),
+  operatorToken("-"),
+  metricToken("yearly_ai_staff_cost"),
+]
+
+const yearThreeNetCashFlowExpression: FormulaToken[] = [...yearTwoNetCashFlowExpression]
+
+const unityExpression: FormulaToken[] = [
+  metricToken("avg_yearly_cost_per_employee"),
+  operatorToken("/"),
+  metricToken("avg_yearly_cost_per_employee"),
+]
+
+const onePlusDiscountExpression: FormulaToken[] = [
+  parenToken("("),
+  ...unityExpression,
+  operatorToken("+"),
+  metricToken("discount_rate"),
+  parenToken(")"),
+]
+
+const discountFactorSquaredExpression: FormulaToken[] = [
+  parenToken("("),
+  ...onePlusDiscountExpression,
+  operatorToken("*"),
+  ...onePlusDiscountExpression,
+  parenToken(")"),
+]
+
+const discountFactorCubedExpression: FormulaToken[] = [
+  parenToken("("),
+  ...onePlusDiscountExpression,
+  operatorToken("*"),
+  ...onePlusDiscountExpression,
+  operatorToken("*"),
+  ...onePlusDiscountExpression,
+  parenToken(")"),
+]
+
+const npvTermOneExpression: FormulaToken[] = [
+  ...wrapTokens(yearOneNetCashFlowExpression),
+  operatorToken("/"),
+  ...onePlusDiscountExpression,
+]
+
+const npvTermTwoExpression: FormulaToken[] = [
+  ...wrapTokens(yearTwoNetCashFlowExpression),
+  operatorToken("/"),
+  ...discountFactorSquaredExpression,
+]
+
+const npvTermThreeExpression: FormulaToken[] = [
+  ...wrapTokens(yearThreeNetCashFlowExpression),
+  operatorToken("/"),
+  ...discountFactorCubedExpression,
+]
+
+const npvExpression: FormulaToken[] = [
+  ...npvTermOneExpression,
+  operatorToken("+"),
+  ...npvTermTwoExpression,
+  operatorToken("+"),
+  ...npvTermThreeExpression,
+]
+
 export const mockFormulas: Formula[] = [
   {
     id: "formula-time-savings-total",
-    name: "Total Time Savings",
+    name: "Annual Time Savings",
     categoryId: "cat-time-savings",
-    tokens: [
-      {
-        type: "metric",
-        metricId: "time_savings_monetary_value",
-      },
-    ],
+    tokens: timeSavingsExpression,
     updatedAt: new Date().toISOString(),
   },
   {
     id: "formula-quality-savings",
-    name: "Quality Savings",
+    name: "Annual Quality Savings",
     categoryId: "cat-quality",
-    tokens: [
-      {
-        type: "metric",
-        metricId: "bug_reduction_rate",
-      },
-      {
-        type: "operator",
-        value: "*",
-      },
-      {
-        type: "metric",
-        metricId: "external_bug_cost",
-      },
-    ],
+    tokens: qualitySavingsExpression,
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: "formula-product-revenue-impact",
+    name: "Annual Revenue Impact",
+    categoryId: "cat-product-delivery",
+    tokens: revenueImpactExpression,
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: "formula-retention-savings",
+    name: "Annual Retention Savings",
+    categoryId: "cat-retention",
+    tokens: retentionSavingsExpression,
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: "formula-total-annual-benefits",
+    name: "Total Annual Benefits",
+    categoryId: "cat-facts",
+    tokens: totalBenefitsExpression,
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: "formula-ongoing-costs",
+    name: "Ongoing Annual Costs",
+    categoryId: "cat-costs",
+    tokens: ongoingCostsExpression,
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: "formula-year-1-net",
+    name: "Year 1 Net Cash Flow",
+    categoryId: "cat-facts",
+    tokens: yearOneNetCashFlowExpression,
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: "formula-year-2-net",
+    name: "Year 2 Net Cash Flow",
+    categoryId: "cat-facts",
+    tokens: yearTwoNetCashFlowExpression,
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: "formula-year-3-net",
+    name: "Year 3 Net Cash Flow",
+    categoryId: "cat-facts",
+    tokens: yearThreeNetCashFlowExpression,
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: "formula-npv-3-year",
+    name: "NPV (3 Years)",
+    categoryId: "cat-facts",
+    tokens: npvExpression,
     updatedAt: new Date().toISOString(),
   },
 ]

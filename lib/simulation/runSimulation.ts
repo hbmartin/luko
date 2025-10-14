@@ -54,9 +54,9 @@ const quantile = (values: number[], q: number): number => {
   const index = (sorted.length - 1) * q
   const lower = Math.floor(index)
   const upper = Math.ceil(index)
-  if (lower === upper) return sorted[lower]
+  if (lower === upper) return sorted[lower]!
   const weight = index - lower
-  return sorted[lower] * (1 - weight) + sorted[upper] * weight
+  return sorted[lower]! * (1 - weight) + sorted[upper]! * weight
 }
 
 const mean = (values: number[]) => (values.length ? values.reduce((acc, value) => acc + value, 0) / values.length : 0)
@@ -79,8 +79,8 @@ const correlation = (x: number[], y: number[]) => {
   let denomY = 0
 
   for (let i = 0; i < x.length; i += 1) {
-    const dx = x[i] - meanX
-    const dy = y[i] - meanY
+    const dx = x[i]! - meanX
+    const dy = y[i]! - meanY
     numerator += dx * dy
     denomX += dx * dx
     denomY += dy * dy
@@ -97,7 +97,7 @@ interface MetricSampleTrack {
 
 export async function runSimulation(
   notebook: Notebook,
-  iterations: number = DEFAULT_ITERATIONS,
+  iterations: number = DEFAULT_ITERATIONS
 ): Promise<SimulationResult> {
   const registry = compileMetricFormulas(notebook.metrics)
   const metricSamples: Record<string, MetricSampleTrack> = {}
@@ -121,7 +121,7 @@ export async function runSimulation(
       if (!metricSamples[metric.id]) {
         metricSamples[metric.id] = { metric, values: [] }
       }
-      metricSamples[metric.id].values.push(value)
+      metricSamples[metric.id]!.values.push(value)
     })
 
     const evaluatedValues = evaluateFormulas(registry, sampledValues)
@@ -137,7 +137,7 @@ export async function runSimulation(
         return acc + value
       }, 0)
       if (!categorySamples[category.id]) categorySamples[category.id] = []
-      categorySamples[category.id].push(contribution)
+      categorySamples[category.id]!.push(contribution)
 
       if (category.type === "benefit") benefitsTotals.push(contribution)
       if (category.type === "cost") costsTotals.push(contribution)
@@ -151,14 +151,17 @@ export async function runSimulation(
 
     const yearlyBenefits = growthMultiplier.map((multiplier) => totalBenefits * multiplier)
     const yearlyCosts = efficiencyMultiplier.map((multiplier) => totalCosts * multiplier)
-    const yearlyNet = yearlyBenefits.map((benefit, index) => benefit - yearlyCosts[index])
+    const yearlyNet = yearlyBenefits.map((benefit, index) => benefit - yearlyCosts[index]!)
 
-    yearlyBenefits.forEach((value, index) => yearlyBenefitsSamples[index].push(value))
-    yearlyCosts.forEach((value, index) => yearlyCostsSamples[index].push(value))
-    yearlyNet.forEach((value, index) => yearlyNetSamples[index].push(value))
+    yearlyBenefits.forEach((value, index) => yearlyBenefitsSamples[index]!.push(value))
+    yearlyCosts.forEach((value, index) => yearlyCostsSamples[index]!.push(value))
+    yearlyNet.forEach((value, index) => yearlyNetSamples[index]!.push(value))
 
     const discountRate = evaluatedValues.discount_rate ?? sampledValues.discount_rate ?? 0.25
-    const npvValue = yearlyNet.reduce((acc, cashFlow, index) => acc + cashFlow / Math.pow(1 + discountRate, index + 1), 0)
+    const npvValue = yearlyNet.reduce(
+      (acc, cashFlow, index) => acc + cashFlow / Math.pow(1 + discountRate, index + 1),
+      0
+    )
     npvSamples.push(npvValue)
 
     paybackSamples.push(estimatePaybackMonths(yearlyBenefits, yearlyCosts))
@@ -188,8 +191,8 @@ export async function runSimulation(
 
   const yearlyResults = yearlyNetSamples.map((netSamples, index) => ({
     year: index + 1,
-    benefits: createStats(yearlyBenefitsSamples[index]),
-    costs: createStats(yearlyCostsSamples[index]),
+    benefits: createStats(yearlyBenefitsSamples[index]!),
+    costs: createStats(yearlyCostsSamples[index]!),
     net: createStats(netSamples),
   }))
 
@@ -210,11 +213,11 @@ export async function runSimulation(
 }
 
 const estimatePaybackMonths = (benefits: number[], costs: number[]): number => {
-  let cumulative = -costs[0]
+  let cumulative = -costs[0]!
   let month = 0
   for (let year = 0; year < 3; year += 1) {
-    const monthlyBenefit = benefits[year] / 12
-    const monthlyCost = costs[year] / 12
+    const monthlyBenefit = benefits[year]! / 12
+    const monthlyCost = costs[year]! / 12
     for (let m = 0; m < 12; m += 1) {
       month += 1
       cumulative += monthlyBenefit - monthlyCost

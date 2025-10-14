@@ -1,7 +1,7 @@
 "use client"
 
 import betaPDF from "@stdlib/stats-base-dists-beta-pdf"
-import { useId, useMemo } from "react"
+import { ComponentProps, useId, useMemo } from "react"
 import { CartesianGrid, Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
 
 import { Distribution, Metric } from "@/lib/types/notebook"
@@ -46,12 +46,20 @@ export const generatePertPdfData = (distribution: Distribution, gamma = DEFAULT_
   return data
 }
 
+type ReferenceLineLabelRenderer = Extract<
+  NonNullable<ComponentProps<typeof ReferenceLine>["label"]>,
+  (...args: any[]) => any
+>
+type ReferenceLineLabelProps = Parameters<ReferenceLineLabelRenderer>[0]
+
 const createReferenceLineLabel =
-  (label: string, align: "left" | "center" | "right") =>
-  ({ viewBox }: any) => {
-    if (!viewBox) return null
+  (label: string, align: "left" | "center" | "right"): ReferenceLineLabelRenderer =>
+  ({ viewBox }: ReferenceLineLabelProps) => {
+    if (!viewBox || typeof viewBox.x !== "number" || typeof viewBox.y !== "number") {
+      return <></>
+    }
+
     const { x, y } = viewBox
-    if (x === undefined || y === undefined) return null
 
     const textAnchor = align === "left" ? "start" : align === "right" ? "end" : "middle"
     const xOffset = align === "left" ? 8 : align === "right" ? -8 : 0

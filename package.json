@@ -6,8 +6,8 @@
     "dev": "cross-env FORCE_COLOR=1 next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
-    "lint:fix": "next lint --fix",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
     "prettier": "prettier --check \"**/*.{js,jsx,ts,tsx}\"",
     "prettier:fix": "prettier --write \"**/*.{js,jsx,ts,tsx}\"",
     "analyze": "cross-env ANALYZE=true pnpm run build",
@@ -116,6 +116,7 @@
     "typed-query-selector": "^2.12.0",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.46.1",
+    "vite": "^7.1.10",
     "vite-tsconfig-paths": "^5.1.4",
     "vitest": "^3.2.4",
     "webpack": "^5.102.1"

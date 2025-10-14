@@ -90,14 +90,7 @@ export function WaterfallChart({ data }: WaterfallChartProps) {
           const y = padding.top + chartHeight - t * chartHeight
           return (
             <g key={t}>
-              <line
-                x1={padding.left}
-                y1={y}
-                x2={width - padding.right}
-                y2={y}
-                stroke="#f3f4f6"
-                strokeWidth="1"
-              />
+              <line x1={padding.left} y1={y} x2={width - padding.right} y2={y} stroke="#f3f4f6" strokeWidth="1" />
               <text
                 x={padding.left - 10}
                 y={y}
@@ -122,11 +115,7 @@ export function WaterfallChart({ data }: WaterfallChartProps) {
             const barY = Math.min(y1, y2)
 
             const isTotal = item.categoryId === "total"
-            const color = isTotal
-              ? "#1e40af"
-              : item.isPositive
-                ? "#10b981"
-                : "#ef4444"
+            const color = isTotal ? "#1e40af" : item.isPositive ? "#10b981" : "#ef4444"
 
             return (
               <g key={i}>
@@ -134,7 +123,7 @@ export function WaterfallChart({ data }: WaterfallChartProps) {
                 {i > 0 && !isTotal && (
                   <line
                     x1={xScale(i - 1) + barW / 2}
-                    y1={yScale(waterfallData[i - 1].end)}
+                    y1={yScale(waterfallData[i - 1]!.end)}
                     x2={x - barW / 2}
                     y2={yScale(item.start)}
                     stroke="#9ca3af"
@@ -144,23 +133,10 @@ export function WaterfallChart({ data }: WaterfallChartProps) {
                 )}
 
                 {/* Bar */}
-                <rect
-                  x={x - barW / 2}
-                  y={barY}
-                  width={barW}
-                  height={barHeight}
-                  fill={color}
-                  opacity="0.8"
-                  rx="2"
-                />
+                <rect x={x - barW / 2} y={barY} width={barW} height={barHeight} fill={color} opacity="0.8" rx="2" />
 
                 {/* Value label */}
-                <text
-                  x={x}
-                  y={barY - 5}
-                  textAnchor="middle"
-                  className="fill-gray-700 text-xs font-medium"
-                >
+                <text x={x} y={barY - 5} textAnchor="middle" className="fill-gray-700 text-xs font-medium">
                   {formatAbbreviatedNumber(item.contribution)}
                 </text>
 
@@ -172,9 +148,7 @@ export function WaterfallChart({ data }: WaterfallChartProps) {
                   transform={`rotate(-45, ${x}, ${chartHeight + 10})`}
                   className="fill-gray-600 text-xs"
                 >
-                  {item.categoryName.length > 25
-                    ? item.categoryName.substring(0, 25) + "..."
-                    : item.categoryName}
+                  {item.categoryName.length > 25 ? item.categoryName.substring(0, 25) + "..." : item.categoryName}
                 </text>
               </g>
             )

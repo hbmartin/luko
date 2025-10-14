@@ -1,8 +1,8 @@
 "use client"
 
-import { createContext, useContext, useState, useEffect } from "react"
-import { Notebook, SimulationResult } from "@/lib/types/notebook"
+import { createContext, useContext, useEffect, useState } from "react"
 import { runSimulation } from "@/lib/simulation/runSimulation"
+import { Notebook, SimulationResult } from "@/lib/types/notebook"
 
 interface Scenario {
   id: string
@@ -32,7 +32,7 @@ const NotebookContext = createContext<NotebookContextType | undefined>(undefined
 
 export function NotebookProvider({
   children,
-  notebook: initialNotebook
+  notebook: initialNotebook,
 }: {
   children: React.ReactNode
   notebook: Notebook
@@ -47,11 +47,13 @@ export function NotebookProvider({
 
   const handleRenameScenario = (scenarioId: string, name: string) => {
     setScenarios((prev) =>
-      prev.map((scenario) =>
-        scenario.id === scenarioId ? { ...scenario, name: name || scenario.name } : scenario
-      )
+      prev.map((scenario) => (scenario.id === scenarioId ? { ...scenario, name: name || scenario.name } : scenario))
     )
   }
+
+  useEffect(() => {
+    document.title = `Luko - ${notebook.name}`
+  }, [notebook.name])
 
   useEffect(() => {
     if (typeof document === "undefined") return

@@ -172,7 +172,7 @@ export const SimulationRunSchema = z.object({
   id: z.string(),
   notebookId: z.string(),
   timestamp: z.string(),
-  inputSnapshot: z.record(z.any()), // snapshot of all metric values at run time
+  // inputSnapshot: z.record(z.any()), // snapshot of all metric values at run time
   results: SimulationResultSchema,
 })
 

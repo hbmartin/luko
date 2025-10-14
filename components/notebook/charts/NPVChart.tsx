@@ -27,11 +27,10 @@ interface NPVChartProps {
 }
 
 export function NPVChart({ series }: NPVChartProps) {
-  if (!series.length) {
+  const primary = series[0]
+  if (!primary) {
     return null
   }
-
-  const primary = series[0]
   const data = primary.data
   const width = 600
   const height = 300
@@ -67,10 +66,7 @@ export function NPVChart({ series }: NPVChartProps) {
   const p90Path = createPath((d) => d.net.p90)
 
   // Create confidence interval areas
-  const createArea = (
-    getUpper: (d: YearlyResult) => number,
-    getLower: (d: YearlyResult) => number,
-  ) => {
+  const createArea = (getUpper: (d: YearlyResult) => number, getLower: (d: YearlyResult) => number) => {
     const upperPath = data.map((d, i) => `${xScale(i + 1)},${yScale(getUpper(d))}`).join(" ")
     const lowerPath = data
       .map((d, i) => `${xScale(i + 1)},${yScale(getLower(d))}`)
@@ -81,11 +77,11 @@ export function NPVChart({ series }: NPVChartProps) {
 
   const area5090 = createArea(
     (d) => d.net.p90,
-    (d) => d.net.p10,
+    (d) => d.net.p10
   )
   const area2575 = createArea(
     (d) => d.net.p75,
-    (d) => d.net.p25,
+    (d) => d.net.p25
   )
 
   // Y-axis ticks
@@ -125,14 +121,7 @@ export function NPVChart({ series }: NPVChartProps) {
           const y = padding.top + yScale(value)
           return (
             <g key={i}>
-              <line
-                x1={padding.left}
-                y1={y}
-                x2={width - padding.right}
-                y2={y}
-                stroke="#f3f4f6"
-                strokeWidth="1"
-              />
+              <line x1={padding.left} y1={y} x2={width - padding.right} y2={y} stroke="#f3f4f6" strokeWidth="1" />
               <text
                 x={padding.left - 10}
                 y={y}
@@ -150,13 +139,7 @@ export function NPVChart({ series }: NPVChartProps) {
         {data.map((d, i) => {
           const x = padding.left + xScale(i + 1)
           return (
-            <text
-              key={i}
-              x={x}
-              y={height - padding.bottom + 20}
-              textAnchor="middle"
-              className="fill-gray-600 text-xs"
-            >
+            <text key={i} x={x} y={height - padding.bottom + 20} textAnchor="middle" className="fill-gray-600 text-xs">
               Year {d.year}
             </text>
           )
@@ -188,7 +171,9 @@ export function NPVChart({ series }: NPVChartProps) {
                 return index === 0 ? `M ${x},${y}` : `L ${x},${y}`
               })
               .join(" ")
-            return <path key={entry.id} d={path} stroke={entry.color} strokeWidth="2" strokeDasharray="6 4" fill="none" />
+            return (
+              <path key={entry.id} d={path} stroke={entry.color} strokeWidth="2" strokeDasharray="6 4" fill="none" />
+            )
           })}
 
           {/* Data points for primary */}
@@ -197,15 +182,7 @@ export function NPVChart({ series }: NPVChartProps) {
             const y = yScale(d.net.p50)
             const isActive = hoveredIndex === i
             return (
-              <circle
-                key={i}
-                cx={x}
-                cy={y}
-                r={isActive ? 6 : 4}
-                fill={primary.color}
-                stroke="white"
-                strokeWidth="2"
-              />
+              <circle key={i} cx={x} cy={y} r={isActive ? 6 : 4} fill={primary.color} stroke="white" strokeWidth="2" />
             )
           })}
 
@@ -250,10 +227,13 @@ export function NPVChart({ series }: NPVChartProps) {
       </div>
 
       {hoveredPoint && (
-        <div className="absolute right-4 top-4 rounded-xl border border-[var(--color-border-soft)] bg-white/90 p-3 text-xs shadow-md">
+        <div className="absolute top-4 right-4 rounded-xl border border-[var(--color-border-soft)] bg-white/90 p-3 text-xs shadow-md">
           <div className="font-semibold text-[var(--color-text-primary)]">Year {hoveredPoint.year}</div>
           <div className="mt-1 text-[var(--color-text-muted)]">
-            Median: <span className="font-semibold text-[var(--color-text-primary)]">{formatAbbreviatedNumber(hoveredPoint.net.p50)}</span>
+            Median:{" "}
+            <span className="font-semibold text-[var(--color-text-primary)]">
+              {formatAbbreviatedNumber(hoveredPoint.net.p50)}
+            </span>
           </div>
           <div className="text-[var(--color-text-muted)]">
             p10 / p90: {formatAbbreviatedNumber(hoveredPoint.net.p10)} – {formatAbbreviatedNumber(hoveredPoint.net.p90)}

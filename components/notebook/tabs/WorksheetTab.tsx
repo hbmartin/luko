@@ -26,7 +26,9 @@ const reorder = <T,>(items: T[], sourceIndex: number, targetIndex: number): T[] 
   if (sourceIndex === targetIndex) return items
   const next = [...items]
   const [removed] = next.splice(sourceIndex, 1)
-  next.splice(targetIndex, 0, removed)
+  if (removed !== undefined) {
+    next.splice(targetIndex, 0, removed)
+  }
   return next
 }
 
@@ -160,13 +162,13 @@ export function WorksheetTab({ notebook, onNotebookChange, density, simulationRe
   const undo = useCallback(() => {
     if (historyIndexRef.current === 0) return
     historyIndexRef.current -= 1
-    onNotebookChange(historyRef.current[historyIndexRef.current])
+    onNotebookChange(historyRef.current[historyIndexRef.current]!)
   }, [onNotebookChange])
 
   const redo = useCallback(() => {
     if (historyIndexRef.current >= historyRef.current.length - 1) return
     historyIndexRef.current += 1
-    onNotebookChange(historyRef.current[historyIndexRef.current])
+    onNotebookChange(historyRef.current[historyIndexRef.current]!)
   }, [onNotebookChange])
 
   const handleMetricChange = useCallback(
@@ -308,6 +310,7 @@ export function WorksheetTab({ notebook, onNotebookChange, density, simulationRe
 
       if (sourceMetricIndex !== -1 && targetMetricIndex !== -1) {
         const sourceMetric = notebook.metrics[sourceMetricIndex]
+        if (sourceMetric === undefined) return
         const targetMetric = notebook.metrics[targetMetricIndex]
         if (sourceMetric?.categoryId !== targetMetric?.categoryId) return
 
@@ -362,7 +365,7 @@ export function WorksheetTab({ notebook, onNotebookChange, density, simulationRe
           validation={activeMetric ? validationErrors[activeMetric.id] : undefined}
         />
         <SimulationSummaryPanel notebook={notebook} result={simulationResult ?? null} />
-        <div className="rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface-elevated)] p-4 shadow-sm">
+        {/* <div className="rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface-elevated)] p-4 shadow-sm">
           <div className="flex items-center justify-between">
             <span className="font-semibold text-[var(--color-text-primary)]">History</span>
             <div className="flex items-center gap-2 text-[var(--color-text-primary)]">
@@ -382,7 +385,7 @@ export function WorksheetTab({ notebook, onNotebookChange, density, simulationRe
               </button>
             </div>
           </div>
-        </div>
+        </div> */}
       </div>
 
       <div className="sr-only" aria-hidden>
