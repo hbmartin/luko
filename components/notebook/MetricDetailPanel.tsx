@@ -1,7 +1,7 @@
 "use client"
 
-import { Metric } from "@/lib/types/notebook"
 import { DistributionChart } from "@/components/notebook/charts/DistributionChart"
+import { Metric } from "@/lib/types/notebook"
 
 interface ValidationState {
   min?: string
@@ -23,20 +23,21 @@ export function MetricDetailPanel({ metric, validation }: MetricDetailPanelProps
       {!metric ? (
         <p className="text-sm text-[var(--color-text-muted)]">Select a metric in the worksheet to view its details.</p>
       ) : (
-        <div className="space-y-[var(--space-400)]">
+        <div className="flex flex-col gap-4">
           <div>
             <div className="mt-1 text-xl font-semibold text-[var(--color-text-primary)]">{metric.name}</div>
             {metric.description && <p className="mt-1 text-sm text-[var(--color-text-muted)]">{metric.description}</p>}
           </div>
 
-          <section className="rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface-muted)] p-[var(--space-400)]">
-            <h4 className="text-sm font-semibold text-[var(--color-text-primary)]">Distribution</h4>
+          <section className="rounded-2xl">
             <div className="mt-3">
               {distribution ? (
                 <DistributionChart metric={metric} distribution={distribution} />
               ) : (
-                <div className="flex h-48 items-center justify-center">
-                  <p className="text-xs text-[var(--color-text-muted)]">No distribution data available for this metric.</p>
+                <div className="items-center justify-center">
+                  <p className="p-8 text-center text-xs">
+                    Please configure min, most likely, and max values for this metric.
+                  </p>
                 </div>
               )}
             </div>

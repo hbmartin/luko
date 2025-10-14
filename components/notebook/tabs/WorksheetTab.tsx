@@ -2,8 +2,8 @@
 
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { parseFormula } from "@/lib/formula/parser"
-import { tokensToExpression } from "@/lib/utils/formulaTokens"
 import { FormulaToken, Metric, Notebook, SimulationResult } from "@/lib/types/notebook"
+import { tokensToExpression } from "@/lib/utils/formulaTokens"
 import { DataGridComponent } from "../DataGridComponent"
 import { MetricDetailPanel } from "../MetricDetailPanel"
 import { SimulationSummaryPanel } from "../SimulationSummaryPanel"
@@ -120,9 +120,7 @@ export function WorksheetTab({ notebook, onNotebookChange, density, simulationRe
         return
       }
 
-      const missingMetric = formula.tokens.find(
-        (token) => token.type === "metric" && !metricsById.has(token.metricId)
-      )
+      const missingMetric = formula.tokens.find((token) => token.type === "metric" && !metricsById.has(token.metricId))
 
       if (missingMetric) {
         errors[formula.id] = "Referenced metric no longer exists"

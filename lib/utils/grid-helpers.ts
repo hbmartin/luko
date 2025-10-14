@@ -11,19 +11,6 @@ export function notebookToGridRows(notebook: Notebook): GridRow[] {
   const sortedCategories = [...notebook.categories].sort((a, b) => a.order - b.order)
 
   sortedCategories.forEach((category) => {
-    // Add category row
-    // rows.push({
-    //   id: category.id,
-    //   type: "category",
-    //   name: category.name,
-    //   isExpanded: category.isExpanded,
-    //   level: 0,
-    //   depth: 0,
-    //   description: category.description,
-    // })
-
-    // Add metric rows if category is expanded
-    // if (category.isExpanded) {
     const categoryMetrics = notebook.metrics.filter((m) => m.categoryId === category.id)
 
     categoryMetrics.forEach((metric) => {
@@ -34,7 +21,6 @@ export function notebookToGridRows(notebook: Notebook): GridRow[] {
     categoryFormulas.forEach((formula) => {
       rows.push(formulaToGridRow(formula, notebook.dirtyFormulas))
     })
-    // }
   })
 
   return rows

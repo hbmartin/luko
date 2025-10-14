@@ -24,6 +24,7 @@ import {
 import type { CategoryRow, FormulaToken, GridRow, MetricRow, Notebook } from "@/lib/types/notebook"
 import { notebookToGridRows } from "@/lib/utils/grid-helpers"
 import { FormulaRowCell } from "./FormulaRowCell"
+import { Button } from "../ui/button"
 
 interface ValidationState {
   min?: string
@@ -88,9 +89,7 @@ function isFormulaRow(row: GridRow): row is Extract<GridRow, { type: "formula" }
 export function DataGridComponent({
   notebook,
   density,
-  validationErrors,
   onMetricChange,
-  onCategoryToggle,
   onOpenDetails,
   onAddMetric,
   onDeleteMetric,
@@ -139,15 +138,50 @@ export function DataGridComponent({
     })
     return map
   }, [notebook.categories])
-  const handleGroupContextMenu = useCallback((categoryId: string, categoryName: string, event: ReactMouseEvent) => {
-    if (!categoryId || categoryId === "__ungrouped__") return
-    event.preventDefault()
-    setContextMenuState({
-      kind: "category",
-      categoryId,
-      categoryName,
-    })
-  }, [])
+  const openCategoryContextMenu = useCallback(
+    (categoryId: string, categoryName: string) => {
+      setContextMenuState({
+        kind: "category",
+        categoryId,
+        categoryName,
+      })
+    },
+    [setContextMenuState]
+  )
+  const handleGroupContextMenu = useCallback(
+    (categoryId: string, categoryName: string, event: ReactMouseEvent) => {
+      if (!categoryId || categoryId === "__ungrouped__") return
+      event.preventDefault()
+      openCategoryContextMenu(categoryId, categoryName)
+    },
+    [openCategoryContextMenu]
+  )
+  const handleGroupMenuButtonClick = useCallback(
+    (categoryId: string, categoryName: string, event: ReactMouseEvent<HTMLButtonElement>) => {
+      if (!categoryId || categoryId === "__ungrouped__") return
+
+      event.preventDefault()
+      event.stopPropagation()
+
+      openCategoryContextMenu(categoryId, categoryName)
+
+      const { clientX, clientY } = event.nativeEvent
+      const rect = event.currentTarget.getBoundingClientRect()
+      const pointerX = clientX || rect.left + rect.width / 2
+      const pointerY = clientY || rect.top + rect.height / 2
+
+      event.currentTarget.dispatchEvent(
+        new MouseEvent("contextmenu", {
+          view: window,
+          bubbles: true,
+          cancelable: true,
+          clientX: pointerX,
+          clientY: pointerY,
+        })
+      )
+    },
+    [openCategoryContextMenu]
+  )
 
   const columns = useMemo<Column<GridRow>[]>(() => {
     const numericCellClass = "spreadsheet-cell-numeric"
@@ -168,12 +202,17 @@ export function DataGridComponent({
           })
         }
         return (
-          <span onContextMenu={(event) => handleGroupContextMenu(rawKey, label, event)} style={{ display: "contents" }}>
-            {renderToggleGroup({
-              ...props,
-              groupKey: label,
-            })}
-          </span>
+          <div
+            className="flex w-full items-center justify-between gap-2 pr-2"
+            onContextMenu={(event) => handleGroupContextMenu(rawKey, label, event)}
+          >
+            <div className="min-w-0 flex-1">
+              {renderToggleGroup({
+                ...props,
+                groupKey: label,
+              })}
+            </div>
+          </div>
         )
       },
     }
@@ -207,11 +246,14 @@ export function DataGridComponent({
             </div>
           )
         },
-        renderGroupCell: (props: RenderGroupCellProps<GridRow>) => {
+        renderGroupCell: ({ groupKey }: RenderGroupCellProps<GridRow>) => {
+          const rawKey = groupKey == null ? "" : String(groupKey)
+          const label = categoryLabels.get(rawKey) ?? rawKey ?? "Uncategorized"
+
           return (
-            <span style={{ display: "contents" }}>
-              replace this span with an "add" dropdown that allows adding a new category, formula, or metric
-            </span>
+            <Button variant="outline" onClick={(event) => handleGroupMenuButtonClick(rawKey, label, event)}>
+              Add new...
+            </Button>
           )
         },
       },
@@ -256,7 +298,15 @@ export function DataGridComponent({
     }
 
     return [groupColumn, ...baseColumns]
-  }, [categoryLabels, handleGroupContextMenu, notebook.metrics, activeFormulaId, onFormulaChange, formulaValidation])
+  }, [
+    categoryLabels,
+    handleGroupContextMenu,
+    handleGroupMenuButtonClick,
+    notebook.metrics,
+    activeFormulaId,
+    onFormulaChange,
+    formulaValidation,
+  ])
 
   const rowClass = useCallback(
     (row: GridRow) => {

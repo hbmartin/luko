@@ -53,8 +53,7 @@ const createReferenceLineLabel =
     const { x, y } = viewBox
     if (x === undefined || y === undefined) return null
 
-    const textAnchor =
-      align === "left" ? "start" : align === "right" ? "end" : "middle"
+    const textAnchor = align === "left" ? "start" : align === "right" ? "end" : "middle"
     const xOffset = align === "left" ? 8 : align === "right" ? -8 : 0
 
     return (
@@ -97,8 +96,8 @@ export function DistributionChart({ metric, distribution }: DistributionChartPro
 
   return (
     <div className="h-48">
-      <ResponsiveContainer width="100%" height="100%">
-        <LineChart data={pdfData} margin={{ top: 16, right: 16, left: -4, bottom: 8 }}>
+      <ResponsiveContainer>
+        <LineChart data={pdfData} margin={{ top: 24, right: 16, left: 8, bottom: 8 }}>
           <defs>
             <linearGradient id={gradientId} x1="0%" y1="0%" x2="0%" y2="100%">
               <stop offset="0%" stopColor="var(--color-accent)" stopOpacity={0.25} />
@@ -114,23 +113,6 @@ export function DistributionChart({ metric, distribution }: DistributionChartPro
             strokeOpacity={0.3}
             tick={{ fill: "var(--color-text-muted)", fontSize: 11 }}
           />
-          <YAxis
-            type="number"
-            domain={[0, maxDensity ? maxDensity * 1.1 : "auto"]}
-            tickFormatter={(value: number) => formatNumber(value)}
-            stroke="var(--color-primary)"
-            strokeOpacity={0.3}
-            tick={{ fill: "var(--color-text-muted)", fontSize: 11 }}
-          />
-          <Tooltip
-            formatter={(value: number) => formatNumber(value)}
-            labelFormatter={(value: number) => formatMetricValue(metric, value)}
-            contentStyle={{
-              background: "var(--color-surface-elevated)",
-              borderColor: "var(--color-primary)",
-              color: "var(--color-text-primary)",
-            }}
-          />
           <Line
             type="monotone"
             dataKey="y"
@@ -143,24 +125,10 @@ export function DistributionChart({ metric, distribution }: DistributionChartPro
             isAnimationActive={false}
           />
           <ReferenceLine
-            x={distribution.min}
-            stroke="var(--color-accent)"
-            strokeOpacity={0.4}
-            strokeDasharray="5 5"
-            label={createReferenceLineLabel(`Min ${formatMetricValue(metric, distribution.min)}`, "left")}
-          />
-          <ReferenceLine
             x={distribution.mode}
-            stroke="var(--color-accent)"
-            strokeDasharray="5 5"
-            label={createReferenceLineLabel(`Most likely ${formatMetricValue(metric, distribution.mode)}`, "center")}
-          />
-          <ReferenceLine
-            x={distribution.max}
-            stroke="var(--color-accent)"
-            strokeOpacity={0.4}
-            strokeDasharray="5 5"
-            label={createReferenceLineLabel(`Max ${formatMetricValue(metric, distribution.max)}`, "right")}
+            stroke="var(--color-secondary)"
+            strokeWidth={2}
+            label={createReferenceLineLabel(`Most Likely: ${formatMetricValue(metric, distribution.mode)}`, "center")}
           />
         </LineChart>
       </ResponsiveContainer>

@@ -460,9 +460,13 @@ div[role="columnheader"][aria-selected="true"] {
     color: var(--primary-foreground);
   }
 
+  :focus {
+    outline: none;
+  }
+
   :focus-visible {
     outline: none;
-    box-shadow: 0 0 0 3px var(--ring);
+    box-shadow: none;
   }
 
   :focus-visible[data-focus="strong"] {
