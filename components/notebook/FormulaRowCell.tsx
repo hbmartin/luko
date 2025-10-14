@@ -1,8 +1,8 @@
 "use client"
 
 import { FormEvent, type MouseEvent, useId, useMemo, useState } from "react"
-import { cn } from "@/lib/utils"
 import type { FormulaRow, FormulaToken, Metric } from "@/lib/types/notebook"
+import { cn } from "@/lib/utils"
 
 interface FormulaRowCellProps {
   formula: FormulaRow
@@ -117,7 +117,6 @@ export function FormulaRowCell({
       onClick={handleContainerClick}
       className={cn("formula-row-cell", isActive && "formula-row-cell-active")}
     >
-      <div className="formula-row-label">{formula.name}</div>
       <form className="formula-row-editor" onSubmit={handleSubmit}>
         <div className="formula-row-tokens">
           {formula.tokens.map((token, index) => {

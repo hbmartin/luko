@@ -7,6 +7,7 @@ import {
   type CellSelectArgs,
   Column,
   type GroupRow,
+  RenderCellProps,
   type RenderGroupCellProps,
   renderToggleGroup,
   type RowsChangeData,
@@ -225,19 +226,6 @@ export function DataGridComponent({
         frozen: true,
         cellClass: "spreadsheet-cell-name",
         renderCell: ({ row }) => {
-          if (isFormulaRow(row)) {
-            return (
-              <FormulaRowCell
-                formula={row}
-                metrics={notebook.metrics}
-                isActive={activeFormulaId === row.id}
-                onActivate={() => setActiveFormulaId(row.id)}
-                onTokensChange={(tokens) => onFormulaChange(row.id, tokens)}
-                onHighlightMetric={setHighlightedMetricId}
-                validationMessage={formulaValidation[row.id] ?? null}
-              />
-            )
-          }
           return (
             <div className="spreadsheet-metric">
               <div>
@@ -262,10 +250,27 @@ export function DataGridComponent({
         name: "Unit",
         width: 120,
         cellClass: unitCellClass,
-        // renderCell: ({ row }) => {
-        //   if (row.type === "category" || !row.unit) return null
-        //   return <span className="spreadsheet-unit">{row.unit}</span>
-        // },
+        colSpan: (args) => {
+          if (args.type !== "ROW") return undefined
+          if (args.row.type === "formula") return 4
+          return 1
+        },
+        renderCell: ({ row, column, onRowChange, rowIdx }: RenderCellProps<GridRow>) => {
+          if (isFormulaRow(row)) {
+            return (
+              <FormulaRowCell
+                formula={row}
+                metrics={notebook.metrics}
+                isActive={activeFormulaId === row.id}
+                onActivate={() => setActiveFormulaId(row.id)}
+                onTokensChange={(tokens) => onFormulaChange(row.id, tokens)}
+                onHighlightMetric={setHighlightedMetricId}
+                validationMessage={formulaValidation[row.id] ?? null}
+              />
+            )
+          }
+          return textEditor({ row, column, onRowChange, rowIdx, onClose: () => {} })
+        },
       },
       {
         key: "min",
@@ -289,13 +294,6 @@ export function DataGridComponent({
         renderEditCell: textEditor,
       },
     ]
-
-    baseColumns[0].colSpan = (args) => {
-      if (args.type !== "ROW") return undefined
-      if (args.row.type === "category") return baseColumns.length
-      if (args.row.type === "formula") return 5
-      return undefined
-    }
 
     return [groupColumn, ...baseColumns]
   }, [
