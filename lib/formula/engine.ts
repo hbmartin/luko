@@ -27,10 +27,10 @@ export const compileMetricFormulas = (metrics: Metric[]): FormulaRegistry => {
 
 export const evaluateFormulas = (
   registry: FormulaRegistry,
-  baseValues: Record<string, number>,
+  baseValues: Record<string, number>
 ): Record<string, number> => {
   const dependencyMap = buildDependencyMap(
-    Object.fromEntries(Object.entries(registry).map(([metricId, compiled]) => [metricId, compiled.ast])),
+    Object.fromEntries(Object.entries(registry).map(([metricId, compiled]) => [metricId, compiled.ast]))
   )
 
   const cycles = detectCircularDependencies(dependencyMap)

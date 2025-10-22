@@ -74,15 +74,7 @@ export function PaybackChart({ paybackPeriod }: PaybackChartProps) {
         {[0, 0.25, 0.5, 0.75, 1].map((t) => {
           const y = padding.top + chartHeight - t * chartHeight
           return (
-            <line
-              key={t}
-              x1={padding.left}
-              y1={y}
-              x2={width - padding.right}
-              y2={y}
-              stroke="#f3f4f6"
-              strokeWidth="1"
-            />
+            <line key={t} x1={padding.left} y1={y} x2={width - padding.right} y2={y} stroke="#f3f4f6" strokeWidth="1" />
           )
         })}
 
@@ -150,12 +142,7 @@ export function PaybackChart({ paybackPeriod }: PaybackChartProps) {
           })}
 
         {/* X-axis title */}
-        <text
-          x={width / 2}
-          y={height - 10}
-          textAnchor="middle"
-          className="fill-gray-700 text-sm font-medium"
-        >
+        <text x={width / 2} y={height - 10} textAnchor="middle" className="fill-gray-700 text-sm font-medium">
           Months to Payback
         </text>
 

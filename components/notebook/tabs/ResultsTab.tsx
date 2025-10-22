@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { SimulationResult } from "@/lib/types/notebook"
 import { formatAbbreviatedNumber } from "@/lib/utils/grid-helpers"
 import { NPVChart, type NPVSeries } from "../charts/NPVChart"
@@ -39,6 +39,7 @@ export function ResultsTab({
   const [comparisonIds, setComparisonIds] = useState<string[]>([])
   const [editingScenarioId, setEditingScenarioId] = useState<string | null>(null)
   const [draftName, setDraftName] = useState("")
+  const hasRequestedInitialRun = useRef(false)
 
   const activeScenario = useMemo(() => {
     if (!scenarios.length) return null
@@ -70,10 +71,18 @@ export function ResultsTab({
   }, [activeScenario, comparisonScenarios])
 
   useEffect(() => {
-    if (!simulationResult || !activeScenario) {
-      handleRunSimulation()
+    if ((simulationResult && activeScenario) || isSimulating) {
+      hasRequestedInitialRun.current = false
+      return
     }
-  }, [simulationResult, activeScenario])
+
+    if (hasRequestedInitialRun.current) return
+
+    hasRequestedInitialRun.current = true
+    handleRunSimulation().finally(() => {
+      hasRequestedInitialRun.current = false
+    })
+  }, [simulationResult, activeScenario, isSimulating, handleRunSimulation])
 
   if (!simulationResult || !activeScenario || isSimulating) {
     return (
