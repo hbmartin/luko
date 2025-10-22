@@ -40,12 +40,7 @@ export function TornadoChart({ data }: TornadoChartProps) {
         />
 
         {/* X-axis labels */}
-        <text
-          x={padding.left}
-          y={height - padding.bottom + 25}
-          textAnchor="start"
-          className="fill-gray-600 text-xs"
-        >
+        <text x={padding.left} y={height - padding.bottom + 25} textAnchor="start" className="fill-gray-600 text-xs">
           Negative Impact
         </text>
         <text
@@ -88,9 +83,7 @@ export function TornadoChart({ data }: TornadoChartProps) {
                 alignmentBaseline="middle"
                 className="fill-gray-700 text-xs"
               >
-                {item.metricName.length > 30
-                  ? item.metricName.substring(0, 30) + "..."
-                  : item.metricName}
+                {item.metricName.length > 30 ? item.metricName.substring(0, 30) + "..." : item.metricName}
               </text>
 
               {/* Impact value label */}
@@ -122,8 +115,7 @@ export function TornadoChart({ data }: TornadoChartProps) {
       {/* Legend */}
       <div className="mt-4 text-xs text-gray-600">
         <p>
-          <strong>Impact:</strong> Correlation coefficient showing how changes in each metric
-          affect NPV
+          <strong>Impact:</strong> Correlation coefficient showing how changes in each metric affect NPV
         </p>
       </div>
     </div>

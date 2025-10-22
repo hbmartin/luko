@@ -39,13 +39,7 @@ export interface ParseError {
   index: number
 }
 
-export type TokenType =
-  | "number"
-  | "identifier"
-  | "operator"
-  | "leftParen"
-  | "rightParen"
-  | "comma"
+export type TokenType = "number" | "identifier" | "operator" | "leftParen" | "rightParen" | "comma"
 
 export interface Token {
   type: TokenType

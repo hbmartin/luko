@@ -8,8 +8,5 @@ export function tokensToExpression(tokens: FormulaToken[]): string {
     return ""
   })
 
-  return segments
-    .join("")
-    .replace(/\s+/g, " ")
-    .trim()
+  return segments.join("").replace(/\s+/g, " ").trim()
 }
