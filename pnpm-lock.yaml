@@ -126,6 +126,9 @@ importers:
       react-dom:
         specifier: 19.2.0
         version: 19.2.0(react@19.2.0)
+      react-is:
+        specifier: ^19.2.0
+        version: 19.2.0
       react-mentions-ts:
         specifier: ^5.1.0
         version: 5.1.0(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
@@ -256,9 +259,6 @@ importers:
       prettier-plugin-tailwindcss:
         specifier: ^0.7.1
         version: 0.7.1(prettier@3.6.2)
-      react-is:
-        specifier: ^19.2.0
-        version: 19.2.0
       tailwindcss:
         specifier: ^4.1.15
         version: 4.1.15

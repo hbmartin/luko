@@ -25,11 +25,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      - run: echo "node_version=$(cat .github/nodejs.version)" >> $GITHUB_ENV
-      - name: "use node ${{ env.node_version }}"
+
+      - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: ${{ env.node_version }}
+          node-version-file: .github/nodejs.version
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
 
       - uses: pnpm/action-setup@v4
         name: Install pnpm
@@ -42,18 +44,16 @@ jobs:
       - name: Restore next build
         uses: actions/cache@v4
         id: restore-build-cache
-        env:
-          cache-name: cache-next-build
         with:
           # if you use a custom build directory, replace all instances of `.next` in this file with your build directory
           # ex: if your app builds to `dist`, replace `.next` with `dist`
           path: .next/cache
           # change this if you prefer a more strict cache
-          key: ${{ runner.os }}-build-${{ env.cache-name }}
+          key: ${{ runner.os }}-next-build-${{ hashFiles('pnpm-lock.yaml') }}
 
       - name: Build next.js app
         # change this if your site requires a custom build command
-        run: pnpm run build
+        run: ANALYZE=true next build --webpack
       # Here's the first place where next-bundle-analysis' own script is used
       # This step pulls the raw bundle stats for the current bundle
       - name: Analyze bundle

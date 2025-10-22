@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useState } from "react"
+import { useState } from "react"
 import { Mention, MentionsInput } from "react-mentions-ts"
 import { Notebook, SimulationResult } from "@/lib/types/notebook"
 import { formatAbbreviatedNumber } from "@/lib/utils/grid-helpers"
