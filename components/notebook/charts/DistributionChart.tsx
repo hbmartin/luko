@@ -3,7 +3,7 @@
 import betaPDF from "@stdlib/stats-base-dists-beta-pdf"
 import { useId, useMemo } from "react"
 import type { ReactElement } from "react"
-import { CartesianGrid, Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
+import { CartesianGrid, Line, LineChart, ReferenceLine, ResponsiveContainer, XAxis } from "recharts"
 import type { CartesianViewBox } from "recharts/types/util/types"
 
 import { Distribution, Metric } from "@/lib/types/notebook"
