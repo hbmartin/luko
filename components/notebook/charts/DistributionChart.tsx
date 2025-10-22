@@ -52,7 +52,7 @@ interface ReferenceLineLabelProps {
   viewBox?: CartesianViewBox
 }
 
-type ReferenceLineLabelRenderer = (props: ReferenceLineLabelProps) => ReactElement
+type ReferenceLineLabelRenderer = (props: ReferenceLineLabelProps) => ReactElement<SVGElement>
 
 const createReferenceLineLabel =
   (label: string, align: "left" | "center" | "right"): ReferenceLineLabelRenderer =>
@@ -91,7 +91,6 @@ export function DistributionChart({ metric, distribution }: DistributionChartPro
     [distribution.min, distribution.mode, distribution.max]
   )
   const hasData = pdfData.length > 0
-  const maxDensity = useMemo(() => (hasData ? Math.max(...pdfData.map((point) => point.y)) : 0), [pdfData, hasData])
 
   const rawGradientId = useId()
   const gradientId = `pertDensityGradient-${rawGradientId.replace(/[:]/g, "")}`
