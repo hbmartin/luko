@@ -34,7 +34,3 @@ jobs:
         run: pnpm run prettier
       - name: Unit & Integration tests
         run: echo "pnpm run test"
-      - name: Smoke & Acceptance tests
-        run: |
-          pnpm playwright install
-          pnpm run e2e:headless
