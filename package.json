@@ -67,7 +67,7 @@
     "@eslint/eslintrc": "^3.3.1",
     "@next/eslint-plugin-next": "16.0.0-beta.0",
     "@opentelemetry/resources": "2.1.0",
-    "@opentelemetry/sdk-node": "^0.206.0",
+    "@opentelemetry/sdk-node": "^0.207.0",
     "@opentelemetry/sdk-trace-node": "2.1.0",
     "@opentelemetry/semantic-conventions": "1.37.0",
     "@playwright/test": "^1.56.1",
