@@ -1,6 +1,6 @@
 "use client"
 
-import { createContext, useContext, useEffect, useState } from "react"
+import { createContext, useCallback, useContext, useEffect, useState } from "react"
 import { runSimulation } from "@/lib/simulation/runSimulation"
 import { Notebook, SimulationResult } from "@/lib/types/notebook"
 
@@ -62,7 +62,7 @@ export function NotebookProvider({
     root.setAttribute("data-density", density)
   }, [theme, density])
 
-  const handleRunSimulation = async () => {
+  const handleRunSimulation = useCallback(async () => {
     setIsSimulating(true)
     const start = performance.now()
     const result = await runSimulation(notebook)
@@ -96,7 +96,7 @@ export function NotebookProvider({
     }))
 
     setIsSimulating(false)
-  }
+  }, [notebook])
 
   return (
     <NotebookContext.Provider

@@ -1,0 +1,15 @@
+#!/usr/bin/env sh
+set -e
+
+# Ensure common Homebrew path is available when husky runs outside interactive shells.
+if test -d "/opt/homebrew/bin" && ! printf "%s" "$PATH" | grep -q "/opt/homebrew/bin"; then
+  export PATH="/opt/homebrew/bin:$PATH"
+fi
+
+if command -v pnpm >/dev/null 2>&1; then
+  pnpm format
+  git update-index --again
+else
+  echo "pnpm is required for this repository. Add it to your PATH (e.g. export PATH=\"/opt/homebrew/bin:\$PATH\")." >&2
+  exit 127
+fi
