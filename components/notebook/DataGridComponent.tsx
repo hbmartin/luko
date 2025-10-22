@@ -233,7 +233,7 @@ export function DataGridComponent({
     const baseColumns: Column<GridRow>[] = [
       {
         key: "name",
-        name: "Metric",
+        name: "Lever",
         width: 320,
         frozen: true,
         cellClass: "spreadsheet-cell-name",

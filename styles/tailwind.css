@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "react-mentions-ts/styles/tailwind.css";
 @source "../app/**/*.{ts,tsx,js,jsx,mdx}";
 @source "../components/**/*.{ts,tsx,js,jsx}";
 @source "../lib/**/*.{ts,tsx,js,jsx}";
