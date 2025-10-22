@@ -1,14 +1,13 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 name: "Next.js Bundle Analysis"
 
 on:
+  pull_request:
   push:
     branches:
-      - main
-      - develop
-  pull_request:
-    branches:
-      - main
-      - develop
+      - main # change this if your default branch is named differently
   workflow_dispatch:
 
 defaults:
@@ -16,28 +15,28 @@ defaults:
     # change this if your nextjs app does not live at the root of the repo
     working-directory: ./
 
+permissions:
+  contents: read # for checkout repository
+  actions: read # for fetching base branch bundle stats
+  pull-requests: write # for comments
+
 jobs:
   analyze:
-    env:
-      SKIP_ENV_VALIDATION: true
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v3
 
-      - name: Set up node
+      - name: Install Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: "20.x"
+          node-version: 22
 
-      - name: "Install pnpm & dependencies"
-        uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v2
+        name: Install pnpm
+        id: pnpm-install
         with:
-          run_install: |
-            - recursive: true
-            - args: [--frozen-lockfile]
-
-      # - name: Install dependencies
-      #   run: pnpm install --frozen-lockfile
+          version: 7
+          run_install: true
 
       - name: Restore next build
         uses: actions/cache@v3
@@ -45,29 +44,29 @@ jobs:
         env:
           cache-name: cache-next-build
         with:
+          # if you use a custom build directory, replace all instances of `.next` in this file with your build directory
+          # ex: if your app builds to `dist`, replace `.next` with `dist`
           path: .next/cache
           # change this if you prefer a more strict cache
           key: ${{ runner.os }}-build-${{ env.cache-name }}
 
       - name: Build next.js app
-        env:
-          SKIP_BUILD_PRODUCT_REDIRECTS: 1
         # change this if your site requires a custom build command
-        run: pnpm build
+        run: ./node_modules/.bin/next build
 
       # Here's the first place where next-bundle-analysis' own script is used
       # This step pulls the raw bundle stats for the current bundle
       - name: Analyze bundle
-        run: node report-bundle-size.js
+        run: npx -p nextjs-bundle-analysis report
 
       - name: Upload bundle
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v3
         with:
           name: bundle
           path: .next/analyze/__bundle_analysis.json
 
       - name: Download base branch bundle stats
-        uses: dawidd6/action-download-artifact@v8
+        uses: dawidd6/action-download-artifact@v2
         if: success() && github.event.number
         with:
           workflow: nextjs_bundle_analysis.yml
@@ -91,16 +90,14 @@ jobs:
         if: success() && github.event.number
         run: ls -laR .next/analyze/base && npx -p nextjs-bundle-analysis compare
 
-      - name: Get comment body
+      - name: Get Comment Body
         id: get-comment-body
         if: success() && github.event.number
-        uses: actions/github-script@v6
-        with:
-          result-encoding: string
-          script: |
-            const fs = require('fs')
-            const comment = fs.readFileSync('.next/analyze/__bundle_analysis_comment.txt', 'utf8')
-            core.setOutput('body', comment)
+        # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-strings
+        run: |
+          echo "body<<EOF" >> $GITHUB_OUTPUT
+          echo "$(cat .next/analyze/__bundle_analysis_comment.txt)" >> $GITHUB_OUTPUT
+          echo EOF >> $GITHUB_OUTPUT
 
       - name: Find Comment
         uses: peter-evans/find-comment@v2
@@ -111,14 +108,14 @@ jobs:
           body-includes: "<!-- __NEXTJS_BUNDLE -->"
 
       - name: Create Comment
-        uses: peter-evans/create-or-update-comment@v3
+        uses: peter-evans/create-or-update-comment@v2
         if: success() && github.event.number && steps.fc.outputs.comment-id == 0
         with:
           issue-number: ${{ github.event.number }}
           body: ${{ steps.get-comment-body.outputs.body }}
 
       - name: Update Comment
-        uses: peter-evans/create-or-update-comment@v3
+        uses: peter-evans/create-or-update-comment@v2
         if: success() && github.event.number && steps.fc.outputs.comment-id != 0
         with:
           issue-number: ${{ github.event.number }}

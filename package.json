@@ -15,11 +15,12 @@
     "test:watch": "cross-env FORCE_COLOR=1 vitest --watch",
     "test:ui": "cross-env FORCE_COLOR=1 vitest --ui",
     "test:coverage": "cross-env FORCE_COLOR=1 vitest --coverage",
-    "e2e:headless": "playwright test",
+    "e2e:headless": "playwright test --reporter=line",
     "e2e:ui": "playwright test --ui",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "postinstall": "npx patch-package -y",
-    "coupling-graph": "npx madge --extensions js,jsx,ts,tsx,css,md,mdx ./ --exclude '.next|tailwind.config.js|reset.d.ts|prettier.config.js|postcss.config.js|playwright.config.ts|next.config.js|next-env.d.ts|instrumentation.ts|e2e/|README.md|.eslintrc.js' --image graph.svg"
+    "coupling-graph": "npx madge --extensions js,jsx,ts,tsx,css,md,mdx ./ --exclude '.next|tailwind.config.js|reset.d.ts|prettier.config.js|postcss.config.js|playwright.config.ts|next.config.js|next-env.d.ts|instrumentation.ts|e2e/|README.md|.eslintrc.js' --image graph.svg",
+    "prepare": "husky"
   },
   "dependencies": {
     "@next/bundle-analyzer": "16.0.0-beta.0",
@@ -92,6 +93,7 @@
     "eslint-plugin-tailwindcss": "4.0.0-beta.0",
     "fetch-mock": "^12.5.5",
     "gzip-size": "7.0.0",
+    "husky": "^9.1.7",
     "jsdom": "^27.0.1",
     "mkdirp": "^3.0.1",
     "patch-package": "^8.0.1",
@@ -134,5 +136,11 @@
       "@types/react": "19.2.2",
       "@types/react-dom": "19.2.1"
     }
+  },
+  "nextBundleAnalysis": {
+    "budget": null,
+    "budgetPercentIncreaseRed": 20,
+    "minimumChangeThreshold": 0,
+    "showDetails": true
   }
 }
