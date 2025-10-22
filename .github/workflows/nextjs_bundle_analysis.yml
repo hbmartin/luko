@@ -27,6 +27,7 @@ jobs:
       - uses: actions/checkout@v5
 
       - name: Setup Node.js
+        id: setup-node
         uses: actions/setup-node@v6
         with:
           node-version-file: .github/nodejs.version
@@ -47,11 +48,14 @@ jobs:
           # ex: if your app builds to `dist`, replace `.next` with `dist`
           path: .next/cache
           # change this if you prefer a more strict cache
-          key: ${{ runner.os }}-next-build-${{ hashFiles('pnpm-lock.yaml') }}
+          key: ${{ runner.os }}-next-build-${{ steps.setup-node.outputs.node-version }}-${{ hashFiles('pnpm-lock.yaml', 'package.json', 'tsconfig.json', 'next.config.ts', 'env.mjs') }}
+          restore-keys: |
+            ${{ runner.os }}-next-build-${{ steps.setup-node.outputs.node-version }}-
+            ${{ runner.os }}-next-build-
 
       - name: Build next.js app
         # change this if your site requires a custom build command
-        run: ANALYZE=true next build --webpack
+        run: ANALYZE=true pnpm run build --webpack
       # Here's the first place where next-bundle-analysis' own script is used
       # This step pulls the raw bundle stats for the current bundle
       - name: Analyze bundle

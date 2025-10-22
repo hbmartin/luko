@@ -18,4 +18,10 @@ const config: NextConfig = {
   ],
 }
 
-export default env.ANALYZE ? withBundleAnalyzer({ enabled: env.ANALYZE })(config) : config
+export default env.ANALYZE
+  ? withBundleAnalyzer({
+      enabled: env.ANALYZE,
+      analyzerMode: "json",
+      openAnalyzer: false,
+    })(config)
+  : config
