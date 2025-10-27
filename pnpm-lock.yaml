@@ -130,8 +130,8 @@ importers:
         specifier: ^19.2.0
         version: 19.2.0
       react-mentions-ts:
-        specifier: ^5.1.0
-        version: 5.1.0(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
+        specifier: ^5.4.1
+        version: 5.4.1(class-variance-authority@0.7.1)(clsx@2.1.1)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(tailwind-merge@3.3.1)
       recharts:
         specifier: ^3.3.0
         version: 3.3.0(@types/react@19.2.2)(react-dom@19.2.0(react@19.2.0))(react-is@19.2.0)(react@19.2.0)(redux@5.0.1)
@@ -4775,12 +4775,15 @@ packages:
   react-is@19.2.0:
     resolution: {integrity: sha512-x3Ax3kNSMIIkyVYhWPyO09bu0uttcAIoecO/um/rKGQ4EltYWVYtyiGkS/3xMynrbVQdS69Jhlv8FXUEZehlzA==}
 
-  react-mentions-ts@5.1.0:
-    resolution: {integrity: sha512-J1kWhoUX36kdoaTzN9CyHk96Du6ptWdvsxSbep2xmBcXSwD84oz4FfrFxQRnpPQnPf51qd9EjC9gIQMigWLSvg==}
+  react-mentions-ts@5.4.1:
+    resolution: {integrity: sha512-/3rhPPQYG04v57wBYFeBp3zQ4kMEJk0Jrl4U2JlVPopCv2OaUuj0vsKACNpHJZYcei4AqBWqe515VLVdOeHqsQ==}
     engines: {node: '>=20'}
     peerDependencies:
+      class-variance-authority: '>=0.6.0'
+      clsx: '>=2.0.0'
       react: '>=19.0.0'
       react-dom: '>=19.0.0'
+      tailwind-merge: '>=3.0.0'
 
   react-redux@9.2.0:
     resolution: {integrity: sha512-ROY9fvHhwOD9ySfrF0wmvu//bKCQ6AeZZq1nJNtbDC+kk5DuSuNX/n6YWYF/SYy7bSba4D4FSz8DJeKY/S/r+g==}
@@ -10117,7 +10120,7 @@ snapshots:
 
   react-is@19.2.0: {}
 
-  react-mentions-ts@5.1.0(react-dom@19.2.0(react@19.2.0))(react@19.2.0):
+  react-mentions-ts@5.4.1(class-variance-authority@0.7.1)(clsx@2.1.1)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(tailwind-merge@3.3.1):
     dependencies:
       class-variance-authority: 0.7.1
       clsx: 2.1.1
