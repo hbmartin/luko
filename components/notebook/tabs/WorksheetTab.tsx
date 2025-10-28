@@ -344,6 +344,13 @@ export function WorksheetTab({ notebook, onNotebookChange, density, simulationRe
     [notebook.metrics, selectedMetricId]
   )
 
+  const activeFormula = useMemo(
+    () => notebook.formulas.find((candidate) => candidate.id === selectedMetricId) ?? null,
+    [notebook.formulas, selectedMetricId]
+  )
+
+  const activeMetricValidation = activeMetric ? validationErrors[activeMetric.id] : undefined
+  const activeFormulaValidation = selectedMetricId ? (formulaValidation[selectedMetricId] ?? null) : null
   return (
     <div className="mx-auto flex h-full min-h-0 flex-1 items-stretch gap-4 p-6">
       <DataGridComponent
@@ -361,8 +368,11 @@ export function WorksheetTab({ notebook, onNotebookChange, density, simulationRe
       />
       <div className="w-80 shrink-0 space-y-4">
         <MetricDetailPanel
+          notebook={notebook}
           metric={activeMetric}
-          validation={activeMetric ? validationErrors[activeMetric.id] : undefined}
+          formula={activeFormula}
+          validation={activeMetricValidation}
+          formulaValidation={activeFormulaValidation}
         />
         <SimulationSummaryPanel notebook={notebook} result={simulationResult ?? null} />
         {/* <div className="rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface-elevated)] p-4 shadow-sm">

@@ -346,36 +346,59 @@ export function DataGridComponent({
     [onOpenDetails]
   )
 
-  const handleCellClick = useCallback(
-    ({ row }: CellMouseArgs<GridRow>) => {
-      if (isFormulaRow(row)) {
-        setActiveFormulaId(row.id)
-        return
-      }
-      if (row.type !== "metric") return
-      if (activeFormulaId) {
-        const formula = notebook.formulas.find((candidate) => candidate.id === activeFormulaId)
-        if (formula) {
-          onFormulaChange(activeFormulaId, [...formula.tokens, { type: "metric", metricId: row.id }])
-          setHighlightedMetricId(row.id)
-        }
-      }
+  const addMetricToActiveFormula = useCallback(
+    (metricId: string) => {
+      if (!activeFormulaId) return false
+      const formula = notebook.formulas.find((candidate) => candidate.id === activeFormulaId)
+      if (!formula) return false
+      onFormulaChange(activeFormulaId, [...formula.tokens, { type: "metric", metricId }])
+      setHighlightedMetricId(metricId)
+      return true
+    },
+    [activeFormulaId, notebook.formulas, onFormulaChange]
+  )
+
+  const handleFormulaRowSelection = useCallback(
+    (row: Extract<GridRow, { type: "formula" }>) => {
+      setActiveFormulaId(row.id)
       triggerDetails(row.id)
     },
-    [activeFormulaId, notebook.formulas, onFormulaChange, triggerDetails]
+    [triggerDetails]
+  )
+
+  const handleMetricRowSelection = useCallback(
+    (row: MetricRow) => {
+      addMetricToActiveFormula(row.id)
+      triggerDetails(row.id)
+    },
+    [addMetricToActiveFormula, triggerDetails]
+  )
+
+  const handleCellClick = useCallback(
+    ({ row }: CellMouseArgs<GridRow>) => {
+      if (isMetricRow(row)) {
+        handleMetricRowSelection(row)
+        return
+      }
+      if (isFormulaRow(row)) {
+        handleFormulaRowSelection(row)
+      }
+    },
+    [handleFormulaRowSelection, handleMetricRowSelection]
   )
 
   const handleCellFocus = useCallback(
     ({ row }: CellSelectArgs<GridRow>) => {
       if (!row) return
       if (isFormulaRow(row)) {
-        setActiveFormulaId(row.id)
+        handleFormulaRowSelection(row)
         return
       }
-      if (row.type !== "metric") return
-      triggerDetails(row.id)
+      if (isMetricRow(row)) {
+        triggerDetails(row.id)
+      }
     },
-    [triggerDetails]
+    [handleFormulaRowSelection, triggerDetails]
   )
 
   const handleRowsChange = useCallback(

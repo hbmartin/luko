@@ -1,7 +1,5 @@
 "use client"
 
-import { useState } from "react"
-import { Mention, MentionsInput } from "react-mentions-ts"
 import { Notebook, SimulationResult } from "@/lib/types/notebook"
 import { formatAbbreviatedNumber } from "@/lib/utils/grid-helpers"
 import { useNotebook } from "./NotebookProvider"
@@ -11,81 +9,14 @@ interface SimulationSummaryPanelProps {
   result: SimulationResult | null
 }
 
-const users = [
-  {
-    id: "walter",
-    display: "Walter White",
-  },
-  {
-    id: "pipilu",
-    display: "皮皮鲁",
-  },
-  {
-    id: "luxixi",
-    display: "鲁西西",
-  },
-  {
-    id: "satoshi1",
-    display: "中本聪",
-  },
-  {
-    id: "satoshi2",
-    display: "サトシ・ナカモト",
-  },
-  {
-    id: "nobi",
-    display: "野比のび太",
-  },
-  {
-    id: "sung",
-    display: "성덕선",
-  },
-  {
-    id: "jesse",
-    display: "Jesse Pinkman",
-  },
-  {
-    id: "gus",
-    display: 'Gustavo "Gus" Fring',
-  },
-  {
-    id: "saul",
-    display: "Saul Goodman",
-  },
-  {
-    id: "hank",
-    display: "Hank Schrader",
-  },
-  {
-    id: "skyler",
-    display: "Skyler White",
-  },
-  {
-    id: "mike",
-    display: "Mike Ehrmantraut",
-  },
-  {
-    id: "lydia",
-    display: "Lydìã Rôdarté-Qüayle",
-  },
-]
-
 export function SimulationSummaryPanel({ notebook, result }: SimulationSummaryPanelProps) {
   const { handleRunSimulation, isSimulating } = useNotebook()
-  const [value, setValue] = useState("")
 
   return (
     <div className="rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface-elevated)] p-4 shadow-sm">
       <h3 className="mb-[var(--space-300)] text-lg font-semibold text-[var(--color-text-primary)]">
         Simulation Summary
       </h3>
-      <MentionsInput value={value} onChange={(e) => setValue(e.target.value)}>
-        <Mention
-          trigger="@"
-          data={users}
-          renderSuggestion={(entry) => <div>{typeof entry === "string" ? entry : entry.display}</div>}
-        />
-      </MentionsInput>
       {!result ? (
         <div className="rounded-xl bg-[var(--color-surface-muted)] p-4 text-center text-sm text-[var(--color-text-muted)]">
           <button
