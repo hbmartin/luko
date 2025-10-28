@@ -71,10 +71,9 @@ const validateMetric = (metric: Metric): ValidationState | undefined => {
 }
 
 export function WorksheetTab({ notebook, onNotebookChange, density, simulationResult }: WorksheetTabProps) {
-  const originalNotebookRef = useRef(notebook)
   const historyRef = useRef<Notebook[]>([notebook])
   const historyIndexRef = useRef(0)
-  const [selectedMetricId, setSelectedMetricId] = useState<string | null>(null)
+  const [selectedRowId, setSelectedRowId] = useState<string | null>(null)
 
   useEffect(() => {
     const existing = historyRef.current[historyIndexRef.current]
@@ -340,17 +339,17 @@ export function WorksheetTab({ notebook, onNotebookChange, density, simulationRe
   )
 
   const activeMetric = useMemo(
-    () => notebook.metrics.find((metric) => metric.id === selectedMetricId) ?? null,
-    [notebook.metrics, selectedMetricId]
+    () => notebook.metrics.find((metric) => metric.id === selectedRowId) ?? null,
+    [notebook.metrics, selectedRowId]
   )
 
   const activeFormula = useMemo(
-    () => notebook.formulas.find((candidate) => candidate.id === selectedMetricId) ?? null,
-    [notebook.formulas, selectedMetricId]
+    () => notebook.formulas.find((candidate) => candidate.id === selectedRowId) ?? null,
+    [notebook.formulas, selectedRowId]
   )
 
   const activeMetricValidation = activeMetric ? validationErrors[activeMetric.id] : undefined
-  const activeFormulaValidation = selectedMetricId ? (formulaValidation[selectedMetricId] ?? null) : null
+  const activeFormulaValidation = selectedRowId ? (formulaValidation[selectedRowId] ?? null) : null
   return (
     <div className="mx-auto flex h-full min-h-0 flex-1 items-stretch gap-4 p-6">
       <DataGridComponent
@@ -360,7 +359,7 @@ export function WorksheetTab({ notebook, onNotebookChange, density, simulationRe
         onMetricChange={handleMetricChange}
         onCategoryToggle={handleCategoryToggle}
         onRowReorder={handleRowReorder}
-        onOpenDetails={setSelectedMetricId}
+        onOpenDetails={setSelectedRowId}
         onFormulaChange={handleFormulaChange}
         formulaValidation={formulaValidation}
         onAddFormula={handleAddFormula}

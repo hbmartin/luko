@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { Mention, MentionsInput, type MentionDataItem } from "react-mentions-ts"
+import { Mention, type MentionDataItem, MentionsInput } from "react-mentions-ts"
 import { DistributionChart } from "@/components/notebook/charts/DistributionChart"
 import { Formula, Metric, Notebook } from "@/lib/types/notebook"
 
@@ -55,6 +55,11 @@ export function MetricDetailPanel({
     })
   }, [notebook.categories, notebook.metrics])
 
+  const metricsById = useMemo(
+    () => new Map(notebook.metrics.map((candidate) => [candidate.id, candidate])),
+    [notebook.metrics]
+  )
+
   const referencedMetricIds = useMemo(() => {
     if (!formula) return []
     const ids = formula.tokens.filter((token) => token.type === "metric").map((token) => token.metricId)
@@ -63,11 +68,10 @@ export function MetricDetailPanel({
 
   const referencedMetrics = useMemo(() => {
     if (!referencedMetricIds.length) return []
-    const metricsById = new Map(notebook.metrics.map((candidate) => [candidate.id, candidate]))
     return referencedMetricIds
       .map((metricId) => metricsById.get(metricId))
       .filter((entry): entry is Metric => Boolean(entry))
-  }, [notebook.metrics, referencedMetricIds])
+  }, [metricsById, referencedMetricIds])
 
   useEffect(() => {
     setNoteValue("")
@@ -75,7 +79,6 @@ export function MetricDetailPanel({
 
   const formulaExpressionMarkup = useMemo(() => {
     if (!formula) return ""
-    const metricsById = new Map(notebook.metrics.map((candidate) => [candidate.id, candidate]))
     const segments = formula.tokens.map((token) => {
       if (token.type === "metric") {
         const metric = metricsById.get(token.metricId)
@@ -86,7 +89,7 @@ export function MetricDetailPanel({
       return token.value
     })
     return segments.join("").replace(/\s+/g, " ").trim()
-  }, [formula, notebook.metrics])
+  }, [formula, metricsById])
 
   const noteSection = (
     <section className="rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface-elevated)] p-[var(--space-400)]">
