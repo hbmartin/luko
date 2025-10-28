@@ -1,7 +1,9 @@
 "use client"
 
+import { useEffect, useMemo, useState } from "react"
+import { Mention, MentionsInput, type MentionDataItem } from "react-mentions-ts"
 import { DistributionChart } from "@/components/notebook/charts/DistributionChart"
-import { Metric } from "@/lib/types/notebook"
+import { Formula, Metric, Notebook } from "@/lib/types/notebook"
 
 interface ValidationState {
   min?: string
@@ -11,18 +13,166 @@ interface ValidationState {
 }
 
 interface MetricDetailPanelProps {
+  notebook: Notebook
   metric: Metric | null
+  formula?: Formula | null
   validation?: ValidationState
+  formulaValidation?: string | null
 }
 
-export function MetricDetailPanel({ metric, validation }: MetricDetailPanelProps) {
-  const distribution = metric?.distribution ?? null
+type MetricMentionExtra = {
+  categoryId: Notebook["categories"][number]["id"]
+  categoryName: Notebook["categories"][number]["name"]
+  categoryType: Notebook["categories"][number]["type"]
+  unit: Notebook["metrics"][number]["unit"]
+  description?: Notebook["metrics"][number]["description"]
+}
 
-  return (
-    <div className="rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface-elevated)] p-4 shadow-sm">
-      {!metric ? (
-        <p className="text-sm text-[var(--color-text-muted)]">Select a metric in the worksheet to view its details.</p>
-      ) : (
+type MetricMentionItem = MentionDataItem<MetricMentionExtra>
+
+export function MetricDetailPanel({
+  notebook,
+  metric,
+  formula = null,
+  validation,
+  formulaValidation,
+}: MetricDetailPanelProps) {
+  const distribution = metric?.distribution ?? null
+  const [noteValue, setNoteValue] = useState("")
+  const mentionOptions = useMemo<MetricMentionItem[]>(() => {
+    const sortedCategories = [...notebook.categories].sort((a, b) => a.order - b.order)
+    return sortedCategories.flatMap((category) => {
+      const categoryMetrics = notebook.metrics.filter((candidate) => candidate.categoryId === category.id)
+      return categoryMetrics.map<MetricMentionItem>((candidate) => ({
+        id: candidate.id,
+        display: candidate.name,
+        categoryId: category.id,
+        categoryName: category.name,
+        categoryType: category.type,
+        unit: candidate.unit,
+        description: candidate.description,
+      }))
+    })
+  }, [notebook.categories, notebook.metrics])
+
+  const referencedMetricIds = useMemo(() => {
+    if (!formula) return []
+    const ids = formula.tokens.filter((token) => token.type === "metric").map((token) => token.metricId)
+    return Array.from(new Set(ids))
+  }, [formula])
+
+  const referencedMetrics = useMemo(() => {
+    if (!referencedMetricIds.length) return []
+    const metricsById = new Map(notebook.metrics.map((candidate) => [candidate.id, candidate]))
+    return referencedMetricIds
+      .map((metricId) => metricsById.get(metricId))
+      .filter((entry): entry is Metric => Boolean(entry))
+  }, [notebook.metrics, referencedMetricIds])
+
+  useEffect(() => {
+    setNoteValue("")
+  }, [metric?.id, formula?.id])
+
+  const formulaExpressionMarkup = useMemo(() => {
+    if (!formula) return ""
+    const metricsById = new Map(notebook.metrics.map((candidate) => [candidate.id, candidate]))
+    const segments = formula.tokens.map((token) => {
+      if (token.type === "metric") {
+        const metric = metricsById.get(token.metricId)
+        const display = metric?.name ?? token.metricId
+        return `@[${display}](${token.metricId})`
+      }
+      if (token.type === "operator") return ` ${token.value} `
+      return token.value
+    })
+    return segments.join("").replace(/\s+/g, " ").trim()
+  }, [formula, notebook.metrics])
+
+  const noteSection = (
+    <section className="rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface-elevated)] p-[var(--space-400)]">
+      <h4 className="text-sm font-semibold text-[var(--color-text-primary)]">Notebook Notes</h4>
+      <p className="mt-1 text-xs text-[var(--color-text-muted)]">Type @ to reference metrics or facts.</p>
+      <MentionsInput
+        value={noteValue}
+        onMentionsChange={(change) => {
+          setNoteValue(change.value)
+        }}
+        placeholder="Add a note…"
+        className="mt-2"
+      >
+        <Mention<MetricMentionExtra>
+          data={mentionOptions}
+          trigger="@"
+          renderSuggestion={(suggestion, _query, highlightedDisplay) => (
+            <div className="flex flex-col">
+              <span className="font-medium text-[var(--color-text-primary)]">{highlightedDisplay}</span>
+              <span className="text-xs text-[var(--color-text-muted)]">
+                {suggestion.categoryName}
+                {" • "}
+                {suggestion.unit}
+              </span>
+              {suggestion.description ? (
+                <span className="text-[10px] text-[var(--color-text-muted)]">{suggestion.description}</span>
+              ) : null}
+            </div>
+          )}
+        />
+      </MentionsInput>
+    </section>
+  )
+
+  if (!metric && !formula) {
+    return (
+      <div className="rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface-elevated)] p-4 shadow-sm">
+        <p className="text-sm text-[var(--color-text-muted)]">Select a row to view more details.</p>
+      </div>
+    )
+  }
+
+  if (formula && !metric) {
+    return (
+      <div className="rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface-elevated)] p-4 shadow-sm">
+        <div className="flex flex-col gap-4">
+          <div>
+            <div className="mt-1 text-xl font-semibold text-[var(--color-text-primary)]">{formula.name}</div>
+            <MentionsInput
+              value={formulaExpressionMarkup}
+              readOnly
+              placeholder="Build this formula by selecting metrics from the worksheet."
+              className="mt-2"
+            >
+              <Mention<MetricMentionExtra>
+                data={mentionOptions}
+                trigger="@"
+                displayTransform={(id, display) => display ?? `${id}`}
+              />
+            </MentionsInput>
+            {formulaValidation ? <p className="mt-2 text-[10px] text-red-500">{formulaValidation}</p> : null}
+          </div>
+
+          {referencedMetrics.length > 0 && (
+            <section className="rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface-elevated)] p-[var(--space-400)]">
+              <h4 className="text-sm font-semibold text-[var(--color-text-primary)]">Referenced Metrics</h4>
+              <ul className="mt-2 space-y-1 text-xs text-[var(--color-text-muted)]">
+                {referencedMetrics.map((referencedMetric) => (
+                  <li key={referencedMetric.id}>
+                    <span className="font-medium text-[var(--color-text-primary)]">{referencedMetric.name}</span>
+                    <span className="ml-1 text-[var(--color-text-muted)]">({referencedMetric.unit})</span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
+          {noteSection}
+        </div>
+      </div>
+    )
+  }
+
+  if (metric) {
+    return (
+      <div className="rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface-elevated)] p-4 shadow-sm">
         <div className="flex flex-col gap-4">
           <div>
             <div className="mt-1 text-xl font-semibold text-[var(--color-text-primary)]">{metric.name}</div>
@@ -54,6 +204,8 @@ export function MetricDetailPanel({ metric, validation }: MetricDetailPanelProps
             <h4 className="text-sm font-semibold text-[var(--color-text-primary)]">Unit: {metric.unit ?? "—"}</h4>
           </section>
 
+          {noteSection}
+
           {metric.formula && (
             <section className="rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface-elevated)] p-[var(--space-400)]">
               <h4 className="text-sm font-semibold text-[var(--color-text-primary)]">Formula</h4>
@@ -63,7 +215,9 @@ export function MetricDetailPanel({ metric, validation }: MetricDetailPanelProps
             </section>
           )}
         </div>
-      )}
-    </div>
-  )
+      </div>
+    )
+  }
+
+  return null
 }
