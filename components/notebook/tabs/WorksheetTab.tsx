@@ -1,7 +1,7 @@
 "use client"
 
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { parseFormula } from "@/lib/formula/parser"
+import { parseFormula } from "@/lib/formulas"
 import { FormulaToken, Metric, Notebook, SimulationResult } from "@/lib/types/notebook"
 import { tokensToExpression } from "@/lib/utils/formulaTokens"
 import { DataGridComponent } from "../DataGridComponent"
