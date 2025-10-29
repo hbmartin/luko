@@ -1,4 +1,4 @@
-import { compileMetricFormulas, evaluateFormulas } from "@/lib/formula/engine"
+import { compileMetricFormulas, evaluateFormulas } from "@/lib/formulas"
 import { Metric, Notebook, SimulationResult } from "@/lib/types/notebook"
 
 const DEFAULT_ITERATIONS = 5000

@@ -140,9 +140,9 @@ export function MetricDetailPanel({
             <div className="mt-1 text-xl font-semibold text-[var(--color-text-primary)]">{formula.name}</div>
             <MentionsInput
               value={formulaExpressionMarkup}
-              readOnly
               placeholder="Build this formula by selecting metrics from the worksheet."
               className="mt-2"
+              autoResize
             >
               <Mention<MetricMentionExtra>
                 data={mentionOptions}
@@ -167,7 +167,7 @@ export function MetricDetailPanel({
             </section>
           )}
 
-          {noteSection}
+          {/* {noteSection} */}
         </div>
       </div>
     )
@@ -207,7 +207,7 @@ export function MetricDetailPanel({
             <h4 className="text-sm font-semibold text-[var(--color-text-primary)]">Unit: {metric.unit ?? "—"}</h4>
           </section>
 
-          {noteSection}
+          {/* {noteSection} */}
 
           {metric.formula && (
             <section className="rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface-elevated)] p-[var(--space-400)]">
