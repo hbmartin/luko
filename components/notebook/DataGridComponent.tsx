@@ -266,7 +266,7 @@ export function DataGridComponent({
         width: 320,
         frozen: true,
         cellClass: "spreadsheet-cell-name",
-        renderEditCell: textEditor,
+        // renderEditCell: textEditor,
         // renderCell: ({ row }) => {
         //   return (
         //     <div className="spreadsheet-metric">
@@ -297,22 +297,22 @@ export function DataGridComponent({
         //   if (args.row.type === "formula") return 4
         //   return 1
         // },
-        renderCell: ({ row, column, onRowChange, rowIdx }: RenderCellProps<GridRow>) => {
-          // if (isFormulaRow(row)) {
-          //   return (
-          //     <FormulaRowCell
-          //       formula={row}
-          //       metrics={notebook.metrics}
-          //       isActive={activeFormulaId === row.id}
-          //       onActivate={() => setActiveFormulaId(row.id)}
-          //       onTokensChange={(tokens) => onFormulaChange(row.id, tokens)}
-          //       onHighlightMetric={setHighlightedMetricId}
-          //       validationMessage={formulaValidation[row.id] ?? null}
-          //     />
-          //   )
-          // }
-          return textEditor({ row, column, onRowChange, rowIdx, onClose: () => {} })
-        },
+        // renderCell: ({ row, column, onRowChange, rowIdx }: RenderCellProps<GridRow>) => {
+        // if (isFormulaRow(row)) {
+        //   return (
+        //     <FormulaRowCell
+        //       formula={row}
+        //       metrics={notebook.metrics}
+        //       isActive={activeFormulaId === row.id}
+        //       onActivate={() => setActiveFormulaId(row.id)}
+        //       onTokensChange={(tokens) => onFormulaChange(row.id, tokens)}
+        //       onHighlightMetric={setHighlightedMetricId}
+        //       validationMessage={formulaValidation[row.id] ?? null}
+        //     />
+        //   )
+        // }
+        //   return textEditor({ row, column, onRowChange, rowIdx, onClose: () => {} })
+        // },
       },
       {
         key: "min",
@@ -597,49 +597,47 @@ export function DataGridComponent({
   /* <ContextMenu onOpenChange={handleContextMenuOpenChange}>
       <ContextMenuTrigger asChild> */
   return (
-    <div className="h-screen">
-      <TreeDataGrid
-        enableVirtualization={true}
-        ref={gridRef}
-        className="rdg-light rdg-spreadsheet h-screen"
-        columns={columns}
-        rows={rows}
-        style={{ height: "100%" }}
-        rowHeight={46}
-        headerRowHeight={46}
-        rowKeyGetter={(row) => row.id}
-        rowClass={(row) => rowClass?.(row) ?? ""}
-        defaultColumnOptions={{ resizable: false }}
-        // onCellClick={handleCellClick}
-        // onSelectedCellChange={handleCellFocus}
-        // onCellContextMenu={handleCellContextMenu}
-        groupBy={["categoryId"]}
-        rowGrouper={rowGrouper}
-        expandedGroupIds={expandedGroupIds}
-        onExpandedGroupIdsChange={setExpandedGroupIds}
-        // onRowsChange={handleRowsChange}
-        onScroll={(event: React.UIEvent<HTMLDivElement>) => {
-          const starts = [...document.querySelectorAll('.rdg-cell[aria-colindex="1"]')].map((cell) =>
-            Number(getComputedStyle(cell).gridRowStart)
-          )
-          const heights = [...document.querySelectorAll('.rdg-cell[aria-colindex="1"]')].map(
-            (cell) => cell.getBoundingClientRect().height
-          )
-          console.log(Math.min(...starts), Math.max(...starts), Math.min(...heights), Math.max(...heights))
-          const el = gridRef.current?.element // DataGridHandle gives you { element }
-          if (!el) return
-          const cells = document.getElementsByClassName("rdg-cell")
-          for (let i = 0; i < cells.length; i++) {
-            const height = cells[i]?.getBoundingClientRect().height
-            if (height !== 46) {
-              console.error("cell height is not 46", cells[i]?.getBoundingClientRect().height)
-            }
+    <TreeDataGrid
+      enableVirtualization={true}
+      ref={gridRef}
+      className="rdg-light rdg-spreadsheet h-screen"
+      columns={columns}
+      rows={rows}
+      style={{ minHeight: 0 }}
+      rowHeight={46}
+      headerRowHeight={46}
+      rowKeyGetter={(row) => row.id}
+      rowClass={(row) => rowClass?.(row) ?? ""}
+      defaultColumnOptions={{ resizable: false }}
+      // onCellClick={handleCellClick}
+      // onSelectedCellChange={handleCellFocus}
+      // onCellContextMenu={handleCellContextMenu}
+      groupBy={["categoryId"]}
+      rowGrouper={rowGrouper}
+      expandedGroupIds={expandedGroupIds}
+      onExpandedGroupIdsChange={setExpandedGroupIds}
+      // onRowsChange={handleRowsChange}
+      onScroll={(event: React.UIEvent<HTMLDivElement>) => {
+        const starts = [...document.querySelectorAll('.rdg-cell[aria-colindex="1"]')].map((cell) =>
+          Number(getComputedStyle(cell).gridRowStart)
+        )
+        const heights = [...document.querySelectorAll('.rdg-cell[aria-colindex="1"]')].map(
+          (cell) => cell.getBoundingClientRect().height
+        )
+        console.log(Math.min(...starts), Math.max(...starts), Math.min(...heights), Math.max(...heights))
+        const el = gridRef.current?.element // DataGridHandle gives you { element }
+        if (!el) return
+        const cells = document.getElementsByClassName("rdg-cell")
+        for (let i = 0; i < cells.length; i++) {
+          const height = cells[i]?.getBoundingClientRect().height
+          if (height !== 46) {
+            console.error("cell height is not 46", cells[i]?.getBoundingClientRect().height)
           }
-          const grid = event.currentTarget
-          console.log("scroll", grid.scrollTop, grid.clientHeight, grid.scrollHeight)
-        }}
-      />
-    </div>
+        }
+        const grid = event.currentTarget
+        console.log("scroll", grid.scrollTop, grid.clientHeight, grid.scrollHeight)
+      }}
+    />
     // </ContextMenuTrigger>
     //   {contextMenuState && (
     //     <ContextMenuContent>

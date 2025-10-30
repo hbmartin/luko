@@ -17,9 +17,7 @@ export default function NotebookLayout({
   return (
     <NotebookProvider notebook={mockNotebook}>
       <NotebookHeader notebookId={unwrappedParams.id} />
-      <main className="absolute top-32 right-0 bottom-0 left-0 mx-auto flex flex-col px-[var(--space-500)] py-[var(--space-500)]">
-        {children}
-      </main>
+      <main className="">{children}</main>
     </NotebookProvider>
   )
 }
