@@ -100,7 +100,7 @@ export function WorksheetTab({ notebook, onNotebookChange, density, simulationRe
     return () => window.removeEventListener("keydown", handleKey)
   })
 
-  const validationErrors = useMemo(() => {
+  const validationErrors: Record<string, ValidationState | undefined> = useMemo(() => {
     const errors: Record<string, ValidationState | undefined> = {}
     notebook.metrics.forEach((metric) => {
       const metricErrors = validateMetric(metric)
@@ -111,8 +111,8 @@ export function WorksheetTab({ notebook, onNotebookChange, density, simulationRe
     return errors
   }, [notebook.metrics])
 
-  const formulaValidation = useMemo(() => {
-    const errors: Record<string, string | null> = {}
+  const formulaValidation: Record<string, string | undefined> = useMemo(() => {
+    const errors: Record<string, string | undefined> = {}
     const metricsById = new Map(notebook.metrics.map((metric) => [metric.id, metric]))
 
     notebook.formulas.forEach((formula) => {
@@ -136,7 +136,7 @@ export function WorksheetTab({ notebook, onNotebookChange, density, simulationRe
 
       try {
         parseFormula(expression)
-        errors[formula.id] = null
+        errors[formula.id] = undefined
       } catch (error) {
         errors[formula.id] = error instanceof Error ? error.message : "Formula is invalid"
       }
@@ -349,7 +349,7 @@ export function WorksheetTab({ notebook, onNotebookChange, density, simulationRe
   )
 
   const activeMetricValidation = activeMetric ? validationErrors[activeMetric.id] : undefined
-  const activeFormulaValidation = selectedRowId ? (formulaValidation[selectedRowId] ?? null) : null
+  const activeFormulaValidation = selectedRowId ? (formulaValidation[selectedRowId] ?? undefined) : undefined
   return (
     <div className="mx-auto flex h-full min-h-0 flex-1 items-stretch gap-4 p-6">
       <DataGridComponent
@@ -370,7 +370,7 @@ export function WorksheetTab({ notebook, onNotebookChange, density, simulationRe
           notebook={notebook}
           metric={activeMetric}
           formula={activeFormula}
-          validation={activeMetricValidation}
+          metricValidation={activeMetricValidation}
           formulaValidation={activeFormulaValidation}
         />
         <SimulationSummaryPanel notebook={notebook} result={simulationResult ?? null} />

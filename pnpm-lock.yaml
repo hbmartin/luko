@@ -133,8 +133,8 @@ importers:
         specifier: ^19.2.0
         version: 19.2.0
       react-mentions-ts:
-        specifier: ^5.4.2
-        version: 5.4.2(class-variance-authority@0.7.1)(clsx@2.1.1)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(tailwind-merge@3.3.1)
+        specifier: ^5.4.3
+        version: 5.4.3(class-variance-authority@0.7.1)(clsx@2.1.1)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(tailwind-merge@3.3.1)
       recharts:
         specifier: ^3.3.0
         version: 3.3.0(@types/react@19.2.2)(react-dom@19.2.0(react@19.2.0))(react-is@19.2.0)(react@19.2.0)(redux@5.0.1)
@@ -230,8 +230,8 @@ importers:
         specifier: 4.0.0-beta.0
         version: 4.0.0-beta.0(tailwindcss@4.1.16)
       fetch-mock:
-        specifier: ^12.5.6
-        version: 12.5.6
+        specifier: ^12.6.0
+        version: 12.6.0
       gzip-size:
         specifier: 7.0.0
         version: 7.0.0
@@ -3793,8 +3793,8 @@ packages:
     resolution: {integrity: sha512-7yAQpD2UMJzLi1Dqv7qFYnPbaPx7ZfFK6PiIxQ4PfkGPyNyl2Ugx+a/umUonmKqjhM4DnfbMvdX6otXq83soQQ==}
     engines: {node: ^12.20 || >= 14.13}
 
-  fetch-mock@12.5.6:
-    resolution: {integrity: sha512-w7r26n4P5nbXGhTnmzgNDUb6Hzx8DTh6tBKIk9hd2NNRhv5i9r+gUFslNzttxh9doAGLUaxefnjZT0EvYTL+AA==}
+  fetch-mock@12.6.0:
+    resolution: {integrity: sha512-oAy0OqAvjAvduqCeWveBix7LLuDbARPqZZ8ERYtBcCURA3gy7EALA3XWq0tCNxsSg+RmmJqyaeeZlOCV9abv6w==}
     engines: {node: '>=18.11.0'}
 
   fflate@0.8.2:
@@ -4850,8 +4850,8 @@ packages:
   react-is@19.2.0:
     resolution: {integrity: sha512-x3Ax3kNSMIIkyVYhWPyO09bu0uttcAIoecO/um/rKGQ4EltYWVYtyiGkS/3xMynrbVQdS69Jhlv8FXUEZehlzA==}
 
-  react-mentions-ts@5.4.2:
-    resolution: {integrity: sha512-M3mbia5D0WAQRqjaW3L9G5kPR8qv6bwvjsevrsgXbHSB/NBbTJo9lnj38uLNysoI1PizQcSMetoaGVmjWvPPzg==}
+  react-mentions-ts@5.4.3:
+    resolution: {integrity: sha512-mezHSNtZHrWMm3PwogQZjNCUPDTfydPsYV95cDLNaQFa2SfgH81+OGFSNO7PRDAJeaA9VQ7DszUadcNu9RG3Pw==}
     engines: {node: '>=20'}
     peerDependencies:
       class-variance-authority: '>=0.6.0'
@@ -9318,7 +9318,7 @@ snapshots:
       node-domexception: 1.0.0
       web-streams-polyfill: 3.3.3
 
-  fetch-mock@12.5.6:
+  fetch-mock@12.6.0:
     dependencies:
       '@types/glob-to-regexp': 0.4.4
       dequal: 2.0.3
@@ -10299,7 +10299,7 @@ snapshots:
 
   react-is@19.2.0: {}
 
-  react-mentions-ts@5.4.2(class-variance-authority@0.7.1)(clsx@2.1.1)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(tailwind-merge@3.3.1):
+  react-mentions-ts@5.4.3(class-variance-authority@0.7.1)(clsx@2.1.1)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(tailwind-merge@3.3.1):
     dependencies:
       class-variance-authority: 0.7.1
       clsx: 2.1.1

@@ -92,6 +92,7 @@ export const FormulaSchema = z.object({
   id: z.string(),
   name: z.string(),
   categoryId: z.string(),
+  description: z.string().optional(),
   tokens: z.array(FormulaTokenSchema),
   updatedAt: z.string(),
 })
