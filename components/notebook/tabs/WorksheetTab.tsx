@@ -351,20 +351,37 @@ export function WorksheetTab({ notebook, onNotebookChange, density, simulationRe
   const activeMetricValidation = activeMetric ? validationErrors[activeMetric.id] : undefined
   const activeFormulaValidation = selectedRowId ? (formulaValidation[selectedRowId] ?? undefined) : undefined
   return (
+    <DataGridComponent
+      notebook={notebook}
+      density={density}
+      validationErrors={validationErrors}
+      onMetricChange={handleMetricChange}
+      onCategoryToggle={handleCategoryToggle}
+      onRowReorder={handleRowReorder}
+      onOpenDetails={setSelectedRowId}
+      onFormulaChange={handleFormulaChange}
+      formulaValidation={formulaValidation}
+      onAddFormula={handleAddFormula}
+      onDeleteFormula={handleDeleteFormula}
+    />
+  )
+  return (
     <div className="mx-auto flex h-full min-h-0 flex-1 items-stretch gap-4 p-6">
-      <DataGridComponent
-        notebook={notebook}
-        density={density}
-        validationErrors={validationErrors}
-        onMetricChange={handleMetricChange}
-        onCategoryToggle={handleCategoryToggle}
-        onRowReorder={handleRowReorder}
-        onOpenDetails={setSelectedRowId}
-        onFormulaChange={handleFormulaChange}
-        formulaValidation={formulaValidation}
-        onAddFormula={handleAddFormula}
-        onDeleteFormula={handleDeleteFormula}
-      />
+      <div className="min-w-0 flex-1">
+        <DataGridComponent
+          notebook={notebook}
+          density={density}
+          validationErrors={validationErrors}
+          onMetricChange={handleMetricChange}
+          onCategoryToggle={handleCategoryToggle}
+          onRowReorder={handleRowReorder}
+          onOpenDetails={setSelectedRowId}
+          onFormulaChange={handleFormulaChange}
+          formulaValidation={formulaValidation}
+          onAddFormula={handleAddFormula}
+          onDeleteFormula={handleDeleteFormula}
+        />
+      </div>
       <div className="w-80 shrink-0 space-y-4">
         <MetricDetailPanel
           notebook={notebook}

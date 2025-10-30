@@ -123,6 +123,19 @@ export function DataGridComponent({
   onDeleteFormula,
 }: DataGridComponentProps) {
   const gridRef = useRef<DataGridHandle>(null)
+  useLayoutEffect(() => {
+    const el = gridRef.current?.element // DataGridHandle gives you { element }
+    if (!el) return
+    el.dataset.instance = el.dataset.instance ?? Math.random().toString(36).slice(2)
+    console.log("grid instance", el.dataset.instance)
+    const cells = document.getElementsByClassName("rdg-cell")
+    for (let i = 0; i < cells.length; i++) {
+      const height = cells[i]?.getBoundingClientRect().height
+      if (height !== 46) {
+        console.error("cell height is not 46", cells[i])
+      }
+    }
+  })
   const [expandedGroupIds, setExpandedGroupIds] = useState<ReadonlySet<unknown>>(
     () => new Set<unknown>(notebook.categories.map((category) => category.id))
   )
@@ -220,6 +233,10 @@ export function DataGridComponent({
       renderGroupCell: (props: RenderGroupCellProps<GridRow>) => {
         const rawKey = props.groupKey == null ? "" : String(props.groupKey)
         const label = categoryLabels.get(rawKey) ?? rawKey ?? "Uncategorized"
+        return renderToggleGroup({
+          ...props,
+          groupKey: label,
+        })
         if (rawKey === "__ungrouped__" || rawKey === "") {
           return renderToggleGroup({
             ...props,
@@ -249,50 +266,51 @@ export function DataGridComponent({
         width: 320,
         frozen: true,
         cellClass: "spreadsheet-cell-name",
-        renderCell: ({ row }) => {
-          return (
-            <div className="spreadsheet-metric">
-              <div>
-                <p className="spreadsheet-metric-name">{row.name}</p>
-              </div>
-            </div>
-          )
-        },
-        renderGroupCell: ({ groupKey }: RenderGroupCellProps<GridRow>) => {
-          const rawKey = groupKey == null ? "" : String(groupKey)
-          const label = categoryLabels.get(rawKey) ?? rawKey ?? "Uncategorized"
+        renderEditCell: textEditor,
+        // renderCell: ({ row }) => {
+        //   return (
+        //     <div className="spreadsheet-metric">
+        //       <div>
+        //         <p className="spreadsheet-metric-name">{row.name}</p>
+        //       </div>
+        //     </div>
+        //   )
+        // },
+        // renderGroupCell: ({ groupKey }: RenderGroupCellProps<GridRow>) => {
+        //   const rawKey = groupKey == null ? "" : String(groupKey)
+        //   const label = categoryLabels.get(rawKey) ?? rawKey ?? "Uncategorized"
 
-          return (
-            <Button variant="outline" onClick={(event) => handleGroupMenuButtonClick(rawKey, label, event)}>
-              Add new...
-            </Button>
-          )
-        },
+        //   return (
+        //     <Button variant="outline" onClick={(event) => handleGroupMenuButtonClick(rawKey, label, event)}>
+        //       Add new...
+        //     </Button>
+        //   )
+        // },
       },
       {
         key: "unit",
         name: "Unit",
         width: 120,
         cellClass: unitCellClass,
-        colSpan: (args) => {
-          if (args.type !== "ROW") return undefined
-          if (args.row.type === "formula") return 4
-          return 1
-        },
+        // colSpan: (args) => {
+        //   if (args.type !== "ROW") return undefined
+        //   if (args.row.type === "formula") return 4
+        //   return 1
+        // },
         renderCell: ({ row, column, onRowChange, rowIdx }: RenderCellProps<GridRow>) => {
-          if (isFormulaRow(row)) {
-            return (
-              <FormulaRowCell
-                formula={row}
-                metrics={notebook.metrics}
-                isActive={activeFormulaId === row.id}
-                onActivate={() => setActiveFormulaId(row.id)}
-                onTokensChange={(tokens) => onFormulaChange(row.id, tokens)}
-                onHighlightMetric={setHighlightedMetricId}
-                validationMessage={formulaValidation[row.id] ?? null}
-              />
-            )
-          }
+          // if (isFormulaRow(row)) {
+          //   return (
+          //     <FormulaRowCell
+          //       formula={row}
+          //       metrics={notebook.metrics}
+          //       isActive={activeFormulaId === row.id}
+          //       onActivate={() => setActiveFormulaId(row.id)}
+          //       onTokensChange={(tokens) => onFormulaChange(row.id, tokens)}
+          //       onHighlightMetric={setHighlightedMetricId}
+          //       validationMessage={formulaValidation[row.id] ?? null}
+          //     />
+          //   )
+          // }
           return textEditor({ row, column, onRowChange, rowIdx, onClose: () => {} })
         },
       },
@@ -517,133 +535,196 @@ export function DataGridComponent({
     [categoryLabels]
   )
 
-  const columnCount = columns.length
-  const rowCount = rows.length
+  useEffect(() => {
+    console.log("density changed to", density)
+  }, [density])
 
   useLayoutEffect(() => {
-    if (hasPositionedInitialCellRef.current) return
-    if (!gridRef.current) return
-    if (rowCount === 0) return
-    console.log("scrolling to initial cell")
+    const grid = gridRef.current?.element
+    if (!grid) return
 
-    const firstDataColumnIndex = columnCount > 1 ? 1 : 0
-    gridRef.current.scrollToCell({ rowIdx: 0, idx: firstDataColumnIndex })
-    gridRef.current.selectCell({ rowIdx: 0, idx: firstDataColumnIndex })
-    hasPositionedInitialCellRef.current = true
-  }, [columnCount, rowCount])
+    const dumpRows = () => {
+      const rows = Array.from(grid.querySelectorAll<HTMLElement>('.rdg [role="row"]'))
+      const data = rows
+        .map((row) => ({
+          ariaRow: Number(row.getAttribute("aria-rowindex")),
+          gridRowStart: Number(row.style.getPropertyValue("--rdg-grid-row-start") || Number.NaN),
+        }))
+        .filter((row) => !Number.isNaN(row.gridRowStart))
 
+      if (data.length === 0) return
+      const starts = data.map((row) => row.gridRowStart)
+      console.log("row range", Math.min(...starts), Math.max(...starts), "rows rendered", data.length)
+    }
+
+    dumpRows()
+    const intervalId = window.setInterval(dumpRows, 200)
+
+    const originalDescriptor = Object.getOwnPropertyDescriptor(grid, "scrollTop")
+    if (!originalDescriptor) {
+      const proto = Object.getPrototypeOf(grid)
+      const descriptorFromProto = Object.getOwnPropertyDescriptor(proto, "scrollTop")
+      if (descriptorFromProto?.get && descriptorFromProto?.set) {
+        Object.defineProperty(grid, "scrollTop", {
+          configurable: true,
+          get() {
+            return descriptorFromProto.get!.call(this)
+          },
+          set(value: number) {
+            console.trace("scrollTop set", value)
+            descriptorFromProto.set!.call(this, value)
+          },
+        })
+      }
+    } else if (originalDescriptor.get && originalDescriptor.set) {
+      Object.defineProperty(grid, "scrollTop", {
+        configurable: true,
+        get() {
+          return originalDescriptor.get!.call(this)
+        },
+        set(value: number) {
+          console.trace("scrollTop set", value)
+          originalDescriptor.set!.call(this, value)
+        },
+      })
+    }
+
+    return () => {
+      window.clearInterval(intervalId)
+      delete (grid as typeof grid & { scrollTop?: number }).scrollTop
+    }
+  }, [])
+  /* <ContextMenu onOpenChange={handleContextMenuOpenChange}>
+      <ContextMenuTrigger asChild> */
   return (
-    <ContextMenu onOpenChange={handleContextMenuOpenChange}>
-      <ContextMenuTrigger asChild>
-        <div className="h-screen">
-          <TreeDataGrid
-            ref={gridRef}
-            className="rdg-light rdg-spreadsheet"
-            columns={columns}
-            rows={rows}
-            style={{ height: "100%" }}
-            rowHeight={density === "compact" ? 36 : 46}
-            rowKeyGetter={(row) => row.id}
-            rowClass={(row) => rowClass?.(row) ?? ""}
-            defaultColumnOptions={{ resizable: false }}
-            onCellClick={handleCellClick}
-            onSelectedCellChange={handleCellFocus}
-            onCellContextMenu={handleCellContextMenu}
-            groupBy={["categoryId"]}
-            rowGrouper={rowGrouper}
-            expandedGroupIds={expandedGroupIds}
-            onExpandedGroupIdsChange={setExpandedGroupIds}
-            onRowsChange={handleRowsChange}
-            onScroll={(event: React.UIEvent<HTMLDivElement>) =>
-              console.log(`scrolled: ${event.currentTarget.scrollTop}, ${event.currentTarget.scrollLeft}`)
+    <div className="h-screen">
+      <TreeDataGrid
+        enableVirtualization={true}
+        ref={gridRef}
+        className="rdg-light rdg-spreadsheet h-screen"
+        columns={columns}
+        rows={rows}
+        style={{ height: "100%" }}
+        rowHeight={46}
+        headerRowHeight={46}
+        rowKeyGetter={(row) => row.id}
+        rowClass={(row) => rowClass?.(row) ?? ""}
+        defaultColumnOptions={{ resizable: false }}
+        // onCellClick={handleCellClick}
+        // onSelectedCellChange={handleCellFocus}
+        // onCellContextMenu={handleCellContextMenu}
+        groupBy={["categoryId"]}
+        rowGrouper={rowGrouper}
+        expandedGroupIds={expandedGroupIds}
+        onExpandedGroupIdsChange={setExpandedGroupIds}
+        // onRowsChange={handleRowsChange}
+        onScroll={(event: React.UIEvent<HTMLDivElement>) => {
+          const starts = [...document.querySelectorAll('.rdg-cell[aria-colindex="1"]')].map((cell) =>
+            Number(getComputedStyle(cell).gridRowStart)
+          )
+          const heights = [...document.querySelectorAll('.rdg-cell[aria-colindex="1"]')].map(
+            (cell) => cell.getBoundingClientRect().height
+          )
+          console.log(Math.min(...starts), Math.max(...starts), Math.min(...heights), Math.max(...heights))
+          const el = gridRef.current?.element // DataGridHandle gives you { element }
+          if (!el) return
+          const cells = document.getElementsByClassName("rdg-cell")
+          for (let i = 0; i < cells.length; i++) {
+            const height = cells[i]?.getBoundingClientRect().height
+            if (height !== 46) {
+              console.error("cell height is not 46", cells[i]?.getBoundingClientRect().height)
             }
-          />
-        </div>
-      </ContextMenuTrigger>
-      {contextMenuState && (
-        <ContextMenuContent>
-          {contextMenuState.kind === "metric" && (
-            <>
-              <ContextMenuLabel inset>{contextMenuState.metricName}</ContextMenuLabel>
-              <ContextMenuSeparator />
-              <ContextMenuItem
-                variant="destructive"
-                onSelect={() => {
-                  onDeleteMetric?.(contextMenuState.metricId)
-                  setContextMenuState(null)
-                }}
-              >
-                Delete metric
-              </ContextMenuItem>
-              <ContextMenuItem
-                onSelect={() => {
-                  onAddMetric?.(contextMenuState.categoryId)
-                  setContextMenuState(null)
-                }}
-              >
-                Add new metric
-              </ContextMenuItem>
-            </>
-          )}
-          {contextMenuState.kind === "category" && (
-            <>
-              <ContextMenuLabel inset>{contextMenuState.categoryName}</ContextMenuLabel>
-              <ContextMenuSeparator />
-              <ContextMenuItem
-                variant="destructive"
-                onSelect={() => {
-                  onDeleteCategory?.(contextMenuState.categoryId)
-                  setContextMenuState(null)
-                }}
-              >
-                Delete category
-              </ContextMenuItem>
-              <ContextMenuItem
-                onSelect={() => {
-                  onAddCategory?.(contextMenuState.categoryId)
-                  setContextMenuState(null)
-                }}
-              >
-                Add new category
-              </ContextMenuItem>
-              <ContextMenuSeparator />
-              <ContextMenuItem
-                onSelect={() => {
-                  const newId = onAddFormula?.(contextMenuState.categoryId)
-                  if (newId) setActiveFormulaId(newId)
-                  setContextMenuState(null)
-                }}
-              >
-                Add formula row
-              </ContextMenuItem>
-              <ContextMenuItem
-                onSelect={() => {
-                  onAddMetric?.(contextMenuState.categoryId)
-                  setContextMenuState(null)
-                }}
-              >
-                Add new metric
-              </ContextMenuItem>
-            </>
-          )}
-          {contextMenuState.kind === "formula" && (
-            <>
-              <ContextMenuLabel inset>{contextMenuState.formulaName}</ContextMenuLabel>
-              <ContextMenuSeparator />
-              <ContextMenuItem
-                variant="destructive"
-                onSelect={() => {
-                  onDeleteFormula?.(contextMenuState.formulaId)
-                  setContextMenuState(null)
-                }}
-              >
-                Delete formula
-              </ContextMenuItem>
-            </>
-          )}
-        </ContextMenuContent>
-      )}
-    </ContextMenu>
+          }
+          const grid = event.currentTarget
+          console.log("scroll", grid.scrollTop, grid.clientHeight, grid.scrollHeight)
+        }}
+      />
+    </div>
+    // </ContextMenuTrigger>
+    //   {contextMenuState && (
+    //     <ContextMenuContent>
+    //       {contextMenuState.kind === "metric" && (
+    //         <>
+    //           <ContextMenuLabel inset>{contextMenuState.metricName}</ContextMenuLabel>
+    //           <ContextMenuSeparator />
+    //           <ContextMenuItem
+    //             variant="destructive"
+    //             onSelect={() => {
+    //               onDeleteMetric?.(contextMenuState.metricId)
+    //               setContextMenuState(null)
+    //             }}
+    //           >
+    //             Delete metric
+    //           </ContextMenuItem>
+    //           <ContextMenuItem
+    //             onSelect={() => {
+    //               onAddMetric?.(contextMenuState.categoryId)
+    //               setContextMenuState(null)
+    //             }}
+    //           >
+    //             Add new metric
+    //           </ContextMenuItem>
+    //         </>
+    //       )}
+    //       {contextMenuState.kind === "category" && (
+    //         <>
+    //           <ContextMenuLabel inset>{contextMenuState.categoryName}</ContextMenuLabel>
+    //           <ContextMenuSeparator />
+    //           <ContextMenuItem
+    //             variant="destructive"
+    //             onSelect={() => {
+    //               onDeleteCategory?.(contextMenuState.categoryId)
+    //               setContextMenuState(null)
+    //             }}
+    //           >
+    //             Delete category
+    //           </ContextMenuItem>
+    //           <ContextMenuItem
+    //             onSelect={() => {
+    //               onAddCategory?.(contextMenuState.categoryId)
+    //               setContextMenuState(null)
+    //             }}
+    //           >
+    //             Add new category
+    //           </ContextMenuItem>
+    //           <ContextMenuSeparator />
+    //           <ContextMenuItem
+    //             onSelect={() => {
+    //               const newId = onAddFormula?.(contextMenuState.categoryId)
+    //               if (newId) setActiveFormulaId(newId)
+    //               setContextMenuState(null)
+    //             }}
+    //           >
+    //             Add formula row
+    //           </ContextMenuItem>
+    //           <ContextMenuItem
+    //             onSelect={() => {
+    //               onAddMetric?.(contextMenuState.categoryId)
+    //               setContextMenuState(null)
+    //             }}
+    //           >
+    //             Add new metric
+    //           </ContextMenuItem>
+    //         </>
+    //       )}
+    //       {contextMenuState.kind === "formula" && (
+    //         <>
+    //           <ContextMenuLabel inset>{contextMenuState.formulaName}</ContextMenuLabel>
+    //           <ContextMenuSeparator />
+    //           <ContextMenuItem
+    //             variant="destructive"
+    //             onSelect={() => {
+    //               onDeleteFormula?.(contextMenuState.formulaId)
+    //               setContextMenuState(null)
+    //             }}
+    //           >
+    //             Delete formula
+    //           </ContextMenuItem>
+    //         </>
+    //       )}
+    //     </ContextMenuContent>
+    //   )}
+    // </ContextMenu>
   )
 }
 function rowGrouper(rows: readonly GridRow[], columnKey: string) {
