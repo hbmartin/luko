@@ -3,7 +3,6 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { parseFormula } from "@/lib/formulas"
 import { Metric, Notebook, SimulationResult } from "@/lib/types/notebook"
-import { expressionToTokens } from "@/lib/utils/formulaTokens"
 import { DataGridComponent } from "../DataGridComponent"
 import { MetricDetailPanel } from "../MetricDetailPanel"
 import { SimulationSummaryPanel } from "../SimulationSummaryPanel"
@@ -122,13 +121,13 @@ export function WorksheetTab({ notebook, onNotebookChange, density, simulationRe
         return
       }
 
-      const tokens = expressionToTokens(expression)
-      const missingMetric = tokens.find((token) => token.type === "metric" && !metricsById.has(token.metricId))
+      // const tokens = expressionToTokens(expression)
+      // const missingMetric = tokens.find((token) => token.type === "metric" && !metricsById.has(token.metricId))
 
-      if (missingMetric) {
-        errors[formula.id] = "Referenced metric no longer exists"
-        return
-      }
+      // if (missingMetric) {
+      //   errors[formula.id] = "Referenced metric no longer exists"
+      //   return
+      // }
 
       try {
         parseFormula(expression)

@@ -13,6 +13,7 @@ import {
   textEditor,
   TreeDataGrid,
 } from "react-data-grid"
+import { Button } from "@/components/ui/button"
 import {
   ContextMenu,
   ContextMenuContent,
@@ -22,9 +23,7 @@ import {
   ContextMenuTrigger,
 } from "@/components/ui/context-menu"
 import type { CategoryRow, GridRow, MetricRow, Notebook } from "@/lib/types/notebook"
-import { type ExpressionToken, expressionToTokens, tokensToExpression } from "@/lib/utils/formulaTokens"
 import { notebookToGridRows } from "@/lib/utils/grid-helpers"
-import { Button } from "../ui/button"
 
 // GroupRow type from react-data-grid (not exported)
 interface GroupRow<TRow> {
@@ -355,9 +354,9 @@ export function DataGridComponent({
       if (!activeFormulaId) return false
       const formula = notebook.formulas.find((candidate) => candidate.id === activeFormulaId)
       if (!formula) return false
-      const existingTokens = expressionToTokens(formula.expression)
-      const nextTokens: ExpressionToken[] = [...existingTokens, { type: "metric", metricId }]
-      onFormulaChange(activeFormulaId, tokensToExpression(nextTokens))
+      // const existingTokens = expressionToTokens(formula.expression)
+      // const nextTokens: ExpressionToken[] = [...existingTokens, { type: "metric", metricId }]
+      // onFormulaChange(activeFormulaId, tokensToExpression(nextTokens))
       setHighlightedMetricId(metricId)
       return true
     },
