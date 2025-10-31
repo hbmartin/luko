@@ -14,24 +14,18 @@ export type FormulaRegistry = Record<string, FormulaCompilation>
 
 type DependencyMap = Record<string, Set<string>>
 
-const isSymbolNode = (node: MathNode): node is MathNode & { name: string } =>
-  typeof (node as { isSymbolNode?: boolean }).isSymbolNode === "boolean" &&
-  (node as { isSymbolNode?: boolean }).isSymbolNode === true
-
-const isFunctionNode = (node?: MathNode): node is MathNode & { fn: MathNode } =>
-  !!node &&
-  typeof (node as { isFunctionNode?: boolean }).isFunctionNode === "boolean" &&
-  (node as { isFunctionNode?: boolean }).isFunctionNode === true
-
 const extractDependencies = (node: MathNode): string[] => {
   const dependencies = new Set<string>()
   node.traverse((child, _path, parent) => {
-    if (!isSymbolNode(child)) return
-    if (isFunctionNode(parent) && parent.fn === child) return
+    if (!math.isSymbolNode(child)) return
+    if (math.isFunctionNode(parent) && parent.fn === child) return
     dependencies.add(child.name)
   })
   return Array.from(dependencies)
 }
+
+// Currently all symbol names (e.g., pi) enter the graph, inflating sort order.
+// Consider filtering to keys present in the registry to avoid noise and speed up evaluation.
 
 const buildDependencyMap = (registry: FormulaRegistry): DependencyMap => {
   const map: DependencyMap = {}
@@ -103,6 +97,9 @@ const topologicalSort = (dependencyMap: DependencyMap): string[] => {
 
 const toNumber = (value: MathType): number => {
   if (typeof value === "number") return value
+  if (typeof value === "boolean") {
+    throw new Error("Formula must evaluate to a numeric value, not boolean.")
+  }
   if (typeof value === "bigint") return Number(value)
   if (math.isBigNumber(value) || math.isFraction(value)) {
     return math.number(value)

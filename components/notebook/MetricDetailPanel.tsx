@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react"
 import { Mention, type MentionDataItem, MentionsInput } from "react-mentions-ts"
 import { DistributionChart } from "@/components/notebook/charts/DistributionChart"
 import { Formula, Metric, Notebook } from "@/lib/types/notebook"
+import { expressionToTokens } from "@/lib/utils/formulaTokens"
 
 interface ValidationState {
   min?: string
@@ -16,8 +17,8 @@ interface MetricDetailPanelProps {
   notebook: Notebook
   metric: Metric | null
   formula?: Formula | null
-  validation?: ValidationState
-  formulaValidation?: string | null
+  metricValidation?: ValidationState
+  formulaValidation?: string | undefined
 }
 
 type MetricMentionExtra = {
@@ -34,11 +35,10 @@ export function MetricDetailPanel({
   notebook,
   metric,
   formula = null,
-  validation,
+  metricValidation,
   formulaValidation,
 }: MetricDetailPanelProps) {
   const distribution = metric?.distribution ?? null
-  const [noteValue, setNoteValue] = useState("")
   const mentionOptions = useMemo<MetricMentionItem[]>(() => {
     const sortedCategories = [...notebook.categories].sort((a, b) => a.order - b.order)
     return sortedCategories.flatMap((category) => {
@@ -60,11 +60,16 @@ export function MetricDetailPanel({
     [notebook.metrics]
   )
 
-  const referencedMetricIds = useMemo(() => {
+  const formulaTokens = useMemo(() => {
     if (!formula) return []
-    const ids = formula.tokens.filter((token) => token.type === "metric").map((token) => token.metricId)
+    return expressionToTokens(formula.expression)
+  }, [formula?.expression])
+
+  const referencedMetricIds = useMemo(() => {
+    if (!formulaTokens.length) return []
+    const ids = formulaTokens.filter((token) => token.type === "metric").map((token) => token.metricId)
     return Array.from(new Set(ids))
-  }, [formula])
+  }, [formulaTokens])
 
   const referencedMetrics = useMemo(() => {
     if (!referencedMetricIds.length) return []
@@ -73,57 +78,21 @@ export function MetricDetailPanel({
       .filter((entry): entry is Metric => Boolean(entry))
   }, [metricsById, referencedMetricIds])
 
-  useEffect(() => {
-    setNoteValue("")
-  }, [metric?.id, formula?.id])
+  const [formulaExpressionMarkup, setFormulaExpressionMarkup] = useState<string | undefined>(undefined)
 
-  const formulaExpressionMarkup = useMemo(() => {
-    if (!formula) return ""
-    const segments = formula.tokens.map((token) => {
+  useEffect(() => {
+    if (!formula) return
+    const segments = formulaTokens.map((token) => {
       if (token.type === "metric") {
         const metric = metricsById.get(token.metricId)
         const display = metric?.name ?? token.metricId
         return `@[${display}](${token.metricId})`
       }
-      if (token.type === "operator") return ` ${token.value} `
-      return token.value
+      return ` ${"value" in token ? token.value : ""} `
     })
-    return segments.join("").replace(/\s+/g, " ").trim()
-  }, [formula, metricsById])
-
-  const noteSection = (
-    <section className="rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface-elevated)] p-[var(--space-400)]">
-      <h4 className="text-sm font-semibold text-[var(--color-text-primary)]">Notebook Notes</h4>
-      <p className="mt-1 text-xs text-[var(--color-text-muted)]">Type @ to reference metrics or facts.</p>
-      <MentionsInput
-        value={noteValue}
-        onMentionsChange={(change) => {
-          setNoteValue(change.value)
-        }}
-        placeholder="Add a note…"
-        className="mt-2"
-      >
-        <Mention<MetricMentionExtra>
-          data={mentionOptions}
-          trigger="@"
-          renderSuggestion={(suggestion, _query, highlightedDisplay) => (
-            <div className="flex flex-col">
-              <span className="font-medium text-[var(--color-text-primary)]">{highlightedDisplay}</span>
-              <span className="text-xs text-[var(--color-text-muted)]">
-                {suggestion.categoryName}
-                {" • "}
-                {suggestion.unit}
-              </span>
-              {suggestion.description ? (
-                <span className="text-[10px] text-[var(--color-text-muted)]">{suggestion.description}</span>
-              ) : null}
-            </div>
-          )}
-        />
-      </MentionsInput>
-    </section>
-  )
-
+    const markup = segments.join("").replace(/\s+/g, " ").trim()
+    setFormulaExpressionMarkup(markup)
+  }, [formula, formulaTokens, metricsById])
   if (!metric && !formula) {
     return (
       <div className="rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface-elevated)] p-4 shadow-sm">
@@ -139,10 +108,14 @@ export function MetricDetailPanel({
           <div>
             <div className="mt-1 text-xl font-semibold text-[var(--color-text-primary)]">{formula.name}</div>
             <MentionsInput
-              value={formulaExpressionMarkup}
+              value={formulaExpressionMarkup ?? ""}
               placeholder="Build this formula by selecting metrics from the worksheet."
               className="mt-2"
               autoResize
+              onMentionsChange={(change) => {
+                console.log("change", change)
+                setFormulaExpressionMarkup(change.value)
+              }}
             >
               <Mention<MetricMentionExtra>
                 data={mentionOptions}
@@ -194,11 +167,11 @@ export function MetricDetailPanel({
                 </div>
               )}
             </div>
-            {(validation?.min || validation?.mode || validation?.max) && (
+            {(metricValidation?.min || metricValidation?.mode || metricValidation?.max) && (
               <div className="mt-2 space-y-1 text-[10px]">
-                {validation?.min && <p className="text-red-500">Min: {validation.min}</p>}
-                {validation?.mode && <p className="text-red-500">Most likely: {validation.mode}</p>}
-                {validation?.max && <p className="text-red-500">Max: {validation.max}</p>}
+                {metricValidation?.min && <p className="text-red-500">Min: {metricValidation.min}</p>}
+                {metricValidation?.mode && <p className="text-red-500">Most likely: {metricValidation.mode}</p>}
+                {metricValidation?.max && <p className="text-red-500">Max: {metricValidation.max}</p>}
               </div>
             )}
           </section>

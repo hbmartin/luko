@@ -1,20 +1,23 @@
 "use client"
 
-import { FormEvent, type MouseEvent, useId, useMemo, useState } from "react"
-import type { FormulaRow, FormulaToken, Metric } from "@/lib/types/notebook"
+import { FormEvent, type MouseEvent, useEffect, useId, useMemo, useState } from "react"
+import type { FormulaRow, Metric } from "@/lib/types/notebook"
 import { cn } from "@/lib/utils"
+import { type ExpressionToken, expressionToTokens, tokensToExpression } from "@/lib/utils/formulaTokens"
 
 interface FormulaRowCellProps {
   formula: FormulaRow
   metrics: Metric[]
   isActive: boolean
   onActivate: () => void
-  onTokensChange: (tokens: FormulaToken[]) => void
+  onExpressionChange: (expression: string) => void
   onHighlightMetric: (metricId: string) => void
   validationMessage?: string | null
 }
 
-const operatorTokens = new Set(["+", "-", "*", "/", "(", ")"])
+const operatorTokens = new Set(["+", "-", "*", "/"])
+const parenthesisTokens = new Set(["(", ")"])
+const numericPattern = /^-?\d+(?:\.\d+)?$/
 
 const colorPalette = [
   "#bfdbfe",
@@ -34,13 +37,18 @@ export function FormulaRowCell({
   metrics,
   isActive,
   onActivate,
-  onTokensChange,
+  onExpressionChange,
   onHighlightMetric,
   validationMessage,
 }: FormulaRowCellProps) {
   const inputId = useId()
   const [draft, setDraft] = useState("")
   const [error, setError] = useState<string | null>(null)
+  const [tokens, setTokens] = useState<ExpressionToken[]>(() => expressionToTokens(formula.expression))
+
+  useEffect(() => {
+    setTokens(expressionToTokens(formula.expression))
+  }, [formula.expression])
 
   const metricsByName = useMemo(() => {
     const map = new Map<string, Metric>()
@@ -69,32 +77,34 @@ export function FormulaRowCell({
     const value = rawValue.trim()
     if (!value) return
 
+    let nextToken: ExpressionToken | null = null
     if (operatorTokens.has(value)) {
-      const nextToken: FormulaToken =
-        value === "(" || value === ")"
-          ? { type: "paren", value }
-          : { type: "operator", value: value as "+" | "-" | "*" | "/" }
-      onTokensChange([...formula.tokens, nextToken])
-      setDraft("")
-      setError(null)
-      return
+      nextToken = { type: "operator", value }
+    } else if (parenthesisTokens.has(value)) {
+      nextToken = { type: "paren", value: value as "(" | ")" }
+    } else if (numericPattern.test(value)) {
+      nextToken = { type: "number", value }
+    } else {
+      const metric = metricsByName.get(value.toLowerCase())
+      if (!metric) {
+        setError("Select a metric name, number, or operator")
+        return
+      }
+      nextToken = { type: "metric", metricId: metric.id }
+      onHighlightMetric(metric.id)
     }
 
-    const metric = metricsByName.get(value.toLowerCase())
-    if (!metric) {
-      setError("Select a metric name or operator")
-      return
-    }
-
-    onTokensChange([...formula.tokens, { type: "metric", metricId: metric.id }])
-    onHighlightMetric(metric.id)
+    const nextTokens = [...tokens, nextToken]
+    setTokens(nextTokens)
+    onExpressionChange(tokensToExpression(nextTokens))
     setDraft("")
     setError(null)
   }
 
   const removeTokenAt = (index: number) => {
-    const next = [...formula.tokens.slice(0, index), ...formula.tokens.slice(index + 1)]
-    onTokensChange(next)
+    const next = [...tokens.slice(0, index), ...tokens.slice(index + 1)]
+    setTokens(next)
+    onExpressionChange(tokensToExpression(next))
   }
 
   const handleContainerClick = (event: MouseEvent<HTMLDivElement>) => {
@@ -119,7 +129,7 @@ export function FormulaRowCell({
     >
       <form className="formula-row-editor" onSubmit={handleSubmit}>
         <div className="formula-row-tokens">
-          {formula.tokens.map((token, index) => {
+          {tokens.map((token, index) => {
             if (token.type === "metric") {
               const entry = metricsById.get(token.metricId)
               const metric = entry?.metric
@@ -149,7 +159,7 @@ export function FormulaRowCell({
               )
             }
 
-            const display = token.value
+            const display = token.type === "operator" || token.type === "paren" ? token.value : token.value
             return (
               <button
                 type="button"
@@ -179,16 +189,16 @@ export function FormulaRowCell({
                 event.preventDefault()
                 commitToken(draft)
               }
-              if (event.key === "Backspace" && draft === "" && formula.tokens.length > 0) {
+              if (event.key === "Backspace" && draft === "" && tokens.length > 0) {
                 event.preventDefault()
-                removeTokenAt(formula.tokens.length - 1)
+                removeTokenAt(tokens.length - 1)
               }
               if (event.key === "Escape") {
                 setDraft("")
                 setError(null)
               }
             }}
-            placeholder={formula.tokens.length === 0 ? "Build formula with metrics…" : ""}
+            placeholder={tokens.length === 0 ? "Build formula with metrics…" : ""}
             autoComplete="off"
           />
           <datalist id={`${inputId}-options`}>
@@ -197,6 +207,9 @@ export function FormulaRowCell({
             ))}
             {Array.from(operatorTokens).map((operator) => (
               <option key={operator} value={operator} />
+            ))}
+            {Array.from(parenthesisTokens).map((paren) => (
+              <option key={paren} value={paren} />
             ))}
           </datalist>
         </div>

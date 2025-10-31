@@ -6,7 +6,7 @@ import {
   type CellMouseEvent,
   type CellSelectArgs,
   Column,
-  RenderCellProps,
+  type DataGridHandle,
   type RenderGroupCellProps,
   renderToggleGroup,
   type RowsChangeData,
@@ -21,9 +21,9 @@ import {
   ContextMenuSeparator,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu"
-import type { CategoryRow, FormulaToken, GridRow, MetricRow, Notebook } from "@/lib/types/notebook"
+import type { CategoryRow, GridRow, MetricRow, Notebook } from "@/lib/types/notebook"
+import { type ExpressionToken, expressionToTokens, tokensToExpression } from "@/lib/utils/formulaTokens"
 import { notebookToGridRows } from "@/lib/utils/grid-helpers"
-import { FormulaRowCell } from "./FormulaRowCell"
 import { Button } from "../ui/button"
 
 // GroupRow type from react-data-grid (not exported)
@@ -58,8 +58,8 @@ interface DataGridComponentProps {
   onDeleteMetric?: (metricId: string) => void
   onAddCategory?: (categoryId: string) => void
   onDeleteCategory?: (categoryId: string) => void
-  onFormulaChange: (formulaId: string, tokens: FormulaToken[]) => void
-  formulaValidation: Record<string, string | null>
+  onFormulaChange: (formulaId: string, expression: string) => void
+  formulaValidation: Record<string, string | undefined>
   onAddFormula?: (categoryId: string) => string | void
   onDeleteFormula?: (formulaId: string) => void
 }
@@ -113,6 +113,7 @@ export function DataGridComponent({
   onAddFormula,
   onDeleteFormula,
 }: DataGridComponentProps) {
+  const gridRef = useRef<DataGridHandle>(null)
   const [expandedGroupIds, setExpandedGroupIds] = useState<ReadonlySet<unknown>>(
     () => new Set<unknown>(notebook.categories.map((category) => category.id))
   )
@@ -120,10 +121,12 @@ export function DataGridComponent({
   const [activeFormulaId, setActiveFormulaId] = useState<string | null>(null)
   const [highlightedMetricId, setHighlightedMetricId] = useState<string | null>(null)
   const previousNotebookIdRef = useRef(notebook.id)
+  const hasPositionedInitialCellRef = useRef(false)
   useEffect(() => {
     if (previousNotebookIdRef.current !== notebook.id) {
       previousNotebookIdRef.current = notebook.id
       setExpandedGroupIds(new Set<unknown>(notebook.categories.map((category) => category.id)))
+      hasPositionedInitialCellRef.current = false
     }
   }, [notebook.categories, notebook.id])
   useEffect(() => {
@@ -267,22 +270,22 @@ export function DataGridComponent({
           if (args.row.type === "formula") return 4
           return 1
         },
-        renderCell: ({ row, column, onRowChange, rowIdx }: RenderCellProps<GridRow>) => {
-          if (isFormulaRow(row)) {
-            return (
-              <FormulaRowCell
-                formula={row}
-                metrics={notebook.metrics}
-                isActive={activeFormulaId === row.id}
-                onActivate={() => setActiveFormulaId(row.id)}
-                onTokensChange={(tokens) => onFormulaChange(row.id, tokens)}
-                onHighlightMetric={setHighlightedMetricId}
-                validationMessage={formulaValidation[row.id] ?? null}
-              />
-            )
-          }
-          return textEditor({ row, column, onRowChange, rowIdx, onClose: () => {} })
-        },
+        // renderCell: ({ row, column, onRowChange, rowIdx }: RenderCellProps<GridRow>) => {
+        //   if (isFormulaRow(row)) {
+        //     return (
+        //       <FormulaRowCell
+        //         formula={row}
+        //         metrics={notebook.metrics}
+        //         isActive={activeFormulaId === row.id}
+        //         onActivate={() => setActiveFormulaId(row.id)}
+        //         onExpressionChange={(expression) => onFormulaChange(row.id, expression)}
+        //         onHighlightMetric={setHighlightedMetricId}
+        //         validationMessage={formulaValidation[row.id] ?? null}
+        //       />
+        //     )
+        //   }
+        //   return textEditor({ row, column, onRowChange, rowIdx, onClose: () => {} })
+        // },
       },
       {
         key: "min",
@@ -335,6 +338,7 @@ export function DataGridComponent({
 
   const triggerDetails = useCallback(
     (rowId: string) => {
+      console.log("triggering details for", rowId)
       const now = Date.now()
       const lastTrigger = lastDetailsTriggerRef.current
       if (lastTrigger && lastTrigger.id === rowId && now - lastTrigger.time < 100) {
@@ -351,7 +355,9 @@ export function DataGridComponent({
       if (!activeFormulaId) return false
       const formula = notebook.formulas.find((candidate) => candidate.id === activeFormulaId)
       if (!formula) return false
-      onFormulaChange(activeFormulaId, [...formula.tokens, { type: "metric", metricId }])
+      const existingTokens = expressionToTokens(formula.expression)
+      const nextTokens: ExpressionToken[] = [...existingTokens, { type: "metric", metricId }]
+      onFormulaChange(activeFormulaId, tokensToExpression(nextTokens))
       setHighlightedMetricId(metricId)
       return true
     },
@@ -360,6 +366,7 @@ export function DataGridComponent({
 
   const handleFormulaRowSelection = useCallback(
     (row: Extract<GridRow, { type: "formula" }>) => {
+      console.log("formula row selected", row)
       setActiveFormulaId(row.id)
       triggerDetails(row.id)
     },
@@ -368,6 +375,7 @@ export function DataGridComponent({
 
   const handleMetricRowSelection = useCallback(
     (row: MetricRow) => {
+      console.log("metric row selected", row)
       addMetricToActiveFormula(row.id)
       triggerDetails(row.id)
     },
@@ -376,6 +384,7 @@ export function DataGridComponent({
 
   const handleCellClick = useCallback(
     ({ row }: CellMouseArgs<GridRow>) => {
+      console.log("cell clicked", row)
       if (isMetricRow(row)) {
         handleMetricRowSelection(row)
         return
@@ -389,6 +398,7 @@ export function DataGridComponent({
 
   const handleCellFocus = useCallback(
     ({ row }: CellSelectArgs<GridRow>) => {
+      console.log("cell focused", row)
       if (!row) return
       if (isFormulaRow(row)) {
         handleFormulaRowSelection(row)
@@ -403,6 +413,7 @@ export function DataGridComponent({
 
   const handleRowsChange = useCallback(
     (updatedRows: readonly GridRow[], data: RowsChangeData<GridRow>) => {
+      console.log("rows changed")
       const columnKey = data.column?.key
       if (columnKey !== "min" && columnKey !== "mode" && columnKey !== "max" && columnKey !== "value") return
 
@@ -502,8 +513,9 @@ export function DataGridComponent({
   return (
     <ContextMenu onOpenChange={handleContextMenuOpenChange}>
       <ContextMenuTrigger asChild>
-        <div className="h-full">
+        <div className="h-screen">
           <TreeDataGrid
+            ref={gridRef}
             className="rdg-light rdg-spreadsheet"
             columns={columns}
             rows={rows}
@@ -520,6 +532,9 @@ export function DataGridComponent({
             expandedGroupIds={expandedGroupIds}
             onExpandedGroupIdsChange={setExpandedGroupIds}
             onRowsChange={handleRowsChange}
+            onScroll={(event: React.UIEvent<HTMLDivElement>) =>
+              console.log(`scrolled: ${event.currentTarget.scrollTop}, ${event.currentTarget.scrollLeft}`)
+            }
           />
         </div>
       </ContextMenuTrigger>

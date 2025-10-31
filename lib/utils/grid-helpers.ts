@@ -49,7 +49,7 @@ export function formulaToGridRow(formula: Formula, dirtyFormulas: string[]): For
     id: formula.id,
     type: "formula",
     name: formula.name,
-    tokens: formula.tokens,
+    expression: formula.expression,
     categoryId: formula.categoryId,
     isDirty: dirtyFormulas.includes(formula.id),
   }

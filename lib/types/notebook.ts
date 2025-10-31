@@ -71,28 +71,12 @@ export type Category = z.infer<typeof CategorySchema>
 // Formula Types
 // ============================================================================
 
-export const FormulaTokenSchema = z.discriminatedUnion("type", [
-  z.object({
-    type: z.literal("metric"),
-    metricId: z.string(),
-  }),
-  z.object({
-    type: z.literal("operator"),
-    value: z.enum(["+", "-", "*", "/"]),
-  }),
-  z.object({
-    type: z.literal("paren"),
-    value: z.enum(["(", ")"]),
-  }),
-])
-
-export type FormulaToken = z.infer<typeof FormulaTokenSchema>
-
 export const FormulaSchema = z.object({
   id: z.string(),
   name: z.string(),
   categoryId: z.string(),
-  tokens: z.array(FormulaTokenSchema),
+  description: z.string().optional(),
+  expression: z.string().default(""),
   updatedAt: z.string(),
 })
 
@@ -229,7 +213,7 @@ export interface FormulaRow {
   id: string
   type: "formula"
   name: string
-  tokens: FormulaToken[]
+  expression: string
   categoryId: string
   isDirty: boolean
   description?: string

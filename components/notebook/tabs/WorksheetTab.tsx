@@ -2,8 +2,8 @@
 
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { parseFormula } from "@/lib/formulas"
-import { FormulaToken, Metric, Notebook, SimulationResult } from "@/lib/types/notebook"
-import { tokensToExpression } from "@/lib/utils/formulaTokens"
+import { Metric, Notebook, SimulationResult } from "@/lib/types/notebook"
+import { expressionToTokens } from "@/lib/utils/formulaTokens"
 import { DataGridComponent } from "../DataGridComponent"
 import { MetricDetailPanel } from "../MetricDetailPanel"
 import { SimulationSummaryPanel } from "../SimulationSummaryPanel"
@@ -100,7 +100,7 @@ export function WorksheetTab({ notebook, onNotebookChange, density, simulationRe
     return () => window.removeEventListener("keydown", handleKey)
   })
 
-  const validationErrors = useMemo(() => {
+  const validationErrors: Record<string, ValidationState | undefined> = useMemo(() => {
     const errors: Record<string, ValidationState | undefined> = {}
     notebook.metrics.forEach((metric) => {
       const metricErrors = validateMetric(metric)
@@ -111,32 +111,28 @@ export function WorksheetTab({ notebook, onNotebookChange, density, simulationRe
     return errors
   }, [notebook.metrics])
 
-  const formulaValidation = useMemo(() => {
-    const errors: Record<string, string | null> = {}
+  const formulaValidation: Record<string, string | undefined> = useMemo(() => {
+    const errors: Record<string, string | undefined> = {}
     const metricsById = new Map(notebook.metrics.map((metric) => [metric.id, metric]))
 
     notebook.formulas.forEach((formula) => {
-      if (!formula.tokens.length) {
+      const expression = formula.expression.trim()
+      if (!expression) {
         errors[formula.id] = "Start by selecting a metric"
         return
       }
 
-      const missingMetric = formula.tokens.find((token) => token.type === "metric" && !metricsById.has(token.metricId))
+      const tokens = expressionToTokens(expression)
+      const missingMetric = tokens.find((token) => token.type === "metric" && !metricsById.has(token.metricId))
 
       if (missingMetric) {
         errors[formula.id] = "Referenced metric no longer exists"
         return
       }
 
-      const expression = tokensToExpression(formula.tokens)
-      if (!expression) {
-        errors[formula.id] = "Formula is incomplete"
-        return
-      }
-
       try {
         parseFormula(expression)
-        errors[formula.id] = null
+        errors[formula.id] = undefined
       } catch (error) {
         errors[formula.id] = error instanceof Error ? error.message : "Formula is invalid"
       }
@@ -210,7 +206,7 @@ export function WorksheetTab({ notebook, onNotebookChange, density, simulationRe
         id: newId,
         name: `Formula ${formulaCount + 1}`,
         categoryId,
-        tokens: [] as FormulaToken[],
+        expression: "",
         updatedAt: new Date().toISOString(),
       }
 
@@ -246,12 +242,12 @@ export function WorksheetTab({ notebook, onNotebookChange, density, simulationRe
   )
 
   const handleFormulaChange = useCallback(
-    (formulaId: string, tokens: FormulaToken[]) => {
+    (formulaId: string, expression: string) => {
       const formulas = notebook.formulas.map((formula) =>
         formula.id === formulaId
           ? {
               ...formula,
-              tokens,
+              expression,
               updatedAt: new Date().toISOString(),
             }
           : formula
@@ -349,7 +345,7 @@ export function WorksheetTab({ notebook, onNotebookChange, density, simulationRe
   )
 
   const activeMetricValidation = activeMetric ? validationErrors[activeMetric.id] : undefined
-  const activeFormulaValidation = selectedRowId ? (formulaValidation[selectedRowId] ?? null) : null
+  const activeFormulaValidation = selectedRowId ? (formulaValidation[selectedRowId] ?? undefined) : undefined
   return (
     <div className="mx-auto flex h-full min-h-0 flex-1 items-stretch gap-4 p-6">
       <DataGridComponent
@@ -370,7 +366,7 @@ export function WorksheetTab({ notebook, onNotebookChange, density, simulationRe
           notebook={notebook}
           metric={activeMetric}
           formula={activeFormula}
-          validation={activeMetricValidation}
+          metricValidation={activeMetricValidation}
           formulaValidation={activeFormulaValidation}
         />
         <SimulationSummaryPanel notebook={notebook} result={simulationResult ?? null} />

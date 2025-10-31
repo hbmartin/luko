@@ -4,7 +4,6 @@ import { CircleUserRound, CircleX, Moon, Sun } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { formatAbbreviatedNumber } from "@/lib/utils/grid-helpers"
 import { useNotebook } from "./NotebookProvider"
 
 const dateFormatter = new Intl.DateTimeFormat("en-US", {
