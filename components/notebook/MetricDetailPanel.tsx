@@ -1,10 +1,10 @@
 "use client"
 
-import { parser } from "mathjs"
 import { useEffect, useMemo, useState } from "react"
 import { Mention, type MentionDataItem, MentionsInput } from "react-mentions-ts"
 import { DistributionChart } from "@/components/notebook/charts/DistributionChart"
 import { Formula, Metric, Notebook } from "@/lib/types/notebook"
+import { expressionToTokens } from "@/lib/utils/formulaTokens"
 
 interface ValidationState {
   min?: string
@@ -39,7 +39,6 @@ export function MetricDetailPanel({
   formulaValidation,
 }: MetricDetailPanelProps) {
   const distribution = metric?.distribution ?? null
-  const [noteValue, setNoteValue] = useState("")
   const mentionOptions = useMemo<MetricMentionItem[]>(() => {
     const sortedCategories = [...notebook.categories].sort((a, b) => a.order - b.order)
     return sortedCategories.flatMap((category) => {
@@ -61,11 +60,16 @@ export function MetricDetailPanel({
     [notebook.metrics]
   )
 
-  const referencedMetricIds = useMemo(() => {
+  const formulaTokens = useMemo(() => {
     if (!formula) return []
-    const ids = formula.tokens.filter((token) => token.type === "metric").map((token) => token.metricId)
+    return expressionToTokens(formula.expression)
+  }, [formula?.expression])
+
+  const referencedMetricIds = useMemo(() => {
+    if (!formulaTokens.length) return []
+    const ids = formulaTokens.filter((token) => token.type === "metric").map((token) => token.metricId)
     return Array.from(new Set(ids))
-  }, [formula])
+  }, [formulaTokens])
 
   const referencedMetrics = useMemo(() => {
     if (!referencedMetricIds.length) return []
@@ -74,41 +78,21 @@ export function MetricDetailPanel({
       .filter((entry): entry is Metric => Boolean(entry))
   }, [metricsById, referencedMetricIds])
 
-  useEffect(() => {
-    setNoteValue("")
-  }, [metric?.id, formula?.id])
-
   const [formulaExpressionMarkup, setFormulaExpressionMarkup] = useState<string | undefined>(undefined)
-  const [formulaExpressionId, setFormulaExpressionId] = useState<string | undefined>(undefined)
 
   useEffect(() => {
-    console.log("formula", formula)
-    console.log("metricsById", metricsById)
     if (!formula) return
-    const segments = formula.tokens.map((token) => {
+    const segments = formulaTokens.map((token) => {
       if (token.type === "metric") {
         const metric = metricsById.get(token.metricId)
         const display = metric?.name ?? token.metricId
         return `@[${display}](${token.metricId})`
       }
-      if (token.type === "operator") return ` ${token.value} `
-      return token.value
+      return ` ${"value" in token ? token.value : ""} `
     })
-    setFormulaExpressionMarkup(segments.join("").replace(/\s+/g, " ").trim())
-    const segmentsById = formula.tokens.map((token) => {
-      if (token.type === "metric") {
-        return token.metricId
-      }
-      return token.value
-    })
-    setFormulaExpressionId(segmentsById.join("").replace(/\s+/g, " ").trim())
-  }, [formula, metricsById])
-  useEffect(() => {
-    if (!formulaExpressionId) return
-    console.log("formulaExpressionId", formulaExpressionId)
-    // console.log(parser().evaluate(formulaExpressionMarkup))
-  }, [formulaExpressionId])
-
+    const markup = segments.join("").replace(/\s+/g, " ").trim()
+    setFormulaExpressionMarkup(markup)
+  }, [formula, formulaTokens, metricsById])
   if (!metric && !formula) {
     return (
       <div className="rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface-elevated)] p-4 shadow-sm">
@@ -124,7 +108,7 @@ export function MetricDetailPanel({
           <div>
             <div className="mt-1 text-xl font-semibold text-[var(--color-text-primary)]">{formula.name}</div>
             <MentionsInput
-              value={formulaExpressionMarkup}
+              value={formulaExpressionMarkup ?? ""}
               placeholder="Build this formula by selecting metrics from the worksheet."
               className="mt-2"
               autoResize

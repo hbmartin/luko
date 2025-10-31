@@ -1,21 +1,12 @@
 "use client"
 
-import {
-  type MouseEvent as ReactMouseEvent,
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react"
+import { type MouseEvent as ReactMouseEvent, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   type CellMouseArgs,
   type CellMouseEvent,
   type CellSelectArgs,
   Column,
   type DataGridHandle,
-  RenderCellProps,
   type RenderGroupCellProps,
   renderToggleGroup,
   type RowsChangeData,
@@ -30,9 +21,9 @@ import {
   ContextMenuSeparator,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu"
-import type { CategoryRow, FormulaToken, GridRow, MetricRow, Notebook } from "@/lib/types/notebook"
+import type { CategoryRow, GridRow, MetricRow, Notebook } from "@/lib/types/notebook"
+import { type ExpressionToken, expressionToTokens, tokensToExpression } from "@/lib/utils/formulaTokens"
 import { notebookToGridRows } from "@/lib/utils/grid-helpers"
-import { FormulaRowCell } from "./FormulaRowCell"
 import { Button } from "../ui/button"
 
 // GroupRow type from react-data-grid (not exported)
@@ -67,7 +58,7 @@ interface DataGridComponentProps {
   onDeleteMetric?: (metricId: string) => void
   onAddCategory?: (categoryId: string) => void
   onDeleteCategory?: (categoryId: string) => void
-  onFormulaChange: (formulaId: string, tokens: FormulaToken[]) => void
+  onFormulaChange: (formulaId: string, expression: string) => void
   formulaValidation: Record<string, string | undefined>
   onAddFormula?: (categoryId: string) => string | void
   onDeleteFormula?: (formulaId: string) => void
@@ -279,22 +270,22 @@ export function DataGridComponent({
           if (args.row.type === "formula") return 4
           return 1
         },
-        renderCell: ({ row, column, onRowChange, rowIdx }: RenderCellProps<GridRow>) => {
-          if (isFormulaRow(row)) {
-            return (
-              <FormulaRowCell
-                formula={row}
-                metrics={notebook.metrics}
-                isActive={activeFormulaId === row.id}
-                onActivate={() => setActiveFormulaId(row.id)}
-                onTokensChange={(tokens) => onFormulaChange(row.id, tokens)}
-                onHighlightMetric={setHighlightedMetricId}
-                validationMessage={formulaValidation[row.id] ?? null}
-              />
-            )
-          }
-          return textEditor({ row, column, onRowChange, rowIdx, onClose: () => {} })
-        },
+        // renderCell: ({ row, column, onRowChange, rowIdx }: RenderCellProps<GridRow>) => {
+        //   if (isFormulaRow(row)) {
+        //     return (
+        //       <FormulaRowCell
+        //         formula={row}
+        //         metrics={notebook.metrics}
+        //         isActive={activeFormulaId === row.id}
+        //         onActivate={() => setActiveFormulaId(row.id)}
+        //         onExpressionChange={(expression) => onFormulaChange(row.id, expression)}
+        //         onHighlightMetric={setHighlightedMetricId}
+        //         validationMessage={formulaValidation[row.id] ?? null}
+        //       />
+        //     )
+        //   }
+        //   return textEditor({ row, column, onRowChange, rowIdx, onClose: () => {} })
+        // },
       },
       {
         key: "min",
@@ -364,7 +355,9 @@ export function DataGridComponent({
       if (!activeFormulaId) return false
       const formula = notebook.formulas.find((candidate) => candidate.id === activeFormulaId)
       if (!formula) return false
-      onFormulaChange(activeFormulaId, [...formula.tokens, { type: "metric", metricId }])
+      const existingTokens = expressionToTokens(formula.expression)
+      const nextTokens: ExpressionToken[] = [...existingTokens, { type: "metric", metricId }]
+      onFormulaChange(activeFormulaId, tokensToExpression(nextTokens))
       setHighlightedMetricId(metricId)
       return true
     },
@@ -516,21 +509,6 @@ export function DataGridComponent({
     },
     [categoryLabels]
   )
-
-  const columnCount = columns.length
-  const rowCount = rows.length
-
-  useLayoutEffect(() => {
-    if (hasPositionedInitialCellRef.current) return
-    if (!gridRef.current) return
-    if (rowCount === 0) return
-    console.log("scrolling to initial cell")
-
-    const firstDataColumnIndex = columnCount > 1 ? 1 : 0
-    gridRef.current.scrollToCell({ rowIdx: 0, idx: firstDataColumnIndex })
-    gridRef.current.selectCell({ rowIdx: 0, idx: firstDataColumnIndex })
-    hasPositionedInitialCellRef.current = true
-  }, [columnCount, rowCount])
 
   return (
     <ContextMenu onOpenChange={handleContextMenuOpenChange}>

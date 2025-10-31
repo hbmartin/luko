@@ -2,8 +2,8 @@
 
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { parseFormula } from "@/lib/formulas"
-import { FormulaToken, Metric, Notebook, SimulationResult } from "@/lib/types/notebook"
-import { tokensToExpression } from "@/lib/utils/formulaTokens"
+import { Metric, Notebook, SimulationResult } from "@/lib/types/notebook"
+import { expressionToTokens } from "@/lib/utils/formulaTokens"
 import { DataGridComponent } from "../DataGridComponent"
 import { MetricDetailPanel } from "../MetricDetailPanel"
 import { SimulationSummaryPanel } from "../SimulationSummaryPanel"
@@ -116,21 +116,17 @@ export function WorksheetTab({ notebook, onNotebookChange, density, simulationRe
     const metricsById = new Map(notebook.metrics.map((metric) => [metric.id, metric]))
 
     notebook.formulas.forEach((formula) => {
-      if (!formula.tokens.length) {
+      const expression = formula.expression.trim()
+      if (!expression) {
         errors[formula.id] = "Start by selecting a metric"
         return
       }
 
-      const missingMetric = formula.tokens.find((token) => token.type === "metric" && !metricsById.has(token.metricId))
+      const tokens = expressionToTokens(expression)
+      const missingMetric = tokens.find((token) => token.type === "metric" && !metricsById.has(token.metricId))
 
       if (missingMetric) {
         errors[formula.id] = "Referenced metric no longer exists"
-        return
-      }
-
-      const expression = tokensToExpression(formula.tokens)
-      if (!expression) {
-        errors[formula.id] = "Formula is incomplete"
         return
       }
 
@@ -210,7 +206,7 @@ export function WorksheetTab({ notebook, onNotebookChange, density, simulationRe
         id: newId,
         name: `Formula ${formulaCount + 1}`,
         categoryId,
-        tokens: [] as FormulaToken[],
+        expression: "",
         updatedAt: new Date().toISOString(),
       }
 
@@ -246,12 +242,12 @@ export function WorksheetTab({ notebook, onNotebookChange, density, simulationRe
   )
 
   const handleFormulaChange = useCallback(
-    (formulaId: string, tokens: FormulaToken[]) => {
+    (formulaId: string, expression: string) => {
       const formulas = notebook.formulas.map((formula) =>
         formula.id === formulaId
           ? {
               ...formula,
-              tokens,
+              expression,
               updatedAt: new Date().toISOString(),
             }
           : formula
