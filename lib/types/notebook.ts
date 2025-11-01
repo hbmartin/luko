@@ -197,6 +197,7 @@ export interface MetricRow {
   categoryId: string
   isDirty: boolean
   description?: string
+  error?: string
 }
 
 export interface CategoryRow {
@@ -217,6 +218,7 @@ export interface FormulaRow {
   categoryId: string
   isDirty: boolean
   description?: string
+  error?: string
 }
 
 export type GridRow = MetricRow | CategoryRow | FormulaRow

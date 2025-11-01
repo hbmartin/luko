@@ -35,7 +35,7 @@ const createFormulaId = () => {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
     return crypto.randomUUID()
   }
-  return `formula-${Math.random().toString(36).slice(2, 10)}`
+  return `formula_${Math.random().toString(36).slice(2, 10)}`
 }
 
 const validateMetric = (metric: Metric): ValidationState | undefined => {

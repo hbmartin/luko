@@ -7,8 +7,11 @@ import {
   type CellSelectArgs,
   Column,
   type DataGridHandle,
+  RenderCellProps,
+  RenderEditCellProps,
   type RenderGroupCellProps,
   renderToggleGroup,
+  renderValue,
   type RowsChangeData,
   textEditor,
   TreeDataGrid,
@@ -207,6 +210,12 @@ export function DataGridComponent({
       name: "",
       width: 280,
       frozen: true,
+      renderCell: ({ row, column, onRowChange, rowIdx, tabIndex }: RenderCellProps<GridRow>) => {
+        if ("error" in row && row.error) {
+          return <div className="text-red-500">{row.error}</div>
+        }
+        return null
+      },
       renderGroupCell: (props: RenderGroupCellProps<GridRow>) => {
         const rawKey = props.groupKey == null ? "" : String(props.groupKey)
         const label = categoryLabels.get(rawKey) ?? rawKey ?? "Uncategorized"
@@ -269,22 +278,19 @@ export function DataGridComponent({
           if (args.row.type === "formula") return 4
           return 1
         },
-        // renderCell: ({ row, column, onRowChange, rowIdx }: RenderCellProps<GridRow>) => {
-        //   if (isFormulaRow(row)) {
-        //     return (
-        //       <FormulaRowCell
-        //         formula={row}
-        //         metrics={notebook.metrics}
-        //         isActive={activeFormulaId === row.id}
-        //         onActivate={() => setActiveFormulaId(row.id)}
-        //         onExpressionChange={(expression) => onFormulaChange(row.id, expression)}
-        //         onHighlightMetric={setHighlightedMetricId}
-        //         validationMessage={formulaValidation[row.id] ?? null}
-        //       />
-        //     )
-        //   }
-        //   return textEditor({ row, column, onRowChange, rowIdx, onClose: () => {} })
-        // },
+        renderCell: ({ row, column, onRowChange, rowIdx, tabIndex }: RenderCellProps<GridRow>) => {
+          if (isFormulaRow(row)) {
+            return row.expression as React.ReactNode
+          }
+          return renderValue({ row, column, onRowChange, rowIdx, tabIndex, isCellEditable: true })
+        },
+        renderEditCell: ({ row, column, onRowChange, rowIdx, onClose }: RenderEditCellProps<GridRow>) => {
+          console.log("renderEditCell", row.type)
+          if (isFormulaRow(row)) {
+            return row.expression as React.ReactNode
+          }
+          return textEditor({ row, column, onRowChange, rowIdx, onClose })
+        },
       },
       {
         key: "min",
