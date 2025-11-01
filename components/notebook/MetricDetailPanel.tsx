@@ -67,17 +67,13 @@ export function MetricDetailPanel({
     return detectDependencies(formula.expression)
   }, [formula?.expression])
 
-  useEffect(() => {
-    console.log("formulaReferencedIds", formulaReferencedIds)
-    console.log("referenceableIds", referenceableIds)
-  }, [formulaReferencedIds, referenceableIds])
-
   const [formulaExpressionMarkup, setFormulaExpressionMarkup] = useState<string | undefined>(undefined)
 
   useEffect(() => {
     if (!formula) return
     let markup = formula.expression
-    for (const id of formulaReferencedIds) {
+    const sortedIds = [...formulaReferencedIds].sort((a, b) => b.length - a.length)
+    for (const id of sortedIds) {
       markup = markup.replaceAll(id, `@[${referenceableIds[id]?.name ?? id}](${id})`)
     }
     setFormulaExpressionMarkup(markup)
