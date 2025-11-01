@@ -41,6 +41,7 @@ export function metricToGridRow(metric: Metric, dirtyMetrics: string[]): MetricR
     categoryId: metric.categoryId,
     isDirty: dirtyMetrics.includes(metric.id),
     description: metric.description,
+    error: metric.validation?.summary,
   }
 }
 
@@ -52,6 +53,8 @@ export function formulaToGridRow(formula: Formula, dirtyFormulas: string[]): For
     expression: formula.expression,
     categoryId: formula.categoryId,
     isDirty: dirtyFormulas.includes(formula.id),
+    description: formula.description,
+    error: formula.error,
   }
 }
 

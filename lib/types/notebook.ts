@@ -34,6 +34,22 @@ export type UnitType = z.infer<typeof UnitTypeSchema>
 // Metric Types
 // ============================================================================
 
+export const MetricValidationFieldSchema = z.object({
+  min: z.string().optional(),
+  mode: z.string().optional(),
+  max: z.string().optional(),
+  value: z.string().optional(),
+})
+
+export type MetricValidationFields = z.infer<typeof MetricValidationFieldSchema>
+
+export const MetricValidationSchema = z.object({
+  summary: z.string().optional(),
+  fields: MetricValidationFieldSchema.optional(),
+})
+
+export type MetricValidation = z.infer<typeof MetricValidationSchema>
+
 export const MetricSchema = z.object({
   id: z.string(),
   name: z.string(),
@@ -43,6 +59,7 @@ export const MetricSchema = z.object({
   value: z.number().optional(), // for fixed/constant values
   formula: z.string().optional(), // formula referencing other metrics
   categoryId: z.string(),
+  validation: MetricValidationSchema.optional(),
 })
 
 export type Metric = z.infer<typeof MetricSchema>
@@ -78,6 +95,7 @@ export const FormulaSchema = z.object({
   description: z.string().optional(),
   expression: z.string().default(""),
   updatedAt: z.string(),
+  error: z.string().optional(),
 })
 
 export type Formula = z.infer<typeof FormulaSchema>

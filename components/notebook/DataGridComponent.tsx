@@ -41,17 +41,9 @@ interface GroupRow<TRow> {
   readonly startRowIndex: number
 }
 
-interface ValidationState {
-  min?: string
-  mode?: string
-  max?: string
-  value?: string
-}
-
 interface DataGridComponentProps {
   notebook: Notebook
   density: "comfortable" | "compact"
-  validationErrors: Record<string, ValidationState | undefined>
   onMetricChange: (metricId: string, field: "min" | "mode" | "max" | "value", value: number) => void
   onCategoryToggle: (categoryId: string) => void
   onRowReorder: (sourceId: string, targetId: string) => void
@@ -61,7 +53,6 @@ interface DataGridComponentProps {
   onAddCategory?: (categoryId: string) => void
   onDeleteCategory?: (categoryId: string) => void
   onFormulaChange: (formulaId: string, expression: string) => void
-  formulaValidation: Record<string, string | undefined>
   onAddFormula?: (categoryId: string) => string | void
   onDeleteFormula?: (formulaId: string) => void
 }
@@ -111,7 +102,6 @@ export function DataGridComponent({
   onAddCategory,
   onDeleteCategory,
   onFormulaChange,
-  formulaValidation,
   onAddFormula,
   onDeleteFormula,
 }: DataGridComponentProps) {
@@ -322,7 +312,6 @@ export function DataGridComponent({
     notebook.metrics,
     activeFormulaId,
     onFormulaChange,
-    formulaValidation,
   ])
 
   const rowClass = useCallback(

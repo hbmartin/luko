@@ -1,18 +1,11 @@
 "use client"
 
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { parseFormula } from "@/lib/formulas"
 import { Metric, Notebook, SimulationResult } from "@/lib/types/notebook"
+import { applyNotebookValidations } from "@/lib/utils/notebook-validation"
 import { DataGridComponent } from "../DataGridComponent"
 import { MetricDetailPanel } from "../MetricDetailPanel"
 import { SimulationSummaryPanel } from "../SimulationSummaryPanel"
-
-type ValidationState = {
-  min?: string
-  mode?: string
-  max?: string
-  value?: string
-}
 
 interface WorksheetTabProps {
   notebook: Notebook
@@ -36,37 +29,6 @@ const createFormulaId = () => {
     return crypto.randomUUID()
   }
   return `formula_${Math.random().toString(36).slice(2, 10)}`
-}
-
-const validateMetric = (metric: Metric): ValidationState | undefined => {
-  if (!metric.distribution) return undefined
-  const { min, mode, max } = metric.distribution
-  const errors: ValidationState = {}
-
-  if (min === undefined || Number.isNaN(min)) {
-    errors.min = "Required"
-  }
-  if (mode === undefined || Number.isNaN(mode)) {
-    errors.mode = "Required"
-  }
-  if (max === undefined || Number.isNaN(max)) {
-    errors.max = "Required"
-  }
-
-  if (errors.min || errors.mode || errors.max) return errors
-
-  if (min > mode) {
-    errors.min = "Min must be ≤ Most likely"
-  }
-  if (mode > max) {
-    errors.max = "Max must be ≥ Most likely"
-  }
-  if (min > max) {
-    errors.min = "Min must be ≤ Max"
-    errors.max = "Max must be ≥ Min"
-  }
-
-  return Object.keys(errors).length ? errors : undefined
 }
 
 export function WorksheetTab({ notebook, onNotebookChange, density, simulationResult }: WorksheetTabProps) {
@@ -99,50 +61,11 @@ export function WorksheetTab({ notebook, onNotebookChange, density, simulationRe
     return () => window.removeEventListener("keydown", handleKey)
   })
 
-  const validationErrors: Record<string, ValidationState | undefined> = useMemo(() => {
-    const errors: Record<string, ValidationState | undefined> = {}
-    notebook.metrics.forEach((metric) => {
-      const metricErrors = validateMetric(metric)
-      if (metricErrors) {
-        errors[metric.id] = metricErrors
-      }
-    })
-    return errors
-  }, [notebook.metrics])
-
-  const formulaValidation: Record<string, string | undefined> = useMemo(() => {
-    const errors: Record<string, string | undefined> = {}
-
-    notebook.formulas.forEach((formula) => {
-      const expression = formula.expression.trim()
-      if (!expression) {
-        errors[formula.id] = "Start by selecting a metric"
-        return
-      }
-
-      // const tokens = expressionToTokens(expression)
-      // const missingMetric = tokens.find((token) => token.type === "metric" && !metricsById.has(token.metricId))
-
-      // if (missingMetric) {
-      //   errors[formula.id] = "Referenced metric no longer exists"
-      //   return
-      // }
-
-      try {
-        parseFormula(expression)
-        errors[formula.id] = undefined
-      } catch (error) {
-        errors[formula.id] = error instanceof Error ? error.message : "Formula is invalid"
-      }
-    })
-
-    return errors
-  }, [notebook.formulas, notebook.metrics])
-
   const commitNotebook = useCallback(
     (nextNotebook: Notebook) => {
+      const validated = applyNotebookValidations(nextNotebook)
       const timestamped = {
-        ...nextNotebook,
+        ...validated,
         updatedAt: new Date().toISOString(),
       }
       historyRef.current = [...historyRef.current.slice(0, historyIndexRef.current + 1), timestamped]
@@ -342,20 +265,16 @@ export function WorksheetTab({ notebook, onNotebookChange, density, simulationRe
     [notebook.formulas, selectedRowId]
   )
 
-  const activeMetricValidation = activeMetric ? validationErrors[activeMetric.id] : undefined
-  const activeFormulaValidation = selectedRowId ? (formulaValidation[selectedRowId] ?? undefined) : undefined
   return (
     <div className="mx-auto flex h-full min-h-0 flex-1 items-stretch gap-4 p-6">
       <DataGridComponent
         notebook={notebook}
         density={density}
-        validationErrors={validationErrors}
         onMetricChange={handleMetricChange}
         onCategoryToggle={handleCategoryToggle}
         onRowReorder={handleRowReorder}
         onOpenDetails={setSelectedRowId}
         onFormulaChange={handleFormulaChange}
-        formulaValidation={formulaValidation}
         onAddFormula={handleAddFormula}
         onDeleteFormula={handleDeleteFormula}
       />
@@ -364,8 +283,6 @@ export function WorksheetTab({ notebook, onNotebookChange, density, simulationRe
           notebook={notebook}
           metric={activeMetric}
           formula={activeFormula}
-          metricValidation={activeMetricValidation}
-          formulaValidation={activeFormulaValidation}
           onFormulaChange={handleFormulaChange}
         />
         <SimulationSummaryPanel notebook={notebook} result={simulationResult ?? null} />
@@ -393,14 +310,18 @@ export function WorksheetTab({ notebook, onNotebookChange, density, simulationRe
       </div>
 
       <div className="sr-only" aria-hidden>
-        {Object.entries(validationErrors).map(([metricId, errors]) => (
-          <Fragment key={metricId}>
-            {errors?.min && <span id={`${metricId}-min-error`}>{errors.min}</span>}
-            {errors?.mode && <span id={`${metricId}-mode-error`}>{errors.mode}</span>}
-            {errors?.max && <span id={`${metricId}-max-error`}>{errors.max}</span>}
-            {errors?.value && <span id={`${metricId}-value-error`}>{errors.value}</span>}
-          </Fragment>
-        ))}
+        {notebook.metrics.map((metric) => {
+          const fields = metric.validation?.fields
+          if (!fields) return null
+          return (
+            <Fragment key={metric.id}>
+              {fields.min && <span id={`${metric.id}-min-error`}>Min: {fields.min}</span>}
+              {fields.mode && <span id={`${metric.id}-mode-error`}>Most likely: {fields.mode}</span>}
+              {fields.max && <span id={`${metric.id}-max-error`}>Max: {fields.max}</span>}
+              {fields.value && <span id={`${metric.id}-value-error`}>Value: {fields.value}</span>}
+            </Fragment>
+          )
+        })}
       </div>
     </div>
   )
