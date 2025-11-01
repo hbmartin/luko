@@ -56,23 +56,21 @@ export function MetricDetailPanel({
   }, [notebook.categories, notebook.metrics])
 
   const referenceableIds = useMemo(
-    () => ({
-      ...notebook.metrics.reduce<Record<string, Metric>>((acc, item) => {
-        acc[item.id] = item
-        return acc
-      }, {}),
-      ...notebook.formulas.reduce<Record<string, Formula>>((acc, item) => {
-        acc[item.id] = item
-        return acc
-      }, {}),
-    }),
+    () => Object.fromEntries([...notebook.metrics, ...notebook.formulas].map((item) => [item.id, item])),
     [notebook.metrics, notebook.formulas]
   )
 
   const formulaReferencedIds = useMemo<Set<string>>(() => {
     if (!formula?.expression) return new Set()
+    console.log("formula.expression", formula.expression)
+    console.log("detectDependencies(formula.expression)", detectDependencies(formula.expression))
     return detectDependencies(formula.expression)
   }, [formula?.expression])
+
+  useEffect(() => {
+    console.log("formulaReferencedIds", formulaReferencedIds)
+    console.log("referenceableIds", referenceableIds)
+  }, [formulaReferencedIds, referenceableIds])
 
   const [formulaExpressionMarkup, setFormulaExpressionMarkup] = useState<string | undefined>(undefined)
 
@@ -80,7 +78,7 @@ export function MetricDetailPanel({
     if (!formula) return
     let markup = formula.expression
     for (const id of formulaReferencedIds) {
-      markup = markup.replace(id, `@[${referenceableIds[id]?.name ?? id}](${id})`)
+      markup = markup.replaceAll(id, `@[${referenceableIds[id]?.name ?? id}](${id})`)
     }
     setFormulaExpressionMarkup(markup)
   }, [formula, formulaReferencedIds, referenceableIds])

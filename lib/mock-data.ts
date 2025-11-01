@@ -258,7 +258,8 @@ const revenueImpactExpression =
 const retentionSavingsExpression =
   "retention_improvement_rate * current_yearly_turnover_rate * number_of_employees * replacement_cost_per_employee"
 
-const totalBenefitsExpression = `(${timeSavingsExpression}) + (${qualitySavingsExpression}) + (${revenueImpactExpression}) + (${retentionSavingsExpression})`
+const totalBenefitsExpression =
+  "formula_time_savings_total + formula_quality_savings + formula_product_revenue_impact + formula_retention_savings"
 
 const ongoingCostsExpression = "yearly_tool_cost + yearly_monitoring_support_cost + yearly_ai_staff_cost"
 
@@ -286,70 +287,70 @@ const npvExpression = `${npvTermOneExpression} + ${npvTermTwoExpression} + ${npv
 
 export const mockFormulas: Formula[] = [
   {
-    id: "formula-time-savings-total",
+    id: "formula_time_savings_total",
     name: "Annual Time Savings",
     categoryId: "cat-time-savings",
     expression: timeSavingsExpression,
     updatedAt: new Date().toISOString(),
   },
   {
-    id: "formula-quality-savings",
+    id: "formula_quality_savings",
     name: "Annual Quality Savings",
     categoryId: "cat-quality",
     expression: qualitySavingsExpression,
     updatedAt: new Date().toISOString(),
   },
   {
-    id: "formula-product-revenue-impact",
+    id: "formula_product_revenue_impact",
     name: "Annual Revenue Impact",
     categoryId: "cat-product-delivery",
     expression: revenueImpactExpression,
     updatedAt: new Date().toISOString(),
   },
   {
-    id: "formula-retention-savings",
+    id: "formula_retention_savings",
     name: "Annual Retention Savings",
     categoryId: "cat-retention",
     expression: retentionSavingsExpression,
     updatedAt: new Date().toISOString(),
   },
   {
-    id: "formula-total-annual-benefits",
+    id: "formula_total_annual_benefits",
     name: "Total Annual Benefits",
     categoryId: "cat-facts",
     expression: totalBenefitsExpression,
     updatedAt: new Date().toISOString(),
   },
   {
-    id: "formula-ongoing-costs",
+    id: "formula_ongoing_costs",
     name: "Ongoing Annual Costs",
     categoryId: "cat-costs",
     expression: ongoingCostsExpression,
     updatedAt: new Date().toISOString(),
   },
   {
-    id: "formula-year-1-net",
+    id: "formula_year_1_net",
     name: "Year 1 Net Cash Flow",
     categoryId: "cat-facts",
     expression: yearOneNetCashFlowExpression,
     updatedAt: new Date().toISOString(),
   },
   {
-    id: "formula-year-2-net",
+    id: "formula_year_2_net",
     name: "Year 2 Net Cash Flow",
     categoryId: "cat-facts",
     expression: yearTwoNetCashFlowExpression,
     updatedAt: new Date().toISOString(),
   },
   {
-    id: "formula-year-3-net",
+    id: "formula_year_3_net",
     name: "Year 3 Net Cash Flow",
     categoryId: "cat-facts",
     expression: yearThreeNetCashFlowExpression,
     updatedAt: new Date().toISOString(),
   },
   {
-    id: "formula-npv-3-year",
+    id: "formula_npv_3_year",
     name: "NPV (3 Years)",
     categoryId: "cat-facts",
     expression: npvExpression,

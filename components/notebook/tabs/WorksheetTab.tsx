@@ -112,7 +112,6 @@ export function WorksheetTab({ notebook, onNotebookChange, density, simulationRe
 
   const formulaValidation: Record<string, string | undefined> = useMemo(() => {
     const errors: Record<string, string | undefined> = {}
-    const metricsById = new Map(notebook.metrics.map((metric) => [metric.id, metric]))
 
     notebook.formulas.forEach((formula) => {
       const expression = formula.expression.trim()
