@@ -3,8 +3,8 @@
 import { useEffect, useMemo, useState } from "react"
 import { Mention, type MentionDataItem, MentionsInput } from "react-mentions-ts"
 import { DistributionChart } from "@/components/notebook/charts/DistributionChart"
+import { detectDependencies } from "@/lib/math-utils"
 import { Formula, Metric, Notebook } from "@/lib/types/notebook"
-import { expressionToTokens } from "@/lib/utils/formulaTokens"
 
 interface ValidationState {
   min?: string
@@ -55,44 +55,35 @@ export function MetricDetailPanel({
     })
   }, [notebook.categories, notebook.metrics])
 
-  const metricsById = useMemo(
-    () => new Map(notebook.metrics.map((candidate) => [candidate.id, candidate])),
-    [notebook.metrics]
+  const referenceableIds = useMemo(
+    () => ({
+      ...notebook.metrics.reduce<Record<string, Metric>>((acc, item) => {
+        acc[item.id] = item
+        return acc
+      }, {}),
+      ...notebook.formulas.reduce<Record<string, Formula>>((acc, item) => {
+        acc[item.id] = item
+        return acc
+      }, {}),
+    }),
+    [notebook.metrics, notebook.formulas]
   )
 
-  const formulaTokens = useMemo(() => {
-    if (!formula) return []
-    return expressionToTokens(formula.expression)
+  const formulaReferencedIds = useMemo<Set<string>>(() => {
+    if (!formula?.expression) return new Set()
+    return detectDependencies(formula.expression)
   }, [formula?.expression])
-
-  const referencedMetricIds = useMemo(() => {
-    if (!formulaTokens.length) return []
-    const ids = formulaTokens.filter((token) => token.type === "metric").map((token) => token.metricId)
-    return Array.from(new Set(ids))
-  }, [formulaTokens])
-
-  const referencedMetrics = useMemo(() => {
-    if (!referencedMetricIds.length) return []
-    return referencedMetricIds
-      .map((metricId) => metricsById.get(metricId))
-      .filter((entry): entry is Metric => Boolean(entry))
-  }, [metricsById, referencedMetricIds])
 
   const [formulaExpressionMarkup, setFormulaExpressionMarkup] = useState<string | undefined>(undefined)
 
   useEffect(() => {
     if (!formula) return
-    const segments = formulaTokens.map((token) => {
-      if (token.type === "metric") {
-        const metric = metricsById.get(token.metricId)
-        const display = metric?.name ?? token.metricId
-        return `@[${display}](${token.metricId})`
-      }
-      return ` ${"value" in token ? token.value : ""} `
-    })
-    const markup = segments.join("").replace(/\s+/g, " ").trim()
+    let markup = formula.expression
+    for (const id of formulaReferencedIds) {
+      markup = markup.replace(id, `@[${referenceableIds[id]?.name ?? id}](${id})`)
+    }
     setFormulaExpressionMarkup(markup)
-  }, [formula, formulaTokens, metricsById])
+  }, [formula, formulaReferencedIds, referenceableIds])
   if (!metric && !formula) {
     return (
       <div className="rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface-elevated)] p-4 shadow-sm">
@@ -125,20 +116,6 @@ export function MetricDetailPanel({
             </MentionsInput>
             {formulaValidation ? <p className="mt-2 text-[10px] text-red-500">{formulaValidation}</p> : null}
           </div>
-
-          {referencedMetrics.length > 0 && (
-            <section className="rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface-elevated)] p-[var(--space-400)]">
-              <h4 className="text-sm font-semibold text-[var(--color-text-primary)]">Referenced Metrics</h4>
-              <ul className="mt-2 space-y-1 text-xs text-[var(--color-text-muted)]">
-                {referencedMetrics.map((referencedMetric) => (
-                  <li key={referencedMetric.id}>
-                    <span className="font-medium text-[var(--color-text-primary)]">{referencedMetric.name}</span>
-                    <span className="ml-1 text-[var(--color-text-muted)]">({referencedMetric.unit})</span>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          )}
 
           {/* {noteSection} */}
         </div>
