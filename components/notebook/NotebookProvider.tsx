@@ -3,6 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useState } from "react"
 import { runSimulation } from "@/lib/simulation/runSimulation"
 import { Notebook, SimulationResult } from "@/lib/types/notebook"
+import { applyNotebookValidations } from "@/lib/utils/notebook-validation"
 
 interface Scenario {
   id: string
@@ -37,13 +38,17 @@ export function NotebookProvider({
   children: React.ReactNode
   notebook: Notebook
 }) {
-  const [notebook, setNotebook] = useState<Notebook>(initialNotebook)
+  const [notebook, setNotebookState] = useState<Notebook>(() => applyNotebookValidations(initialNotebook))
   const [simulationResult, setSimulationResult] = useState<SimulationResult | null>(null)
   const [isSimulating, setIsSimulating] = useState(false)
   const [theme, setTheme] = useState<"light" | "dark">("light")
   const [density, setDensity] = useState<"comfortable" | "compact">("comfortable")
   const [scenarios, setScenarios] = useState<Scenario[]>([])
   const [activeScenarioId, setActiveScenarioId] = useState<string | null>(null)
+
+  const setNotebook = useCallback((nextNotebook: Notebook) => {
+    setNotebookState(applyNotebookValidations(nextNotebook))
+  }, [])
 
   const handleRenameScenario = (scenarioId: string, name: string) => {
     setScenarios((prev) =>
@@ -87,13 +92,15 @@ export function NotebookProvider({
       setActiveScenarioId(scenarioId)
       return [...prev, scenario]
     })
-    setNotebook((prev) => ({
-      ...prev,
-      isDirty: false,
-      dirtyMetrics: [],
-      dirtyFormulas: [],
-      lastSimulationId: scenarioId,
-    }))
+    setNotebookState((prev) =>
+      applyNotebookValidations({
+        ...prev,
+        isDirty: false,
+        dirtyMetrics: [],
+        dirtyFormulas: [],
+        lastSimulationId: scenarioId,
+      })
+    )
 
     setIsSimulating(false)
   }, [notebook])

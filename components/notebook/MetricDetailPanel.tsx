@@ -7,19 +7,10 @@ import { parseFormula } from "@/lib/formulas"
 import { detectDependencies } from "@/lib/math-utils"
 import { Formula, Metric, Notebook } from "@/lib/types/notebook"
 
-interface ValidationState {
-  min?: string
-  mode?: string
-  max?: string
-  value?: string
-}
-
 interface MetricDetailPanelProps {
   notebook: Notebook
   metric: Metric | null
   formula?: Formula | null
-  metricValidation?: ValidationState
-  formulaValidation?: string | undefined
   onFormulaChange?: (formulaId: string, expression: string) => void
 }
 
@@ -33,15 +24,9 @@ type MetricMentionExtra = {
 
 type MetricMentionItem = MentionDataItem<MetricMentionExtra>
 
-export function MetricDetailPanel({
-  notebook,
-  metric,
-  formula = null,
-  metricValidation,
-  formulaValidation,
-  onFormulaChange,
-}: MetricDetailPanelProps) {
+export function MetricDetailPanel({ notebook, metric, formula = null, onFormulaChange }: MetricDetailPanelProps) {
   const distribution = metric?.distribution ?? null
+  const metricValidationFields = metric?.validation?.fields ?? {}
   const mentionOptions = useMemo<MetricMentionItem[]>(() => {
     const sortedCategories = [...notebook.categories].sort((a, b) => a.order - b.order)
     return sortedCategories.flatMap((category) => {
@@ -72,6 +57,8 @@ export function MetricDetailPanel({
 
   const [formulaExpressionMarkup, setFormulaExpressionMarkup] = useState<string | undefined>(undefined)
   const [formulaError, setFormulaError] = useState<string | null>(null)
+  const notebookFormulaError = formula?.error ?? null
+  const effectiveFormulaError = formulaError ?? notebookFormulaError
 
   const validateFormulaExpression = useCallback(
     (expression: string): string | null => {
@@ -132,7 +119,7 @@ export function MetricDetailPanel({
         <div className="flex flex-col gap-4">
           <div>
             <div className="mt-1 text-xl font-semibold text-[var(--color-text-primary)]">{formula.name}</div>
-            {formulaError ? <p className="mt-2 text-[10px] text-red-500">{formulaError}</p> : null}
+            {effectiveFormulaError ? <p className="mt-2 text-[10px] text-red-500">{effectiveFormulaError}</p> : null}
             <MentionsInput
               value={formulaExpressionMarkup ?? ""}
               placeholder="Build this formula by selecting metrics from the worksheet."
@@ -162,7 +149,6 @@ export function MetricDetailPanel({
                 displayTransform={(id, display) => display ?? `${id}`}
               />
             </MentionsInput>
-            {formulaValidation ? <p className="mt-2 text-[10px] text-red-500">{formulaValidation}</p> : null}
           </div>
 
           {/* {noteSection} */}
@@ -192,11 +178,13 @@ export function MetricDetailPanel({
                 </div>
               )}
             </div>
-            {(metricValidation?.min || metricValidation?.mode || metricValidation?.max) && (
+            {(metricValidationFields.min || metricValidationFields.mode || metricValidationFields.max) && (
               <div className="mt-2 space-y-1 text-[10px]">
-                {metricValidation?.min && <p className="text-red-500">Min: {metricValidation.min}</p>}
-                {metricValidation?.mode && <p className="text-red-500">Most likely: {metricValidation.mode}</p>}
-                {metricValidation?.max && <p className="text-red-500">Max: {metricValidation.max}</p>}
+                {metricValidationFields.min && <p className="text-red-500">Min: {metricValidationFields.min}</p>}
+                {metricValidationFields.mode && (
+                  <p className="text-red-500">Most likely: {metricValidationFields.mode}</p>
+                )}
+                {metricValidationFields.max && <p className="text-red-500">Max: {metricValidationFields.max}</p>}
               </div>
             )}
           </section>
