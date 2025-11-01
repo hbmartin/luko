@@ -210,7 +210,7 @@ export function DataGridComponent({
       name: "",
       width: 280,
       frozen: true,
-      renderCell: ({ row, column, onRowChange, rowIdx, tabIndex }: RenderCellProps<GridRow>) => {
+      renderCell: ({ row }: RenderCellProps<GridRow>) => {
         if ("error" in row && row.error) {
           return <div className="text-red-500">{row.error}</div>
         }
@@ -285,7 +285,6 @@ export function DataGridComponent({
           return renderValue({ row, column, onRowChange, rowIdx, tabIndex, isCellEditable: true })
         },
         renderEditCell: ({ row, column, onRowChange, rowIdx, onClose }: RenderEditCellProps<GridRow>) => {
-          console.log("renderEditCell", row.type)
           if (isFormulaRow(row)) {
             return row.expression as React.ReactNode
           }
