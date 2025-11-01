@@ -1,6 +1,8 @@
 import { Metadata } from "next"
 import Link from "next/link"
 
+import { LogoutButton } from "@/components/auth/LogoutButton"
+
 export const metadata: Metadata = {
   title: "Luko",
 }
@@ -9,11 +11,14 @@ export default function Home() {
   return (
     <div className="flex min-h-screen flex-col bg-[var(--color-surface)]">
       <header className="border-b border-[var(--color-border-soft)] bg-[var(--color-surface-elevated)] shadow-sm">
-        <div className="mx-auto max-w-7xl px-6 py-4">
-          <h1 className="text-2xl font-semibold text-[var(--color-text-primary)]">Value Impact Calculator</h1>
-          <p className="mt-1 text-sm text-[var(--color-text-muted)]">
-            ROI analysis toolkit for executive-ready decisions
-          </p>
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-6 px-6 py-4">
+          <div>
+            <h1 className="text-2xl font-semibold text-[var(--color-text-primary)]">Value Impact Calculator</h1>
+            <p className="mt-1 text-sm text-[var(--color-text-muted)]">
+              ROI analysis toolkit for executive-ready decisions
+            </p>
+          </div>
+          <LogoutButton />
         </div>
       </header>
 
