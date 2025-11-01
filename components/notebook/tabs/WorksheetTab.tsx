@@ -366,6 +366,7 @@ export function WorksheetTab({ notebook, onNotebookChange, density, simulationRe
           formula={activeFormula}
           metricValidation={activeMetricValidation}
           formulaValidation={activeFormulaValidation}
+          onFormulaChange={handleFormulaChange}
         />
         <SimulationSummaryPanel notebook={notebook} result={simulationResult ?? null} />
         {/* <div className="rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface-elevated)] p-4 shadow-sm">
