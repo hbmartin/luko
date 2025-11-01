@@ -1,8 +1,9 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { Mention, type MentionDataItem, MentionsInput } from "react-mentions-ts"
 import { DistributionChart } from "@/components/notebook/charts/DistributionChart"
+import { parseFormula } from "@/lib/formulas"
 import { detectDependencies } from "@/lib/math-utils"
 import { Formula, Metric, Notebook } from "@/lib/types/notebook"
 
@@ -19,6 +20,7 @@ interface MetricDetailPanelProps {
   formula?: Formula | null
   metricValidation?: ValidationState
   formulaValidation?: string | undefined
+  onFormulaChange?: (formulaId: string, expression: string) => void
 }
 
 type MetricMentionExtra = {
@@ -37,6 +39,7 @@ export function MetricDetailPanel({
   formula = null,
   metricValidation,
   formulaValidation,
+  onFormulaChange,
 }: MetricDetailPanelProps) {
   const distribution = metric?.distribution ?? null
   const mentionOptions = useMemo<MetricMentionItem[]>(() => {
@@ -68,6 +71,42 @@ export function MetricDetailPanel({
   }, [formula?.expression])
 
   const [formulaExpressionMarkup, setFormulaExpressionMarkup] = useState<string | undefined>(undefined)
+  const [formulaError, setFormulaError] = useState<string | null>(null)
+
+  const validateFormulaExpression = useCallback(
+    (expression: string): string | null => {
+      const normalized = expression.trim()
+      if (!normalized) {
+        return null
+      }
+
+      try {
+        parseFormula(normalized)
+      } catch (error) {
+        return error instanceof Error ? error.message : "Formula is invalid"
+      }
+
+      const dependencies = detectDependencies(normalized)
+      const missingIds = Array.from(dependencies).filter((dependency) => {
+        if (referenceableIds[dependency]) return false
+        try {
+          const node = parseFormula(dependency)
+          node.compile().evaluate({})
+          return false
+        } catch {
+          return true
+        }
+      })
+
+      if (missingIds.length > 0) {
+        const label = missingIds.length === 1 ? "Unknown reference" : "Unknown references"
+        return `${label}: ${missingIds.join(", ")}`
+      }
+
+      return null
+    },
+    [referenceableIds]
+  )
 
   useEffect(() => {
     if (!formula) return
@@ -77,7 +116,8 @@ export function MetricDetailPanel({
       markup = markup.replaceAll(id, `@[${referenceableIds[id]?.name ?? id}](${id})`)
     }
     setFormulaExpressionMarkup(markup)
-  }, [formula, formulaReferencedIds, referenceableIds])
+    setFormulaError(validateFormulaExpression(formula.expression))
+  }, [formula, formulaReferencedIds, referenceableIds, validateFormulaExpression])
   if (!metric && !formula) {
     return (
       <div className="rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface-elevated)] p-4 shadow-sm">
@@ -92,6 +132,7 @@ export function MetricDetailPanel({
         <div className="flex flex-col gap-4">
           <div>
             <div className="mt-1 text-xl font-semibold text-[var(--color-text-primary)]">{formula.name}</div>
+            {formulaError ? <p className="mt-2 text-[10px] text-red-500">{formulaError}</p> : null}
             <MentionsInput
               value={formulaExpressionMarkup ?? ""}
               placeholder="Build this formula by selecting metrics from the worksheet."
@@ -100,6 +141,19 @@ export function MetricDetailPanel({
               onMentionsChange={(change) => {
                 console.log("change", change)
                 setFormulaExpressionMarkup(change.value)
+                const expressionWithIds = change.idValue ?? change.plainTextValue ?? ""
+                const validationMessage = validateFormulaExpression(expressionWithIds)
+                if (validationMessage) {
+                  setFormulaError(validationMessage)
+                  return
+                }
+
+                setFormulaError(null)
+                if (!formula) return
+                if (!onFormulaChange) return
+                const normalizedExpression = expressionWithIds.trim()
+                if (normalizedExpression === formula.expression) return
+                onFormulaChange(formula.id, normalizedExpression)
               }}
             >
               <Mention<MetricMentionExtra>
