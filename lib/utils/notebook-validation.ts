@@ -79,6 +79,7 @@ export const validateFormula = (formula: Formula, _notebook: Notebook): string |
     parseFormula(expression)
     return undefined
   } catch (error) {
+    console.error(error)
     return error instanceof Error ? error.message : "Formula is invalid"
   }
 }

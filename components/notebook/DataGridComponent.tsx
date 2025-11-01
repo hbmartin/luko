@@ -270,13 +270,13 @@ export function DataGridComponent({
         },
         renderCell: ({ row, column, onRowChange, rowIdx, tabIndex }: RenderCellProps<GridRow>) => {
           if (isFormulaRow(row)) {
-            return row.expression as React.ReactNode
+            return String(row.expression)
           }
           return renderValue({ row, column, onRowChange, rowIdx, tabIndex, isCellEditable: true })
         },
         renderEditCell: ({ row, column, onRowChange, rowIdx, onClose }: RenderEditCellProps<GridRow>) => {
           if (isFormulaRow(row)) {
-            return row.expression as React.ReactNode
+            return String(row.expression)
           }
           return textEditor({ row, column, onRowChange, rowIdx, onClose })
         },
