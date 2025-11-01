@@ -48,6 +48,8 @@
     "@radix-ui/react-toggle-group": "^1.1.11",
     "@radix-ui/react-tooltip": "^1.2.8",
     "@stdlib/stats-base-dists-beta-pdf": "^0.2.2",
+    "@supabase/ssr": "^0.5.1",
+    "@supabase/supabase-js": "^2.48.0",
     "@t3-oss/env-nextjs": "^0.13.8",
     "@vercel/otel": "^2.1.0",
     "class-variance-authority": "^0.7.1",
