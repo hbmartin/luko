@@ -54,11 +54,9 @@ export function MetricDetailPanel({ notebook, metric, formula = null, onFormulaC
     if (!formula?.expression) {
       setFormulaReferencedIds(new Set())
     } else {
-      setFormulaReferencedIds((prev) => {
-        const newIds = detectDependencies(formula.expression)
-        if (!newIds) return prev
-        return new Set(newIds)
-      })
+      const newIds = detectDependencies(formula.expression)
+      if (newIds === undefined) return
+      setFormulaReferencedIds(new Set(newIds))
     }
   }, [formula?.expression])
 

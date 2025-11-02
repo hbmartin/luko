@@ -39,7 +39,7 @@ export const validateMetric = (metric: Metric): MetricValidationResult | undefin
     fields.max = "Required"
   }
 
-  if (fields.min || fields.mode || fields.max) {
+  if (fields.min || fields.mode || fields.max || min === undefined || mode === undefined || max === undefined) {
     return {
       fields,
       summary: summarizeMetricFieldErrors(fields),
