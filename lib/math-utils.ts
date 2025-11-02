@@ -1,6 +1,6 @@
 import { all, create, FactoryFunctionMap } from "mathjs"
 
-const math = create(all as FactoryFunctionMap, {})
+const math = create(all as FactoryFunctionMap)
 
 export const detectDependencies = (expression: string): Set<string> => {
   const dependencies: Set<string> = new Set()

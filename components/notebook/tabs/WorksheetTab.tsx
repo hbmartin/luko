@@ -173,22 +173,19 @@ export function WorksheetTab({ notebook, onNotebookChange, density, simulationRe
       })
       const formulas = notebook.formulas.map((formula) => {
         if (formula.id !== formulaId) return formula
-        const next = {
-          ...formula,
+
+        const { error: _oldError, ...baseFormula } = formula
+        const updatedFormula = {
+          ...baseFormula,
           expression,
           updatedAt: new Date().toISOString(),
         }
-        if (validation && validation.type === "error") {
-          return {
-            ...next,
-            error: validation.message,
-          }
+
+        if (validation?.type === "error") {
+          return { ...updatedFormula, error: validation.message }
         }
-        if (next.error !== undefined) {
-          const { error: _previousError, ...rest } = next
-          return rest
-        }
-        return next
+
+        return updatedFormula
       })
 
       const dirtySet = new Set(notebook.dirtyFormulas)

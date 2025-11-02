@@ -1,7 +1,7 @@
-import { all, create, EvalFunction, FactoryFunctionMap, MathJsStatic, MathNode, MathType } from "mathjs"
+import { all, create, EvalFunction, FactoryFunctionMap, MathNode, MathType } from "mathjs"
 import type { Metric } from "@/lib/types/notebook"
 
-const math = create(all as FactoryFunctionMap, {}) as MathJsStatic
+const math = create(all as FactoryFunctionMap)
 
 export interface FormulaCompilation {
   raw: string
