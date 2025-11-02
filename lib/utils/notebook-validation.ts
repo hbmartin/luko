@@ -86,7 +86,7 @@ export const validateFormula = (formula: Formula, _notebook: Notebook): string |
 
 export const applyNotebookValidations = (notebook: Notebook): Notebook => {
   let metricsChanged = false
-  const metrics = notebook.metrics.map((metric) => {
+  const mapMetricWithValidation = (metric: Metric): Metric => {
     const validation = validateMetric(metric)
 
     if (!validation) {
@@ -116,10 +116,12 @@ export const applyNotebookValidations = (notebook: Notebook): Notebook => {
       ...metric,
       validation,
     }
-  })
+  }
+
+  const metrics = notebook.metrics.map(mapMetricWithValidation)
 
   let formulasChanged = false
-  const formulas = notebook.formulas.map((formula) => {
+  const mapFormulaWithValidation = (formula: Formula): Formula => {
     const error = validateFormula(formula, notebook)
     if (error === undefined) {
       if (formula.error === undefined) {
@@ -140,7 +142,8 @@ export const applyNotebookValidations = (notebook: Notebook): Notebook => {
       ...formula,
       error,
     }
-  })
+  }
+  const formulas = notebook.formulas.map(mapFormulaWithValidation)
 
   if (!metricsChanged && !formulasChanged) {
     return notebook

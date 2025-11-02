@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from "react"
 import { Mention, type MentionDataItem, MentionsInput } from "react-mentions-ts"
 import { DistributionChart } from "@/components/notebook/charts/DistributionChart"
 import { validateFormulaExpression } from "@/components/notebook/utils/formula-validation"
-import { parseFormula } from "@/lib/formulas"
 import { detectDependencies } from "@/lib/math-utils"
 import { Formula, Metric, Notebook } from "@/lib/types/notebook"
 
@@ -77,21 +76,10 @@ export function MetricDetailPanel({ notebook, metric, formula = null, onFormulaC
 
   const formulaValidation = useMemo(() => {
     if (!formula) return null
-    const expression = draftExpression ?? formula.expression ?? ""
-    const validation = validateFormulaExpression({
-      expression,
+    return validateFormulaExpression({
+      expression: draftExpression ?? formula.expression,
       referenceableIds,
     })
-    if (validation) {
-      return validation
-    }
-    if (formula.error) {
-      return {
-        type: "error" as const,
-        message: formula.error,
-      }
-    }
-    return null
   }, [draftExpression, formula, referenceableIds])
 
   if (!metric && !formula) {

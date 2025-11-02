@@ -1,8 +1,8 @@
 "use client"
 
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { Metric, Notebook, SimulationResult } from "@/lib/types/notebook"
 import { validateFormulaExpression } from "@/components/notebook/utils/formula-validation"
+import { Metric, Notebook, SimulationResult } from "@/lib/types/notebook"
 import { DataGridComponent } from "../DataGridComponent"
 import { MetricDetailPanel } from "../MetricDetailPanel"
 import { SimulationSummaryPanel } from "../SimulationSummaryPanel"
@@ -119,7 +119,7 @@ export function WorksheetTab({ notebook, onNotebookChange, density, simulationRe
         isDirty: true,
       })
     },
-    [commitNotebook, notebook, referenceableItems]
+    [commitNotebook, notebook]
   )
 
   const handleAddFormula = useCallback(
@@ -185,7 +185,7 @@ export function WorksheetTab({ notebook, onNotebookChange, density, simulationRe
           }
         }
         if (next.error !== undefined) {
-          const { error, ...rest } = next
+          const { error: _previousError, ...rest } = next
           return rest
         }
         return next
@@ -201,7 +201,7 @@ export function WorksheetTab({ notebook, onNotebookChange, density, simulationRe
         isDirty: true,
       })
     },
-    [commitNotebook, notebook]
+    [commitNotebook, notebook, referenceableItems]
   )
 
   const handleCategoryToggle = useCallback(
