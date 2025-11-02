@@ -5,9 +5,9 @@ import { z } from "zod"
 // ============================================================================
 
 export const DistributionSchema = z.object({
-  min: z.number(),
-  mode: z.number(), // most likely value
-  max: z.number(),
+  min: z.number().optional(),
+  mode: z.number().optional(), // most likely value
+  max: z.number().optional(),
 })
 
 export type Distribution = z.infer<typeof DistributionSchema>
