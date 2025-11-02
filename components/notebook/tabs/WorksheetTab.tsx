@@ -1,8 +1,8 @@
 "use client"
 
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { validateFormulaExpression } from "@/components/notebook/utils/formula-validation"
 import { Metric, Notebook, SimulationResult } from "@/lib/types/notebook"
-import { applyNotebookValidations } from "@/lib/utils/notebook-validation"
 import { DataGridComponent } from "../DataGridComponent"
 import { MetricDetailPanel } from "../MetricDetailPanel"
 import { SimulationSummaryPanel } from "../SimulationSummaryPanel"
@@ -35,6 +35,10 @@ export function WorksheetTab({ notebook, onNotebookChange, density, simulationRe
   const historyRef = useRef<Notebook[]>([notebook])
   const historyIndexRef = useRef(0)
   const [selectedRowId, setSelectedRowId] = useState<string | null>(null)
+  const referenceableItems = useMemo(
+    () => Object.fromEntries([...notebook.metrics, ...notebook.formulas].map((item) => [item.id, item])),
+    [notebook.metrics, notebook.formulas]
+  )
 
   useEffect(() => {
     const existing = historyRef.current[historyIndexRef.current]
@@ -63,9 +67,8 @@ export function WorksheetTab({ notebook, onNotebookChange, density, simulationRe
 
   const commitNotebook = useCallback(
     (nextNotebook: Notebook) => {
-      const validated = applyNotebookValidations(nextNotebook)
       const timestamped = {
-        ...validated,
+        ...nextNotebook,
         updatedAt: new Date().toISOString(),
       }
       historyRef.current = [...historyRef.current.slice(0, historyIndexRef.current + 1), timestamped]
@@ -164,15 +167,29 @@ export function WorksheetTab({ notebook, onNotebookChange, density, simulationRe
 
   const handleFormulaChange = useCallback(
     (formulaId: string, expression: string) => {
-      const formulas = notebook.formulas.map((formula) =>
-        formula.id === formulaId
-          ? {
-              ...formula,
-              expression,
-              updatedAt: new Date().toISOString(),
-            }
-          : formula
-      )
+      const validation = validateFormulaExpression({
+        expression,
+        referenceableIds: referenceableItems,
+      })
+      const formulas = notebook.formulas.map((formula) => {
+        if (formula.id !== formulaId) return formula
+        const next = {
+          ...formula,
+          expression,
+          updatedAt: new Date().toISOString(),
+        }
+        if (validation && validation.type === "error") {
+          return {
+            ...next,
+            error: validation.message,
+          }
+        }
+        if (next.error !== undefined) {
+          const { error: _previousError, ...rest } = next
+          return rest
+        }
+        return next
+      })
 
       const dirtySet = new Set(notebook.dirtyFormulas)
       dirtySet.add(formulaId)
@@ -184,7 +201,7 @@ export function WorksheetTab({ notebook, onNotebookChange, density, simulationRe
         isDirty: true,
       })
     },
-    [commitNotebook, notebook]
+    [commitNotebook, notebook, referenceableItems]
   )
 
   const handleCategoryToggle = useCallback(
