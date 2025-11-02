@@ -51,12 +51,15 @@ export function MetricDetailPanel({ notebook, metric, formula = null, onFormulaC
   const [formulaReferencedIds, setFormulaReferencedIds] = useState<Set<string>>(new Set())
 
   useEffect(() => {
-    if (!formula?.expression) return
-    setFormulaReferencedIds((prev) => {
-      const newIds = detectDependencies(formula.expression)
-      if (!newIds) return prev
-      return new Set([...prev, ...newIds])
-    })
+    if (!formula?.expression) {
+      setFormulaReferencedIds(new Set())
+    } else {
+      setFormulaReferencedIds((prev) => {
+        const newIds = detectDependencies(formula.expression)
+        if (!newIds) return prev
+        return new Set(newIds)
+      })
+    }
   }, [formula?.expression])
 
   const [formulaExpressionMarkup, setFormulaExpressionMarkup] = useState<string | undefined>(undefined)

@@ -114,7 +114,11 @@ export async function runSimulation(
     notebook.metrics.forEach((metric) => {
       let value = metric.value ?? 0
       if (metric.distribution) {
-        value = samplePert(metric.distribution.min, metric.distribution.mode, metric.distribution.max)
+        value = samplePert(
+          metric.distribution.min ?? 0,
+          metric.distribution.mode ?? 0.5,
+          metric.distribution.max ?? 1.0
+        )
       }
 
       sampledValues[metric.id] = value

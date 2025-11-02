@@ -21,7 +21,7 @@ const formatMetricValue = (metric: Metric, value: number | null | undefined) => 
 
 export const generatePertPdfData = (distribution: Distribution, gamma = DEFAULT_GAMMA, points = DEFAULT_POINTS) => {
   const { min: a, mode: m, max: b } = distribution
-  if (a == undefined || m == undefined || b == undefined) return []
+  if (a === undefined || m === undefined || b === undefined) return []
   if (a >= b || m < a || m > b || gamma <= 0) return []
 
   const range = b - a
