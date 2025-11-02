@@ -1,6 +1,6 @@
 import { all, create, FactoryFunctionMap } from "mathjs"
 
-const math = create(all as FactoryFunctionMap, {})
+const math = create(all as FactoryFunctionMap)
 
 export const detectDependencies = (expression: string): Set<string> => {
   const dependencies: Set<string> = new Set()
@@ -13,4 +13,16 @@ export const detectDependencies = (expression: string): Set<string> => {
   })
 
   return dependencies
+}
+
+export const parseNumeric = (value: unknown): number => {
+  if (typeof value === "number") return value
+  if (typeof value === "string") {
+    const trimmed = value.trim()
+    if (trimmed === "") return Number.NaN
+    const sanitized = trimmed.replace(/,/g, "")
+    const parsed = Number(sanitized)
+    return Number.isFinite(parsed) ? parsed : Number.NaN
+  }
+  return Number.NaN
 }

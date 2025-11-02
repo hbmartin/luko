@@ -1,4 +1,4 @@
-import { parseFormula } from "@/lib/formulas"
+import { validateFormulaExpression } from "@/components/notebook/utils/formula-validation"
 import { Formula, Metric, Notebook } from "@/lib/types/notebook"
 
 export type MetricValidationFieldErrors = {
@@ -67,21 +67,18 @@ export const validateMetric = (metric: Metric): MetricValidationResult | undefin
   }
 }
 
-export const validateFormula = (formula: Formula, _notebook: Notebook): string | undefined => {
-  const expression = formula.expression.trim()
-  if (!expression) {
-    return "Start by selecting a metric"
+export const validateFormula = (formula: Formula, notebook: Notebook): string | undefined => {
+  const referenceableIds = Object.fromEntries(
+    [...notebook.metrics, ...notebook.formulas].map((item) => [item.id, item])
+  )
+  const validation = validateFormulaExpression({
+    expression: formula.expression,
+    referenceableIds,
+  })
+  if (validation && validation.type === "error") {
+    return validation.message
   }
-
-  // TODO: check for missing references once identifiers are available in notebook context
-
-  try {
-    parseFormula(expression)
-    return undefined
-  } catch (error) {
-    console.error(error)
-    return error instanceof Error ? error.message : "Formula is invalid"
-  }
+  return undefined
 }
 
 export const applyNotebookValidations = (notebook: Notebook): Notebook => {
@@ -121,8 +118,15 @@ export const applyNotebookValidations = (notebook: Notebook): Notebook => {
   const metrics = notebook.metrics.map(mapMetricWithValidation)
 
   let formulasChanged = false
+  const referenceableIds = Object.fromEntries(
+    [...notebook.metrics, ...notebook.formulas].map((item) => [item.id, item])
+  )
   const mapFormulaWithValidation = (formula: Formula): Formula => {
-    const error = validateFormula(formula, notebook)
+    const validation = validateFormulaExpression({
+      expression: formula.expression,
+      referenceableIds,
+    })
+    const error = validation && validation.type === "error" ? validation.message : undefined
     if (error === undefined) {
       if (formula.error === undefined) {
         return formula

@@ -1,6 +1,14 @@
 "use client"
 
-import { type MouseEvent as ReactMouseEvent, useCallback, useEffect, useMemo, useRef, useState } from "react"
+import {
+  cloneElement,
+  type MouseEvent as ReactMouseEvent,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react"
 import {
   type CellMouseArgs,
   type CellMouseEvent,
@@ -25,6 +33,7 @@ import {
   ContextMenuSeparator,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu"
+import { parseNumeric } from "@/lib/math-utils"
 import type { CategoryRow, GridRow, MetricRow, Notebook } from "@/lib/types/notebook"
 import { notebookToGridRows } from "@/lib/utils/grid-helpers"
 
@@ -50,9 +59,11 @@ interface DataGridComponentProps {
   onOpenDetails: (metricId: string) => void
   onAddMetric?: (categoryId: string) => void
   onDeleteMetric?: (metricId: string) => void
+  onMetricRename?: (metricId: string, name: string) => void
   onAddCategory?: (categoryId: string) => void
   onDeleteCategory?: (categoryId: string) => void
   onFormulaChange: (formulaId: string, expression: string) => void
+  onFormulaRename?: (formulaId: string, name: string) => void
   onAddFormula?: (categoryId: string) => string | void
   onDeleteFormula?: (formulaId: string) => void
 }
@@ -96,12 +107,14 @@ export function DataGridComponent({
   notebook,
   density,
   onMetricChange,
+  onMetricRename,
   onOpenDetails,
   onAddMetric,
   onDeleteMetric,
   onAddCategory,
   onDeleteCategory,
   onFormulaChange,
+  onFormulaRename,
   onAddFormula,
   onDeleteFormula,
 }: DataGridComponentProps) {
@@ -191,6 +204,13 @@ export function DataGridComponent({
     [openCategoryContextMenu]
   )
 
+  const safeTextEditor = useCallback((props: RenderEditCellProps<GridRow>) => {
+    const rawValue = (props.row as Record<string, unknown>)[props.column.key]
+    const normalizedValue = rawValue === undefined ? "" : (rawValue ?? "")
+
+    return cloneElement(textEditor(props), { value: normalizedValue })
+  }, [])
+
   const columns = useMemo<Column<GridRow>[]>(() => {
     const numericCellClass = "spreadsheet-cell-numeric"
     const unitCellClass = "spreadsheet-cell-unit"
@@ -278,7 +298,7 @@ export function DataGridComponent({
           if (isFormulaRow(row)) {
             return String(row.expression)
           }
-          return textEditor({ row, column, onRowChange, rowIdx, onClose })
+          return safeTextEditor({ row, column, onRowChange, rowIdx, onClose })
         },
       },
       {
@@ -286,21 +306,21 @@ export function DataGridComponent({
         name: "Min",
         width: 120,
         cellClass: numericCellClass,
-        renderEditCell: textEditor,
+        renderEditCell: safeTextEditor,
       },
       {
         key: "mode",
         name: "Most Likely",
         width: 140,
         cellClass: numericCellClass,
-        renderEditCell: textEditor,
+        renderEditCell: safeTextEditor,
       },
       {
         key: "max",
         name: "Max",
         width: 120,
         cellClass: numericCellClass,
-        renderEditCell: textEditor,
+        renderEditCell: safeTextEditor,
       },
     ]
 
@@ -312,6 +332,7 @@ export function DataGridComponent({
     notebook.metrics,
     activeFormulaId,
     onFormulaChange,
+    safeTextEditor,
   ])
 
   const rowClass = useCallback(
@@ -406,38 +427,41 @@ export function DataGridComponent({
 
   const handleRowsChange = useCallback(
     (updatedRows: readonly GridRow[], data: RowsChangeData<GridRow>) => {
-      console.log("rows changed")
+      console.log("rows changed data", data)
+      console.log("rows changed updatedRows", updatedRows)
       const columnKey = data.column?.key
-      if (columnKey !== "min" && columnKey !== "mode" && columnKey !== "max" && columnKey !== "value") return
-
-      const parseNumeric = (value: unknown): number => {
-        if (typeof value === "number") return value
-        if (typeof value === "string") {
-          const trimmed = value.trim()
-          if (trimmed === "") return Number.NaN
-          const sanitized = trimmed.replace(/,/g, "")
-          const parsed = Number(sanitized)
-          return Number.isFinite(parsed) ? parsed : Number.NaN
-        }
-        return Number.NaN
-      }
 
       data.indexes.forEach((rowIndex) => {
         const row = updatedRows[rowIndex]
-        if (!row || row.type !== "metric") return
+        if (!row || !columnKey) return
 
-        let rawValue: unknown
-        if (columnKey === "value") {
-          rawValue = (row as typeof row & { value?: unknown }).value
-        } else {
-          rawValue = row[columnKey]
+        if (isMetricRow(row)) {
+          if (columnKey === "name") {
+            onMetricRename?.(row.id, typeof row.name === "string" ? row.name : "")
+            return
+          }
+          if (columnKey !== "min" && columnKey !== "mode" && columnKey !== "max" && columnKey !== "value") {
+            return
+          }
+
+          let rawValue: unknown
+          if (columnKey === "value") {
+            rawValue = (row as typeof row & { value?: unknown }).value
+          } else {
+            rawValue = row[columnKey]
+          }
+          const parsedValue = parseNumeric(rawValue)
+
+          onMetricChange(row.id, columnKey, parsedValue)
+          return
         }
-        const parsedValue = parseNumeric(rawValue)
 
-        onMetricChange(row.id, columnKey, parsedValue)
+        if (isFormulaRow(row) && columnKey === "name") {
+          onFormulaRename?.(row.id, typeof row.name === "string" ? row.name : "")
+        }
       })
     },
-    [onMetricChange]
+    [onFormulaRename, onMetricChange, onMetricRename]
   )
 
   const handleContextMenuOpenChange = useCallback(
@@ -525,9 +549,6 @@ export function DataGridComponent({
             expandedGroupIds={expandedGroupIds}
             onExpandedGroupIdsChange={setExpandedGroupIds}
             onRowsChange={handleRowsChange}
-            onScroll={(event: React.UIEvent<HTMLDivElement>) =>
-              console.log(`scrolled: ${event.currentTarget.scrollTop}, ${event.currentTarget.scrollLeft}`)
-            }
           />
         </div>
       </ContextMenuTrigger>

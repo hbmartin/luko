@@ -97,9 +97,7 @@ export function WorksheetTab({ notebook, onNotebookChange, density, simulationRe
         if (field === "value") {
           return { ...metric, value }
         }
-        if (!metric.distribution) {
-          return metric
-        }
+
         return {
           ...metric,
           distribution: {
@@ -108,6 +106,23 @@ export function WorksheetTab({ notebook, onNotebookChange, density, simulationRe
           },
         }
       })
+
+      const dirtySet = new Set(notebook.dirtyMetrics)
+      dirtySet.add(metricId)
+
+      commitNotebook({
+        ...notebook,
+        metrics,
+        dirtyMetrics: Array.from(dirtySet),
+        isDirty: true,
+      })
+    },
+    [commitNotebook, notebook]
+  )
+
+  const handleMetricRename = useCallback(
+    (metricId: string, name: string) => {
+      const metrics = notebook.metrics.map((metric) => (metric.id === metricId ? { ...metric, name } : metric))
 
       const dirtySet = new Set(notebook.dirtyMetrics)
       dirtySet.add(metricId)
@@ -173,22 +188,19 @@ export function WorksheetTab({ notebook, onNotebookChange, density, simulationRe
       })
       const formulas = notebook.formulas.map((formula) => {
         if (formula.id !== formulaId) return formula
-        const next = {
-          ...formula,
+
+        const { error: _oldError, ...baseFormula } = formula
+        const updatedFormula = {
+          ...baseFormula,
           expression,
           updatedAt: new Date().toISOString(),
         }
-        if (validation && validation.type === "error") {
-          return {
-            ...next,
-            error: validation.message,
-          }
+
+        if (validation?.type === "error") {
+          return { ...updatedFormula, error: validation.message }
         }
-        if (next.error !== undefined) {
-          const { error: _previousError, ...rest } = next
-          return rest
-        }
-        return next
+
+        return updatedFormula
       })
 
       const dirtySet = new Set(notebook.dirtyFormulas)
@@ -202,6 +214,31 @@ export function WorksheetTab({ notebook, onNotebookChange, density, simulationRe
       })
     },
     [commitNotebook, notebook, referenceableItems]
+  )
+
+  const handleFormulaRename = useCallback(
+    (formulaId: string, name: string) => {
+      const formulas = notebook.formulas.map((formula) => {
+        if (formula.id !== formulaId) return formula
+
+        return {
+          ...formula,
+          name,
+          updatedAt: new Date().toISOString(),
+        }
+      })
+
+      const dirtySet = new Set(notebook.dirtyFormulas)
+      dirtySet.add(formulaId)
+
+      commitNotebook({
+        ...notebook,
+        formulas,
+        dirtyFormulas: Array.from(dirtySet),
+        isDirty: true,
+      })
+    },
+    [commitNotebook, notebook]
   )
 
   const handleCategoryToggle = useCallback(
@@ -288,10 +325,12 @@ export function WorksheetTab({ notebook, onNotebookChange, density, simulationRe
         notebook={notebook}
         density={density}
         onMetricChange={handleMetricChange}
+        onMetricRename={handleMetricRename}
         onCategoryToggle={handleCategoryToggle}
         onRowReorder={handleRowReorder}
         onOpenDetails={setSelectedRowId}
         onFormulaChange={handleFormulaChange}
+        onFormulaRename={handleFormulaRename}
         onAddFormula={handleAddFormula}
         onDeleteFormula={handleDeleteFormula}
       />
