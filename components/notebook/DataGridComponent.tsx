@@ -205,10 +205,11 @@ export function DataGridComponent({
   )
 
   const safeTextEditor = useCallback((props: RenderEditCellProps<GridRow>) => {
-    const rawValue = (props.row as Record<string, unknown>)[props.column.key]
-    const normalizedValue = rawValue === undefined ? "" : (rawValue ?? "")
+    const rowWithIndex = props.row as GridRow & { [key: string]: unknown }
+    const rawValue = rowWithIndex[props.column.key]
+    const normalizedValue = rawValue == null ? "" : String(rawValue)
 
-    return cloneElement(textEditor(props), { value: normalizedValue })
+    return textEditor({ ...props, row: { ...props.row, [props.column.key]: normalizedValue } })
   }, [])
 
   const columns = useMemo<Column<GridRow>[]>(() => {
