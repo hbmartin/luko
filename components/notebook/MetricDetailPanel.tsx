@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react"
 import { Mention, type MentionDataItem, MentionsInput } from "react-mentions-ts"
 import { DistributionChart } from "@/components/notebook/charts/DistributionChart"
-import { validateFormulaExpression } from "@/components/notebook/utils/formula-validation"
+import { validateFormulaExpression } from "@/lib/formula-validation"
 import { detectDependencies } from "@/lib/math-utils"
 import { Formula, Metric, Notebook } from "@/lib/types/notebook"
 
@@ -48,9 +48,15 @@ export function MetricDetailPanel({ notebook, metric, formula = null, onFormulaC
     [notebook.metrics, notebook.formulas]
   )
 
-  const formulaReferencedIds = useMemo<Set<string>>(() => {
-    if (!formula?.expression) return new Set()
-    return detectDependencies(formula.expression)
+  const [formulaReferencedIds, setFormulaReferencedIds] = useState<Set<string>>(new Set())
+
+  useEffect(() => {
+    if (!formula?.expression) return
+    setFormulaReferencedIds((prev) => {
+      const newIds = detectDependencies(formula.expression)
+      if (!newIds) return prev
+      return new Set([...prev, ...newIds])
+    })
   }, [formula?.expression])
 
   const [formulaExpressionMarkup, setFormulaExpressionMarkup] = useState<string | undefined>(undefined)

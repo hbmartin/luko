@@ -1,7 +1,7 @@
 "use client"
 
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { validateFormulaExpression } from "@/components/notebook/utils/formula-validation"
+import { validateFormulaExpression } from "@/lib/formula-validation"
 import { Metric, Notebook, SimulationResult } from "@/lib/types/notebook"
 import { DataGridComponent } from "../DataGridComponent"
 import { MetricDetailPanel } from "../MetricDetailPanel"

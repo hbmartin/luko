@@ -1,4 +1,4 @@
-import { validateFormulaExpression } from "@/components/notebook/utils/formula-validation"
+import { validateFormulaExpression } from "@/lib/formula-validation"
 import { Formula, Metric, Notebook } from "@/lib/types/notebook"
 
 export type MetricValidationFieldErrors = {

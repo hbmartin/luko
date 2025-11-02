@@ -1,11 +1,16 @@
-import { all, create, FactoryFunctionMap } from "mathjs"
+import { all, create, FactoryFunctionMap, type MathNode } from "mathjs"
 
 const math = create(all as FactoryFunctionMap)
 
-export const detectDependencies = (expression: string): Set<string> => {
+export const detectDependencies = (expression: string): Set<string> | undefined => {
   const dependencies: Set<string> = new Set()
 
-  const node = math.parse(expression)
+  let node: MathNode
+  try {
+    node = math.parse(expression)
+  } catch {
+    return undefined
+  }
   node.traverse((child, _path, parent) => {
     if (!math.isSymbolNode(child)) return
     if (math.isFunctionNode(parent) && parent.fn === child) return
