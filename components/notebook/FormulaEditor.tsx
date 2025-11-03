@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Mention, type MentionDataItem, MentionsInput } from "react-mentions-ts"
 import { validateFormulaExpression } from "@/lib/formula-validation"
 import { detectDependencies } from "@/lib/math-utils"
@@ -45,44 +45,71 @@ export function FormulaEditor({ notebook, formula, onFormulaChange, className }:
     [notebook.metrics, notebook.formulas]
   )
 
-  const [formulaReferencedIds, setFormulaReferencedIds] = useState<Set<string>>(new Set())
+  const [draftExpression, setDraftExpression] = useState<string>(() => formula?.expression ?? "")
+  const [formulaExpressionMarkup, setFormulaExpressionMarkup] = useState<string>(() => formula?.expression ?? "")
+  const hasFormula = Boolean(formula)
 
-  useEffect(() => {
-    if (!formula?.expression) {
-      setFormulaReferencedIds(new Set())
-      return
-    }
-    const newIds = detectDependencies(formula.expression)
-    if (newIds === undefined) return
-    setFormulaReferencedIds(new Set(newIds))
-  }, [formula?.expression])
+  const lastSyncedFormulaRef = useRef<{ id: string | null; expression: string }>({
+    id: formula?.id ?? null,
+    expression: formula?.expression ?? "",
+  })
 
-  const [formulaExpressionMarkup, setFormulaExpressionMarkup] = useState<string | undefined>(undefined)
-  const [draftExpression, setDraftExpression] = useState<string | null>(null)
+  const buildMarkupFromExpression = useCallback(
+    (expression: string): string => {
+      if (!expression) return ""
+      const detected = detectDependencies(expression)
+      if (!detected || detected.size === 0) {
+        return expression
+      }
+      const sortedIds = [...detected].sort((a, b) => b.length - a.length)
+      return sortedIds.reduce((accumulator, id) => {
+        const display = referenceableIds[id]?.name ?? id
+        return accumulator.replaceAll(id, `@[${display}](${id})`)
+      }, expression)
+    },
+    [referenceableIds]
+  )
 
   useEffect(() => {
     if (!formula) {
-      setDraftExpression(null)
-      setFormulaExpressionMarkup(undefined)
+      lastSyncedFormulaRef.current = { id: null, expression: "" }
+      setDraftExpression("")
+      setFormulaExpressionMarkup("")
+      return
+    }
+    const { id, expression } = formula
+    const { id: lastId, expression: lastExpression } = lastSyncedFormulaRef.current
+    const idChanged = lastId !== id
+    const expressionChanged = lastExpression !== expression
+
+    if (!idChanged && !expressionChanged) {
       return
     }
 
-    let markup = formula.expression
-    const sortedIds = [...formulaReferencedIds].sort((a, b) => b.length - a.length)
-    for (const id of sortedIds) {
-      markup = markup.replaceAll(id, `@[${referenceableIds[id]?.name ?? id}](${id})`)
+    lastSyncedFormulaRef.current = { id, expression }
+    setDraftExpression(expression)
+    setFormulaExpressionMarkup(buildMarkupFromExpression(expression))
+  }, [buildMarkupFromExpression, formula])
+
+  const normalizedExpression = draftExpression
+
+  useEffect(() => {
+    if (!hasFormula) {
+      setFormulaExpressionMarkup("")
+      return
     }
-    setFormulaExpressionMarkup(markup)
-    setDraftExpression(formula.expression)
-  }, [formula, formulaReferencedIds, referenceableIds])
+    if (normalizedExpression === lastSyncedFormulaRef.current.expression) {
+      setFormulaExpressionMarkup(buildMarkupFromExpression(normalizedExpression))
+    }
+  }, [buildMarkupFromExpression, hasFormula, normalizedExpression])
 
   const formulaValidation = useMemo(() => {
     if (!formula) return null
     return validateFormulaExpression({
-      expression: draftExpression ?? formula.expression,
+      expression: normalizedExpression,
       referenceableIds,
     })
-  }, [draftExpression, formula, referenceableIds])
+  }, [formula, normalizedExpression, referenceableIds])
 
   if (!formula) return null
 
@@ -95,13 +122,13 @@ export function FormulaEditor({ notebook, formula, onFormulaChange, className }:
         </p>
       ) : null}
       <MentionsInput
-        value={formulaExpressionMarkup ?? ""}
+        value={formulaExpressionMarkup}
         placeholder="Build this formula by selecting metrics from the worksheet."
         className="mt-2"
         autoResize
         onMentionsChange={(change) => {
-          setFormulaExpressionMarkup(change.value)
           const expressionWithIds = change.idValue ?? change.plainTextValue ?? ""
+          setFormulaExpressionMarkup(change.value)
           setDraftExpression(expressionWithIds)
           const validation = validateFormulaExpression({
             expression: expressionWithIds,
@@ -111,9 +138,9 @@ export function FormulaEditor({ notebook, formula, onFormulaChange, className }:
             return
           }
           if (!onFormulaChange) return
-          const normalizedExpression = expressionWithIds.trim()
-          if (normalizedExpression === formula.expression) return
-          onFormulaChange(formula.id, normalizedExpression)
+          const normalized = expressionWithIds.trim()
+          if (normalized === formula.expression) return
+          onFormulaChange(formula.id, normalized)
         }}
       >
         <Mention<MetricMentionExtra>
