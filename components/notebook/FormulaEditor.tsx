@@ -47,7 +47,6 @@ export function FormulaEditor({ notebook, formula, onFormulaChange, className }:
 
   const [draftExpression, setDraftExpression] = useState<string>(() => formula?.expression ?? "")
   const [formulaExpressionMarkup, setFormulaExpressionMarkup] = useState<string>(() => formula?.expression ?? "")
-  const hasFormula = Boolean(formula)
 
   const lastSyncedFormulaRef = useRef<{ id: string | null; expression: string }>({
     id: formula?.id ?? null,
@@ -77,31 +76,26 @@ export function FormulaEditor({ notebook, formula, onFormulaChange, className }:
       setFormulaExpressionMarkup("")
       return
     }
+
     const { id, expression } = formula
     const { id: lastId, expression: lastExpression } = lastSyncedFormulaRef.current
     const idChanged = lastId !== id
     const expressionChanged = lastExpression !== expression
 
-    if (!idChanged && !expressionChanged) {
+    if (idChanged || expressionChanged) {
+      lastSyncedFormulaRef.current = { id, expression }
+      setDraftExpression(expression)
+      setFormulaExpressionMarkup(buildMarkupFromExpression(expression))
       return
     }
 
-    lastSyncedFormulaRef.current = { id, expression }
-    setDraftExpression(expression)
-    setFormulaExpressionMarkup(buildMarkupFromExpression(expression))
-  }, [buildMarkupFromExpression, formula])
+    if (draftExpression === lastExpression) {
+      const canonical = buildMarkupFromExpression(lastExpression)
+      setFormulaExpressionMarkup((current) => (current === canonical ? current : canonical))
+    }
+  }, [buildMarkupFromExpression, draftExpression, formula])
 
   const normalizedExpression = draftExpression
-
-  useEffect(() => {
-    if (!hasFormula) {
-      setFormulaExpressionMarkup("")
-      return
-    }
-    if (normalizedExpression === lastSyncedFormulaRef.current.expression) {
-      setFormulaExpressionMarkup(buildMarkupFromExpression(normalizedExpression))
-    }
-  }, [buildMarkupFromExpression, hasFormula, normalizedExpression])
 
   const formulaValidation = useMemo(() => {
     if (!formula) return null
@@ -117,7 +111,7 @@ export function FormulaEditor({ notebook, formula, onFormulaChange, className }:
     <div className={className}>
       <div className="mt-1 text-xl font-semibold text-[var(--color-text-primary)]">{formula.name}</div>
       {formulaValidation ? (
-        <p className={`mt-2 text-[10px] ${formulaValidation.type === "warning" ? "text-amber-500" : "text-red-500"}`}>
+        <p className={`mt-2 text-[10px] ${formulaValidation.type === "warning" ? "text-warning" : "text-error"}`}>
           {formulaValidation.message}
         </p>
       ) : null}
