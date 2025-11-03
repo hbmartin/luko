@@ -259,6 +259,7 @@ export function DataGridComponent({
         width: 320,
         frozen: true,
         cellClass: "spreadsheet-cell-name",
+        renderEditCell: safeTextEditor,
         renderCell: ({ row }) => {
           return (
             <div className="spreadsheet-metric">
