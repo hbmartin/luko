@@ -1,10 +1,11 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { Mention, type MentionDataItem, MentionsInput } from "react-mentions-ts"
+import { Mention, MentionsInput } from "react-mentions-ts"
 import { validateFormulaExpression } from "@/lib/formula-validation"
-import { detectDependencies } from "@/lib/math-utils"
 import type { Formula, Notebook } from "@/lib/types/notebook"
+import type { MetricMentionExtra, MetricMentionItem } from "./FormulaEditorSingleLine"
+import { buildFormulaMarkup } from "./utils/formulaMarkup"
 
 type FormulaEditorProps = {
   notebook: Notebook
@@ -12,16 +13,6 @@ type FormulaEditorProps = {
   onFormulaChange?: (formulaId: string, expression: string) => void
   className?: string
 }
-
-type MetricMentionExtra = {
-  categoryId: Notebook["categories"][number]["id"]
-  categoryName: Notebook["categories"][number]["name"]
-  categoryType: Notebook["categories"][number]["type"]
-  unit: Notebook["metrics"][number]["unit"]
-  description?: Notebook["metrics"][number]["description"]
-}
-
-type MetricMentionItem = MentionDataItem<MetricMentionExtra>
 
 export function FormulaEditor({ notebook, formula, onFormulaChange, className }: FormulaEditorProps) {
   const mentionOptions = useMemo<MetricMentionItem[]>(() => {
@@ -54,18 +45,7 @@ export function FormulaEditor({ notebook, formula, onFormulaChange, className }:
   })
 
   const buildMarkupFromExpression = useCallback(
-    (expression: string): string => {
-      if (!expression) return ""
-      const detected = detectDependencies(expression)
-      if (!detected || detected.size === 0) {
-        return expression
-      }
-      const sortedIds = [...detected].sort((a, b) => b.length - a.length)
-      return sortedIds.reduce((accumulator, id) => {
-        const display = referenceableIds[id]?.name ?? id
-        return accumulator.replaceAll(id, `@[${display}](${id})`)
-      }, expression)
-    },
+    (expression: string): string => buildFormulaMarkup(expression, referenceableIds),
     [referenceableIds]
   )
 

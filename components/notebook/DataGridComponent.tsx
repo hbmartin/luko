@@ -36,6 +36,7 @@ import {
 import { parseNumeric } from "@/lib/math-utils"
 import type { CategoryRow, GridRow, MetricRow, Notebook } from "@/lib/types/notebook"
 import { notebookToGridRows } from "@/lib/utils/grid-helpers"
+import { FormulaEditorSingleLine } from "./FormulaEditorSingleLine"
 
 // GroupRow type from react-data-grid (not exported)
 interface GroupRow<TRow> {
@@ -285,6 +286,7 @@ export function DataGridComponent({
         name: "Unit",
         width: 120,
         cellClass: unitCellClass,
+        editable: (row) => !isFormulaRow(row),
         colSpan: (args) => {
           if (args.type !== "ROW") return undefined
           if (args.row.type === "formula") return 4
@@ -292,7 +294,7 @@ export function DataGridComponent({
         },
         renderCell: ({ row, column, onRowChange, rowIdx, tabIndex }: RenderCellProps<GridRow>) => {
           if (isFormulaRow(row)) {
-            return String(row.expression)
+            return <FormulaEditorSingleLine notebook={notebook} formulaId={row.id} />
           }
           return renderValue({ row, column, onRowChange, rowIdx, tabIndex, isCellEditable: true })
         },
@@ -532,7 +534,7 @@ export function DataGridComponent({
   return (
     <ContextMenu onOpenChange={handleContextMenuOpenChange}>
       <ContextMenuTrigger asChild>
-        <div className="h-screen">
+        <div className="h-full">
           <TreeDataGrid
             ref={gridRef}
             className="rdg-light rdg-spreadsheet"
