@@ -372,6 +372,16 @@ div[role="columnheader"][aria-selected="true"] {
   }
 }
 
+@layer utilities {
+  .text-warning {
+    color: var(--color-warning);
+  }
+
+  .text-error {
+    color: var(--color-danger);
+  }
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
