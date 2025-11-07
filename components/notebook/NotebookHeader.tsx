@@ -1,9 +1,12 @@
 "use client"
 
-import { CircleUserRound, CircleX, Moon, Sun } from "lucide-react"
+import { CircleUserRound, Moon, Sun } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+
+import { LogoutButton } from "@/components/auth/LogoutButton"
+
 import { useNotebook } from "./NotebookProvider"
 
 const dateFormatter = new Intl.DateTimeFormat("en-US", {
@@ -38,7 +41,7 @@ export function NotebookHeader({ notebookId }: NotebookHeaderProps) {
             {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
           </button>
           <CircleUserRound size={18} />
-          <CircleX size={18} />
+          <LogoutButton variant="icon" />
         </div>
       </div>
       <div className="mx-auto flex items-center justify-center gap-6 px-[var(--space-500)] py-2">
