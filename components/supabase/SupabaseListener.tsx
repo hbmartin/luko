@@ -20,20 +20,28 @@ export function SupabaseListener() {
       }
 
       try {
-        await fetch("/auth/callback", {
+        const response = await fetch("/auth/callback", {
           method: "POST",
           headers: new Headers({ "Content-Type": "application/json" }),
           body: JSON.stringify({ event, session }),
         })
+
+        if (!response.ok) {
+          throw new Error(`Failed to sync auth state: ${response.status} ${response.statusText}`)
+        }
       } catch (error) {
         console.error("Failed to sync auth state", error)
+        return
       }
 
       if (event === "SIGNED_OUT") {
-        router.push("/login")
+        await router.push("/login")
+        return
       }
 
-      router.refresh()
+      if (event === "SIGNED_IN") {
+        router.refresh()
+      }
     })
 
     return () => {

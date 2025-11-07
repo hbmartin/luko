@@ -35,7 +35,6 @@ export function LoginForm() {
     }
 
     router.replace("/")
-    router.refresh()
   }
 
   return (

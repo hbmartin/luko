@@ -14,6 +14,8 @@ type FormulaEditorProps = {
   className?: string
 }
 
+const alphabeticalTrigger = /(?:^|\s)((\p{L}+))$/u
+
 export function FormulaEditor({ notebook, formula, onFormulaChange, className }: FormulaEditorProps) {
   const mentionOptions = useMemo<MetricMentionItem[]>(() => {
     const sortedCategories = [...notebook.categories].sort((a, b) => a.order - b.order)
@@ -90,11 +92,6 @@ export function FormulaEditor({ notebook, formula, onFormulaChange, className }:
   return (
     <div className={className}>
       <div className="mt-1 text-xl font-semibold text-[var(--color-text-primary)]">{formula.name}</div>
-      {formulaValidation ? (
-        <p className={`mt-2 text-[10px] ${formulaValidation.type === "warning" ? "text-warning" : "text-error"}`}>
-          {formulaValidation.message}
-        </p>
-      ) : null}
       <MentionsInput
         value={formulaExpressionMarkup}
         placeholder="Build this formula by selecting metrics from the worksheet."
@@ -119,10 +116,15 @@ export function FormulaEditor({ notebook, formula, onFormulaChange, className }:
       >
         <Mention<MetricMentionExtra>
           data={mentionOptions}
-          trigger="@"
+          trigger={alphabeticalTrigger}
           displayTransform={(id, display) => display ?? `${id}`}
         />
       </MentionsInput>
+      {formulaValidation ? (
+        <p className={`mt-2 text-[10px] ${formulaValidation.type === "warning" ? "text-warning" : "text-error"}`}>
+          {formulaValidation.message}
+        </p>
+      ) : null}
     </div>
   )
 }
