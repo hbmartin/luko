@@ -18,7 +18,11 @@ export function LogoutButton({ variant = "text", className }: LogoutButtonProps)
   const handleSignOut = async () => {
     setIsSigningOut(true)
     try {
-      await supabase.auth.signOut()
+      const { error } = await supabase.auth.signOut()
+      if (error) {
+        console.error("Error signing out:", error.message)
+        setIsSigningOut(false)
+      }
     } catch (error) {
       setIsSigningOut(false)
       console.error("Error signing out", error)

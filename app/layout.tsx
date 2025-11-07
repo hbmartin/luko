@@ -12,7 +12,7 @@ const lexend = Lexend({
 })
 
 export default async function RootLayout({ children }: { children: ReactNode }) {
-  const supabase = createServerSupabaseClient()
+  const supabase = await createServerSupabaseClient()
   const {
     data: { session },
   } = await supabase.auth.getSession()

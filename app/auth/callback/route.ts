@@ -5,7 +5,7 @@ import { z } from "zod"
 import { createServerSupabaseClient } from "@/lib/supabase/server"
 
 const callbackSchema = z.object({
-  event: z.enum(["SIGNED_IN", "SIGNED_OUT", "TOKEN_REFRESHED", "USER_UPDATED"]),
+  event: z.enum(["INITIAL_SESSION", "SIGNED_IN", "SIGNED_OUT", "TOKEN_REFRESHED", "USER_UPDATED", "PASSWORD_RECOVERY"]),
   session: z
     .custom<Session | null>((value) => value === null || typeof value === "object", "Invalid session")
     .optional(),
@@ -27,7 +27,7 @@ export async function POST(request: Request) {
   }
 
   const { event, session } = parsedBody.data
-  const supabase = createServerSupabaseClient()
+  const supabase = await createServerSupabaseClient()
 
   if (event === "SIGNED_OUT") {
     await supabase.auth.signOut()
