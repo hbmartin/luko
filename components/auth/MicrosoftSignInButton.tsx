@@ -3,7 +3,7 @@
 import { useState } from "react"
 
 import { useSupabase } from "@/components/supabase/SupabaseProvider"
-import { siteUrl } from "@/lib/site-url"
+import { AUTH_CALLBACK_URL } from "@/lib/auth"
 import { cn } from "@/lib/utils"
 
 type MicrosoftSignInButtonProps = {
@@ -19,12 +19,10 @@ export function MicrosoftSignInButton({ onErrorChange, className }: MicrosoftSig
     onErrorChange?.(null)
     setIsLoading(true)
 
-    const redirectTo = `${siteUrl}/auth/callback`
-
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "azure",
       options: {
-        redirectTo,
+        redirectTo: AUTH_CALLBACK_URL,
         scopes: "email", // Azure OAuth requires requesting the email scope (see azure.html).
       },
     })
