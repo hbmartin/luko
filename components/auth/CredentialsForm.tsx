@@ -56,7 +56,6 @@ export function CredentialsForm({
 
       if (result?.errorMessage) {
         setErrorMessage(result.errorMessage)
-        setIsSubmitting(false)
         return
       }
 
@@ -65,7 +64,8 @@ export function CredentialsForm({
       }
     } catch (error) {
       console.error("Credentials submission failed", error)
-      setErrorMessage("Something went wrong. Please try again.")
+      const errorMessage = error instanceof Error ? error.message : "Something went wrong. Please try again."
+      setErrorMessage(errorMessage)
     } finally {
       setIsSubmitting(false)
     }
