@@ -46,11 +46,22 @@ export async function POST(request: Request) {
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url)
   const code = requestUrl.searchParams.get("code")
+  const nextParam = requestUrl.searchParams.get("next")
+  const next = nextParam && nextParam.startsWith("/") && !nextParam.startsWith("//") ? nextParam : "/"
 
   if (code) {
     const supabase = await createServerSupabaseClient()
-    await supabase.auth.exchangeCodeForSession(code)
+    const { error } = await supabase.auth.exchangeCodeForSession(code)
+    if (!error) {
+      // NextResponse.redirect requires an absolute URL; keep redirect scoped to the app origin.
+      const redirectUrl = new URL(next, requestUrl.origin)
+      return NextResponse.redirect(redirectUrl)
+    }
+
+    const redirectWithError = `${requestUrl.origin}/login?error=${encodeURIComponent(error.message)}`
+    return NextResponse.redirect(redirectWithError)
   }
 
-  return NextResponse.redirect(requestUrl.origin)
+  const missingCodeRedirect = `${requestUrl.origin}/login?error=${encodeURIComponent("Missing authentication code")}`
+  return NextResponse.redirect(missingCodeRedirect)
 }

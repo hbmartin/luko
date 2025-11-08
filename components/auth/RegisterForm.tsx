@@ -4,20 +4,18 @@ import { useRouter } from "next/navigation"
 
 import { CredentialsForm } from "@/components/auth/CredentialsForm"
 import { useSupabase } from "@/components/supabase/SupabaseProvider"
-import { siteUrl } from "@/lib/site-url"
+import { AUTH_CALLBACK_URL } from "@/lib/auth"
 
 export function RegisterForm() {
   const router = useRouter()
   const { supabase } = useSupabase()
 
   const handleCredentials = async ({ email, password }: { email: string; password: string }) => {
-    const redirectTo = `${siteUrl}/auth/callback`
-
     const { error, data } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        emailRedirectTo: redirectTo,
+        emailRedirectTo: AUTH_CALLBACK_URL,
       },
     })
 

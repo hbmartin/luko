@@ -9,7 +9,13 @@ export const metadata: Metadata = {
   title: "Sign in",
 }
 
-export default async function LoginPage() {
+type LoginPageProps = {
+  searchParams?: {
+    error?: string
+  }
+}
+
+export default async function LoginPage({ searchParams }: LoginPageProps) {
   const supabase = await createServerSupabaseClient()
   const {
     data: { session },
@@ -19,6 +25,8 @@ export default async function LoginPage() {
     redirect("/")
   }
 
+  const errorMessage = typeof searchParams?.error === "string" ? searchParams.error : undefined
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-[var(--color-surface)] px-4">
       <div className="w-full max-w-md rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface-elevated)] p-8 shadow-xl">
@@ -26,6 +34,11 @@ export default async function LoginPage() {
           <h1 className="text-2xl font-semibold text-[var(--color-text-primary)]">Welcome back</h1>
           <p className="text-sm text-[var(--color-text-muted)]">Sign in with email or Microsoft SSO.</p>
         </div>
+        {errorMessage && (
+          <div className="mt-6 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {errorMessage}
+          </div>
+        )}
         <div className="mt-8">
           <LoginForm />
         </div>
