@@ -4,12 +4,11 @@ import { useRouter } from "next/navigation"
 
 import { CredentialsForm } from "@/components/auth/CredentialsForm"
 import { useSupabase } from "@/components/supabase/SupabaseProvider"
-import { env } from "@/env.mjs"
+import { siteUrl } from "@/lib/site-url"
 
 export function RegisterForm() {
   const router = useRouter()
   const { supabase } = useSupabase()
-  const siteUrl = env.NEXT_PUBLIC_SITE_URL.replace(/\/$/, "")
 
   const handleCredentials = async ({ email, password }: { email: string; password: string }) => {
     const redirectTo = `${siteUrl}/auth/callback`
