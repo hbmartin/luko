@@ -6,10 +6,11 @@ import { type FormEvent, useState } from "react"
 import { MicrosoftSignInButton } from "@/components/auth/MicrosoftSignInButton"
 import { useSupabase } from "@/components/supabase/SupabaseProvider"
 
-export function LoginForm() {
+export function RegisterForm() {
   const router = useRouter()
   const { supabase } = useSupabase()
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -26,8 +27,17 @@ export function LoginForm() {
 
     setIsSubmitting(true)
     setErrorMessage(null)
+    setSuccessMessage(null)
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    const redirectTo = `${window.location.origin}/auth/callback`
+
+    const { error, data } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo: redirectTo,
+      },
+    })
 
     if (error) {
       setErrorMessage(error.message)
@@ -35,7 +45,13 @@ export function LoginForm() {
       return
     }
 
-    router.replace("/")
+    if (data.session) {
+      router.replace("/")
+      return
+    }
+
+    setSuccessMessage("Check your inbox to confirm your email before signing in.")
+    setIsSubmitting(false)
   }
 
   return (
@@ -79,20 +95,22 @@ export function LoginForm() {
             name="password"
             type="password"
             required
-            autoComplete="current-password"
+            minLength={8}
+            autoComplete="new-password"
             className="focus-visible:ring-primary/40 block w-full rounded-lg border border-[var(--color-border-soft)] bg-[var(--color-surface)] px-4 py-2.5 text-sm text-[var(--color-text-primary)] shadow-sm transition outline-none focus-visible:ring-2"
-            placeholder="••••••••"
+            placeholder="Create a strong password"
           />
         </div>
 
         {errorMessage ? <p className="text-sm text-[var(--color-danger)]">{errorMessage}</p> : null}
+        {successMessage ? <p className="text-sm text-[var(--color-success)]">{successMessage}</p> : null}
 
         <button
           type="submit"
           disabled={isSubmitting}
           className="bg-primary text-primary-foreground inline-flex w-full items-center justify-center rounded-lg px-4 py-2.5 text-sm font-semibold shadow-sm transition hover:brightness-95 focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-surface-elevated)] focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {isSubmitting ? "Signing in..." : "Sign in"}
+          {isSubmitting ? "Creating account..." : "Create account"}
         </button>
       </form>
     </div>

@@ -33,7 +33,10 @@ export async function POST(request: Request) {
     await supabase.auth.signOut()
   }
 
-  if ((event === "TOKEN_REFRESHED" || event === "SIGNED_IN" || event === "USER_UPDATED") && session) {
+  if (
+    (event === "TOKEN_REFRESHED" || event === "SIGNED_IN" || event === "USER_UPDATED" || event === "INITIAL_SESSION") &&
+    session
+  ) {
     await supabase.auth.setSession(session)
   }
 
