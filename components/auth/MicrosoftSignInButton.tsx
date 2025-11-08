@@ -3,6 +3,7 @@
 import { useState } from "react"
 
 import { useSupabase } from "@/components/supabase/SupabaseProvider"
+import { env } from "@/env.mjs"
 import { cn } from "@/lib/utils"
 
 type MicrosoftSignInButtonProps = {
@@ -13,12 +14,13 @@ type MicrosoftSignInButtonProps = {
 export function MicrosoftSignInButton({ onErrorChange, className }: MicrosoftSignInButtonProps) {
   const { supabase } = useSupabase()
   const [isLoading, setIsLoading] = useState(false)
+  const siteUrl = env.NEXT_PUBLIC_SITE_URL.replace(/\/$/, "")
 
   const handleMicrosoftSignIn = async () => {
     onErrorChange?.(null)
     setIsLoading(true)
 
-    const redirectTo = `${window.location.origin}/auth/callback`
+    const redirectTo = `${siteUrl}/auth/callback`
 
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "azure",
