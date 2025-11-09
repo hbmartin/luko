@@ -35,7 +35,7 @@ const tooltipArrow = cva([], {
   },
 })
 
-export interface TooltipProps extends VariantProps<typeof tooltipContent>, RadixTooltip.TooltipProps {
+export interface TooltipProperties extends VariantProps<typeof tooltipContent>, RadixTooltip.TooltipProps {
   explainer: React.ReactElement | string
   children: React.ReactElement
   className?: string
@@ -54,7 +54,7 @@ export function Tooltip({
   side = "top",
   className,
   withArrow,
-}: TooltipProps) {
+}: TooltipProperties) {
   return (
     <RadixTooltip.Provider>
       <RadixTooltip.Root open={open} defaultOpen={defaultOpen} onOpenChange={onOpenChange} delayDuration={200}>

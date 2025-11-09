@@ -49,7 +49,7 @@ const samplePert = (min: number, mode: number, max: number): number => {
 }
 
 const quantile = (values: number[], q: number): number => {
-  if (!values.length) return 0
+  if (values.length === 0) return 0
   const sorted = [...values].sort((a, b) => a - b)
   const index = (sorted.length - 1) * q
   const lower = Math.floor(index)
@@ -59,28 +59,30 @@ const quantile = (values: number[], q: number): number => {
   return sorted[lower]! * (1 - weight) + sorted[upper]! * weight
 }
 
-const mean = (values: number[]) => (values.length ? values.reduce((acc, value) => acc + value, 0) / values.length : 0)
+const mean = (values: number[]) =>
+  values.length > 0 ? values.reduce((accumulator, value) => accumulator + value, 0) / values.length : 0
 
 const stddev = (values: number[]) => {
   if (values.length <= 1) return 0
   const avg = mean(values)
-  const variance = values.reduce((acc, value) => acc + Math.pow(value - avg, 2), 0) / (values.length - 1)
+  const variance =
+    values.reduce((accumulator, value) => accumulator + Math.pow(value - avg, 2), 0) / (values.length - 1)
   return Math.sqrt(variance)
 }
 
 const isFinancialMetric = (metric: Metric) => metric.unit?.includes("$")
 
 const correlation = (x: number[], y: number[]) => {
-  if (!x.length || x.length !== y.length) return 0
+  if (x.length === 0 || x.length !== y.length) return 0
   const meanX = mean(x)
   const meanY = mean(y)
   let numerator = 0
   let denomX = 0
   let denomY = 0
 
-  for (let i = 0; i < x.length; i += 1) {
-    const dx = x[i]! - meanX
-    const dy = y[i]! - meanY
+  for (const [index, element] of x.entries()) {
+    const dx = element - meanX
+    const dy = y[index]! - meanY
     numerator += dx * dy
     denomX += dx * dx
     denomY += dy * dy
@@ -108,17 +110,13 @@ export async function runSimulation(
   const npvSamples: number[] = []
   const paybackSamples: number[] = []
 
-  for (let i = 0; i < iterations; i += 1) {
+  for (let index = 0; index < iterations; index += 1) {
     const sampledValues: Record<string, number> = {}
 
-    notebook.metrics.forEach((metric) => {
+    for (const metric of notebook.metrics) {
       let value = metric.value ?? 0
       if (metric.distribution) {
-        value = samplePert(
-          metric.distribution.min ?? 0,
-          metric.distribution.mode ?? 0.5,
-          metric.distribution.max ?? 1.0
-        )
+        value = samplePert(metric.distribution.min ?? 0, metric.distribution.mode ?? 0.5, metric.distribution.max ?? 1)
       }
 
       sampledValues[metric.id] = value
@@ -126,29 +124,29 @@ export async function runSimulation(
         metricSamples[metric.id] = { metric, values: [] }
       }
       metricSamples[metric.id]!.values.push(value)
-    })
+    }
 
     const evaluatedValues = evaluateFormulas(registry, sampledValues)
 
     const benefitsTotals: number[] = []
     const costsTotals: number[] = []
 
-    notebook.categories.forEach((category) => {
+    for (const category of notebook.categories) {
       const metricsInCategory = notebook.metrics.filter((metric) => metric.categoryId === category.id)
-      const contribution = metricsInCategory.reduce((acc, metric) => {
+      const contribution = metricsInCategory.reduce((accumulator, metric) => {
         const value = evaluatedValues[metric.id] ?? sampledValues[metric.id] ?? 0
-        if (!isFinancialMetric(metric)) return acc
-        return acc + value
+        if (!isFinancialMetric(metric)) return accumulator
+        return accumulator + value
       }, 0)
       if (!categorySamples[category.id]) categorySamples[category.id] = []
       categorySamples[category.id]!.push(contribution)
 
       if (category.type === "benefit") benefitsTotals.push(contribution)
       if (category.type === "cost") costsTotals.push(contribution)
-    })
+    }
 
-    const totalBenefits = benefitsTotals.reduce((acc, value) => acc + value, 0)
-    const totalCosts = costsTotals.reduce((acc, value) => acc + value, 0)
+    const totalBenefits = benefitsTotals.reduce((accumulator, value) => accumulator + value, 0)
+    const totalCosts = costsTotals.reduce((accumulator, value) => accumulator + value, 0)
 
     const growthMultiplier = [1, 1.07, 1.15]
     const efficiencyMultiplier = [1, 0.95, 0.9]
@@ -157,13 +155,13 @@ export async function runSimulation(
     const yearlyCosts = efficiencyMultiplier.map((multiplier) => totalCosts * multiplier)
     const yearlyNet = yearlyBenefits.map((benefit, index) => benefit - yearlyCosts[index]!)
 
-    yearlyBenefits.forEach((value, index) => yearlyBenefitsSamples[index]!.push(value))
-    yearlyCosts.forEach((value, index) => yearlyCostsSamples[index]!.push(value))
-    yearlyNet.forEach((value, index) => yearlyNetSamples[index]!.push(value))
+    for (const [index, value] of yearlyBenefits.entries()) yearlyBenefitsSamples[index]!.push(value)
+    for (const [index, value] of yearlyCosts.entries()) yearlyCostsSamples[index]!.push(value)
+    for (const [index, value] of yearlyNet.entries()) yearlyNetSamples[index]!.push(value)
 
     const discountRate = evaluatedValues.discount_rate ?? sampledValues.discount_rate ?? 0.25
     const npvValue = yearlyNet.reduce(
-      (acc, cashFlow, index) => acc + cashFlow / Math.pow(1 + discountRate, index + 1),
+      (accumulator, cashFlow, index) => accumulator + cashFlow / Math.pow(1 + discountRate, index + 1),
       0
     )
     npvSamples.push(npvValue)

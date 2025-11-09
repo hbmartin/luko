@@ -25,7 +25,7 @@ export const parseNumeric = (value: unknown): number => {
   if (typeof value === "string") {
     const trimmed = value.trim()
     if (trimmed === "") return Number.NaN
-    const sanitized = trimmed.replace(/,/g, "")
+    const sanitized = trimmed.replaceAll(",", "")
     const parsed = Number(sanitized)
     return Number.isFinite(parsed) ? parsed : Number.NaN
   }

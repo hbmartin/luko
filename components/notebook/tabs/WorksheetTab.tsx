@@ -7,7 +7,7 @@ import { DataGridComponent } from "../DataGridComponent"
 import { MetricDetailPanel } from "../MetricDetailPanel"
 import { SimulationSummaryPanel } from "../SimulationSummaryPanel"
 
-interface WorksheetTabProps {
+interface WorksheetTabProperties {
   notebook: Notebook
   onNotebookChange: (notebook: Notebook) => void
   density: "comfortable" | "compact"
@@ -31,9 +31,9 @@ const createFormulaId = () => {
   return `formula_${Math.random().toString(36).slice(2, 10)}`
 }
 
-export function WorksheetTab({ notebook, onNotebookChange, density, simulationResult }: WorksheetTabProps) {
-  const historyRef = useRef<Notebook[]>([notebook])
-  const historyIndexRef = useRef(0)
+export function WorksheetTab({ notebook, onNotebookChange, density, simulationResult }: WorksheetTabProperties) {
+  const historyReference = useRef<Notebook[]>([notebook])
+  const historyIndexReference = useRef(0)
   const [selectedRowId, setSelectedRowId] = useState<string | null>(null)
   const referenceableItems = useMemo(
     () => Object.fromEntries([...notebook.metrics, ...notebook.formulas].map((item) => [item.id, item])),
@@ -41,10 +41,10 @@ export function WorksheetTab({ notebook, onNotebookChange, density, simulationRe
   )
 
   useEffect(() => {
-    const existing = historyRef.current[historyIndexRef.current]
+    const existing = historyReference.current[historyIndexReference.current]
     if (existing?.updatedAt === notebook.updatedAt) return
-    historyRef.current = [...historyRef.current.slice(0, historyIndexRef.current + 1), notebook]
-    historyIndexRef.current = historyRef.current.length - 1
+    historyReference.current = [...historyReference.current.slice(0, historyIndexReference.current + 1), notebook]
+    historyIndexReference.current = historyReference.current.length - 1
   }, [notebook])
 
   useEffect(() => {
@@ -61,8 +61,10 @@ export function WorksheetTab({ notebook, onNotebookChange, density, simulationRe
       }
     }
 
-    window.addEventListener("keydown", handleKey)
-    return () => window.removeEventListener("keydown", handleKey)
+    globalThis.addEventListener("keydown", handleKey)
+    return () => {
+      globalThis.removeEventListener("keydown", handleKey)
+    }
   })
 
   const commitNotebook = useCallback(
@@ -71,23 +73,23 @@ export function WorksheetTab({ notebook, onNotebookChange, density, simulationRe
         ...nextNotebook,
         updatedAt: new Date().toISOString(),
       }
-      historyRef.current = [...historyRef.current.slice(0, historyIndexRef.current + 1), timestamped]
-      historyIndexRef.current = historyRef.current.length - 1
+      historyReference.current = [...historyReference.current.slice(0, historyIndexReference.current + 1), timestamped]
+      historyIndexReference.current = historyReference.current.length - 1
       onNotebookChange(timestamped)
     },
     [onNotebookChange]
   )
 
   const undo = useCallback(() => {
-    if (historyIndexRef.current === 0) return
-    historyIndexRef.current -= 1
-    onNotebookChange(historyRef.current[historyIndexRef.current]!)
+    if (historyIndexReference.current === 0) return
+    historyIndexReference.current -= 1
+    onNotebookChange(historyReference.current[historyIndexReference.current]!)
   }, [onNotebookChange])
 
   const redo = useCallback(() => {
-    if (historyIndexRef.current >= historyRef.current.length - 1) return
-    historyIndexRef.current += 1
-    onNotebookChange(historyRef.current[historyIndexRef.current]!)
+    if (historyIndexReference.current >= historyReference.current.length - 1) return
+    historyIndexReference.current += 1
+    onNotebookChange(historyReference.current[historyIndexReference.current]!)
   }, [onNotebookChange])
 
   const handleMetricChange = useCallback(
@@ -113,7 +115,7 @@ export function WorksheetTab({ notebook, onNotebookChange, density, simulationRe
       commitNotebook({
         ...notebook,
         metrics,
-        dirtyMetrics: Array.from(dirtySet),
+        dirtyMetrics: [...dirtySet],
         isDirty: true,
       })
     },
@@ -130,7 +132,7 @@ export function WorksheetTab({ notebook, onNotebookChange, density, simulationRe
       commitNotebook({
         ...notebook,
         metrics,
-        dirtyMetrics: Array.from(dirtySet),
+        dirtyMetrics: [...dirtySet],
         isDirty: true,
       })
     },
@@ -155,7 +157,7 @@ export function WorksheetTab({ notebook, onNotebookChange, density, simulationRe
       commitNotebook({
         ...notebook,
         formulas: [...notebook.formulas, newFormula],
-        dirtyFormulas: Array.from(dirtySet),
+        dirtyFormulas: [...dirtySet],
         isDirty: true,
       })
 
@@ -173,7 +175,7 @@ export function WorksheetTab({ notebook, onNotebookChange, density, simulationRe
       commitNotebook({
         ...notebook,
         formulas,
-        dirtyFormulas: Array.from(dirtySet),
+        dirtyFormulas: [...dirtySet],
         isDirty: true,
       })
     },
@@ -209,7 +211,7 @@ export function WorksheetTab({ notebook, onNotebookChange, density, simulationRe
       commitNotebook({
         ...notebook,
         formulas,
-        dirtyFormulas: Array.from(dirtySet),
+        dirtyFormulas: [...dirtySet],
         isDirty: true,
       })
     },
@@ -234,7 +236,7 @@ export function WorksheetTab({ notebook, onNotebookChange, density, simulationRe
       commitNotebook({
         ...notebook,
         formulas,
-        dirtyFormulas: Array.from(dirtySet),
+        dirtyFormulas: [...dirtySet],
         isDirty: true,
       })
     },
@@ -291,14 +293,14 @@ export function WorksheetTab({ notebook, onNotebookChange, density, simulationRe
 
         const reorderedWithinCategory = reorder(metricsWithinCategory, sourcePosition, targetPosition)
         const mergedMetrics: Metric[] = []
-        notebook.metrics.forEach((metric) => {
-          if (metric.categoryId !== sourceMetric?.categoryId) {
-            mergedMetrics.push(metric)
-          } else {
+        for (const metric of notebook.metrics) {
+          if (metric.categoryId === sourceMetric?.categoryId) {
             const next = reorderedWithinCategory.shift()
             if (next) mergedMetrics.push(next)
+          } else {
+            mergedMetrics.push(metric)
           }
-        })
+        }
 
         commitNotebook({
           ...notebook,

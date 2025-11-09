@@ -6,12 +6,12 @@ import { useSupabase } from "@/components/supabase/SupabaseProvider"
 import { AUTH_CALLBACK_URL } from "@/lib/auth"
 import { cn } from "@/lib/utils"
 
-type MicrosoftSignInButtonProps = {
+type MicrosoftSignInButtonProperties = {
   onErrorChange?: (message: string | null) => void
   className?: string
 }
 
-export function MicrosoftSignInButton({ onErrorChange, className }: MicrosoftSignInButtonProps) {
+export function MicrosoftSignInButton({ onErrorChange, className }: MicrosoftSignInButtonProperties) {
   const { supabase } = useSupabase()
   const [isLoading, setIsLoading] = useState(false)
 

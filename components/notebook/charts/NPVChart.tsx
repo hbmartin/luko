@@ -22,11 +22,11 @@ export interface NPVSeries {
   data: YearlyResult[]
 }
 
-interface NPVChartProps {
+interface NPVChartProperties {
   series: NPVSeries[]
 }
 
-export function NPVChart({ series }: NPVChartProps) {
+export function NPVChart({ series }: NPVChartProperties) {
   const primary = series[0]
   if (!primary) {
     return null
@@ -51,10 +51,10 @@ export function NPVChart({ series }: NPVChartProps) {
   // Create path strings for each percentile
   const createPath = (getValue: (d: YearlyResult) => number) => {
     return data
-      .map((d, i) => {
-        const x = xScale(i + 1)
+      .map((d, index) => {
+        const x = xScale(index + 1)
         const y = yScale(getValue(d))
-        return i === 0 ? `M ${x},${y}` : `L ${x},${y}`
+        return index === 0 ? `M ${x},${y}` : `L ${x},${y}`
       })
       .join(" ")
   }
@@ -67,9 +67,9 @@ export function NPVChart({ series }: NPVChartProps) {
 
   // Create confidence interval areas
   const createArea = (getUpper: (d: YearlyResult) => number, getLower: (d: YearlyResult) => number) => {
-    const upperPath = data.map((d, i) => `${xScale(i + 1)},${yScale(getUpper(d))}`).join(" ")
+    const upperPath = data.map((d, index) => `${xScale(index + 1)},${yScale(getUpper(d))}`).join(" ")
     const lowerPath = data
-      .map((d, i) => `${xScale(i + 1)},${yScale(getLower(d))}`)
+      .map((d, index) => `${xScale(index + 1)},${yScale(getLower(d))}`)
       .reverse()
       .join(" ")
     return `M ${upperPath} L ${lowerPath} Z`
@@ -86,12 +86,12 @@ export function NPVChart({ series }: NPVChartProps) {
 
   // Y-axis ticks
   const yTicks = 5
-  const yTickValues = Array.from({ length: yTicks }, (_, i) => {
-    return minValue + (i * (maxValue - minValue)) / (yTicks - 1)
+  const yTickValues = Array.from({ length: yTicks }, (_, index) => {
+    return minValue + (index * (maxValue - minValue)) / (yTicks - 1)
   })
 
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null)
-  const hoveredPoint = hoveredIndex !== null ? primary.data[hoveredIndex] : null
+  const hoveredPoint = hoveredIndex === null ? null : primary.data[hoveredIndex]
 
   return (
     <div className="relative">
@@ -117,10 +117,10 @@ export function NPVChart({ series }: NPVChartProps) {
         />
 
         {/* Y-axis grid lines and labels */}
-        {yTickValues.map((value, i) => {
+        {yTickValues.map((value, index) => {
           const y = padding.top + yScale(value)
           return (
-            <g key={i}>
+            <g key={index}>
               <line x1={padding.left} y1={y} x2={width - padding.right} y2={y} stroke="#f3f4f6" strokeWidth="1" />
               <text
                 x={padding.left - 10}
@@ -136,10 +136,16 @@ export function NPVChart({ series }: NPVChartProps) {
         })}
 
         {/* X-axis labels */}
-        {data.map((d, i) => {
-          const x = padding.left + xScale(i + 1)
+        {data.map((d, index) => {
+          const x = padding.left + xScale(index + 1)
           return (
-            <text key={i} x={x} y={height - padding.bottom + 20} textAnchor="middle" className="fill-gray-600 text-xs">
+            <text
+              key={index}
+              x={x}
+              y={height - padding.bottom + 20}
+              textAnchor="middle"
+              className="fill-gray-600 text-xs"
+            >
               Year {d.year}
             </text>
           )
@@ -177,27 +183,39 @@ export function NPVChart({ series }: NPVChartProps) {
           })}
 
           {/* Data points for primary */}
-          {data.map((d, i) => {
-            const x = xScale(i + 1)
+          {data.map((d, index) => {
+            const x = xScale(index + 1)
             const y = yScale(d.net.p50)
-            const isActive = hoveredIndex === i
+            const isActive = hoveredIndex === index
             return (
-              <circle key={i} cx={x} cy={y} r={isActive ? 6 : 4} fill={primary.color} stroke="white" strokeWidth="2" />
+              <circle
+                key={index}
+                cx={x}
+                cy={y}
+                r={isActive ? 6 : 4}
+                fill={primary.color}
+                stroke="white"
+                strokeWidth="2"
+              />
             )
           })}
 
-          {data.map((_, i) => {
-            const x = xScale(i + 1) - chartWidth / data.length / 2
+          {data.map((_, index) => {
+            const x = xScale(index + 1) - chartWidth / data.length / 2
             return (
               <rect
-                key={`hover-${i}`}
+                key={`hover-${index}`}
                 x={x}
                 y={0}
                 width={chartWidth / data.length}
                 height={chartHeight}
                 fill="transparent"
-                onMouseEnter={() => setHoveredIndex(i)}
-                onMouseLeave={() => setHoveredIndex(null)}
+                onMouseEnter={() => {
+                  setHoveredIndex(index)
+                }}
+                onMouseLeave={() => {
+                  setHoveredIndex(null)
+                }}
               />
             )
           })}

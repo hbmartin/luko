@@ -6,11 +6,11 @@ interface SensitivityItem {
   impact: number // correlation coefficient, can be negative
 }
 
-interface TornadoChartProps {
+interface TornadoChartProperties {
   data: SensitivityItem[]
 }
 
-export function TornadoChart({ data }: TornadoChartProps) {
+export function TornadoChart({ data }: TornadoChartProperties) {
   const width = 600
   const height = 400
   const padding = { top: 20, right: 60, bottom: 40, left: 200 }
@@ -53,8 +53,8 @@ export function TornadoChart({ data }: TornadoChartProps) {
         </text>
 
         {/* Bars */}
-        {sortedData.map((item, i) => {
-          const y = padding.top + i * barHeight + barHeight / 2
+        {sortedData.map((item, index) => {
+          const y = padding.top + index * barHeight + barHeight / 2
           const barW = xScale(item.impact)
           const centerX = padding.left + chartWidth / 2
 
@@ -63,7 +63,7 @@ export function TornadoChart({ data }: TornadoChartProps) {
           const color = isPositive ? "#10b981" : "#ef4444"
 
           return (
-            <g key={i}>
+            <g key={index}>
               {/* Bar */}
               <rect
                 x={barX}
@@ -83,7 +83,7 @@ export function TornadoChart({ data }: TornadoChartProps) {
                 alignmentBaseline="middle"
                 className="fill-gray-700 text-xs"
               >
-                {item.metricName.length > 30 ? item.metricName.substring(0, 30) + "..." : item.metricName}
+                {item.metricName.length > 30 ? item.metricName.slice(0, 30) + "..." : item.metricName}
               </text>
 
               {/* Impact value label */}

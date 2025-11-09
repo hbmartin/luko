@@ -7,7 +7,7 @@ import type { Formula, Notebook } from "@/lib/types/notebook"
 import type { MetricMentionExtra, MetricMentionItem } from "./FormulaEditorSingleLine"
 import { buildFormulaMarkup } from "./utils/formulaMarkup"
 
-type FormulaEditorProps = {
+type FormulaEditorProperties = {
   notebook: Notebook
   formula: Formula | null
   onFormulaChange?: (formulaId: string, expression: string) => void
@@ -16,7 +16,7 @@ type FormulaEditorProps = {
 
 const alphabeticalTrigger = /(?:^|\s)((\p{L}+))$/u
 
-export function FormulaEditor({ notebook, formula, onFormulaChange, className }: FormulaEditorProps) {
+export function FormulaEditor({ notebook, formula, onFormulaChange, className }: FormulaEditorProperties) {
   const mentionOptions = useMemo<MetricMentionItem[]>(() => {
     const sortedCategories = [...notebook.categories].sort((a, b) => a.order - b.order)
     return sortedCategories.flatMap((category) => {
@@ -41,7 +41,7 @@ export function FormulaEditor({ notebook, formula, onFormulaChange, className }:
   const [draftExpression, setDraftExpression] = useState<string>(() => formula?.expression ?? "")
   const [formulaExpressionMarkup, setFormulaExpressionMarkup] = useState<string>(() => formula?.expression ?? "")
 
-  const lastSyncedFormulaRef = useRef<{ id: string | null; expression: string }>({
+  const lastSyncedFormulaReference = useRef<{ id: string | null; expression: string }>({
     id: formula?.id ?? null,
     expression: formula?.expression ?? "",
   })
@@ -53,19 +53,19 @@ export function FormulaEditor({ notebook, formula, onFormulaChange, className }:
 
   useEffect(() => {
     if (!formula) {
-      lastSyncedFormulaRef.current = { id: null, expression: "" }
+      lastSyncedFormulaReference.current = { id: null, expression: "" }
       setDraftExpression("")
       setFormulaExpressionMarkup("")
       return
     }
 
     const { id, expression } = formula
-    const { id: lastId, expression: lastExpression } = lastSyncedFormulaRef.current
+    const { id: lastId, expression: lastExpression } = lastSyncedFormulaReference.current
     const idChanged = lastId !== id
     const expressionChanged = lastExpression !== expression
 
     if (idChanged || expressionChanged) {
-      lastSyncedFormulaRef.current = { id, expression }
+      lastSyncedFormulaReference.current = { id, expression }
       setDraftExpression(expression)
       setFormulaExpressionMarkup(buildMarkupFromExpression(expression))
       return

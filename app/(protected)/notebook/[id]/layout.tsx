@@ -12,11 +12,11 @@ export default function NotebookLayout({
   children: React.ReactNode
   params: Promise<{ id: string }>
 }) {
-  const unwrappedParams = use(params)
+  const unwrappedParameters = use(params)
 
   return (
     <NotebookProvider notebook={mockNotebook}>
-      <NotebookHeader notebookId={unwrappedParams.id} />
+      <NotebookHeader notebookId={unwrappedParameters.id} />
       <main className="absolute top-32 right-0 bottom-0 left-0 mx-auto flex flex-col px-[var(--space-500)] py-[var(--space-500)]">
         {children}
       </main>

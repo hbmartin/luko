@@ -34,8 +34,8 @@ export const generatePertPdfData = (distribution: Distribution, gamma = DEFAULT_
   const step = range / (points - 1)
   const data: Array<{ x: number; y: number }> = []
 
-  for (let i = 0; i < points; i++) {
-    const xPert = a + i * step
+  for (let index = 0; index < points; index++) {
+    const xPert = a + index * step
     const xBeta = (xPert - a) / range
     if (xBeta < 0 || xBeta > 1) continue
 
@@ -49,15 +49,15 @@ export const generatePertPdfData = (distribution: Distribution, gamma = DEFAULT_
   return data
 }
 
-interface ReferenceLineLabelProps {
+interface ReferenceLineLabelProperties {
   viewBox?: CartesianViewBox
 }
 
-type ReferenceLineLabelRenderer = (props: ReferenceLineLabelProps) => ReactElement<SVGElement>
+type ReferenceLineLabelRenderer = (properties: ReferenceLineLabelProperties) => ReactElement<SVGElement>
 
 const createReferenceLineLabel =
   (label: string, align: "left" | "center" | "right"): ReferenceLineLabelRenderer =>
-  ({ viewBox }: ReferenceLineLabelProps) => {
+  ({ viewBox }: ReferenceLineLabelProperties) => {
     if (!viewBox || typeof viewBox.x !== "number" || typeof viewBox.y !== "number") {
       return <></>
     }
@@ -81,12 +81,12 @@ const createReferenceLineLabel =
     )
   }
 
-interface DistributionChartProps {
+interface DistributionChartProperties {
   distribution: Distribution
   metric: Metric
 }
 
-export function DistributionChart({ metric, distribution }: DistributionChartProps) {
+export function DistributionChart({ metric, distribution }: DistributionChartProperties) {
   const pdfData = useMemo(
     () => generatePertPdfData(distribution),
     [distribution.min, distribution.mode, distribution.max]
@@ -94,7 +94,7 @@ export function DistributionChart({ metric, distribution }: DistributionChartPro
   const hasData = pdfData.length > 0
 
   const rawGradientId = useId()
-  const gradientId = `pertDensityGradient-${rawGradientId.replace(/[:]/g, "")}`
+  const gradientId = `pertDensityGradient-${rawGradientId.replaceAll(":", "")}`
 
   if (!hasData) {
     return (

@@ -3,7 +3,7 @@ import { z } from "zod"
 
 const normalizedUrl = z.preprocess((value) => {
   if (typeof value !== "string" || value.length === 0) {
-    return undefined
+    return
   }
 
   return value.startsWith("http://") || value.startsWith("https://") ? value : `https://${value}`

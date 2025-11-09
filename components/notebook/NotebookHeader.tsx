@@ -18,11 +18,11 @@ const dateFormatter = new Intl.DateTimeFormat("en-US", {
 
 const numberFormatter = new Intl.NumberFormat("en-US", { notation: "compact" })
 
-interface NotebookHeaderProps {
+interface NotebookHeaderProperties {
   notebookId: string
 }
 
-export function NotebookHeader({ notebookId }: NotebookHeaderProps) {
+export function NotebookHeader({ notebookId }: NotebookHeaderProperties) {
   const pathname = usePathname()
   const { notebook, simulationResult, theme, setTheme } = useNotebook()
 
@@ -35,7 +35,9 @@ export function NotebookHeader({ notebookId }: NotebookHeaderProps) {
           <button
             type="button"
             aria-label="Toggle theme"
-            onClick={() => setTheme(theme === "light" ? "dark" : "light")}
+            onClick={() => {
+              setTheme(theme === "light" ? "dark" : "light")
+            }}
             className="transition-opacity hover:opacity-80"
           >
             {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
@@ -57,7 +59,7 @@ export function NotebookHeader({ notebookId }: NotebookHeaderProps) {
               alt="worksheet"
               width={64}
               height={64}
-              className={`transition-all ${currentPage !== "worksheet" ? "group-hover:scale-110" : ""}`}
+              className={`transition-all ${currentPage === "worksheet" ? "" : "group-hover:scale-110"}`}
             />
             <div className="gap-1/2 flex flex-col">
               <p>{notebook.metrics.length} metrics</p>
@@ -81,7 +83,7 @@ export function NotebookHeader({ notebookId }: NotebookHeaderProps) {
             <div className="gap-1/2 flex flex-col">
               <p>
                 {notebook.dirtyMetrics.length} change
-                {notebook.dirtyMetrics.length !== 1 ? "s" : ""}
+                {notebook.dirtyMetrics.length === 1 ? "" : "s"}
               </p>
               <p>{numberFormatter.format(simulationResult?.metadata.iterations ?? 0)} iterations</p>
               <p>
@@ -100,7 +102,7 @@ export function NotebookHeader({ notebookId }: NotebookHeaderProps) {
               alt="download"
               width={64}
               height={64}
-              className={`transition-all ${currentPage !== "export" ? "group-hover:scale-110" : ""}`}
+              className={`transition-all ${currentPage === "export" ? "" : "group-hover:scale-110"}`}
             />
             <div className="gap-1/2 flex flex-col">
               <p>2 teams sharing</p>

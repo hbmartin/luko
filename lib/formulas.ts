@@ -21,7 +21,7 @@ const extractDependencies = (node: MathNode): string[] => {
     if (math.isFunctionNode(parent) && parent.fn === child) return
     dependencies.add(child.name)
   })
-  return Array.from(dependencies)
+  return [...dependencies]
 }
 
 // Currently all symbol names (e.g., pi) enter the graph, inflating sort order.
@@ -29,9 +29,9 @@ const extractDependencies = (node: MathNode): string[] => {
 
 const buildDependencyMap = (registry: FormulaRegistry): DependencyMap => {
   const map: DependencyMap = {}
-  Object.entries(registry).forEach(([metricId, { dependencies }]) => {
+  for (const [metricId, { dependencies }] of Object.entries(registry)) {
     map[metricId] = new Set(dependencies)
-  })
+  }
   return map
 }
 
@@ -64,23 +64,23 @@ const topologicalSort = (dependencyMap: DependencyMap): string[] => {
   const inDegree = new Map<string, number>()
   const dependents = new Map<string, Set<string>>()
 
-  Object.entries(dependencyMap).forEach(([node, dependencies]) => {
+  for (const [node, dependencies] of Object.entries(dependencyMap)) {
     if (!inDegree.has(node)) inDegree.set(node, 0)
-    dependencies.forEach((dependency) => {
+    for (const dependency of dependencies) {
       inDegree.set(node, (inDegree.get(node) ?? 0) + 1)
       if (!dependents.has(dependency)) dependents.set(dependency, new Set())
       dependents.get(dependency)!.add(node)
       if (!inDegree.has(dependency)) inDegree.set(dependency, 0)
-    })
-  })
+    }
+  }
 
   const queue: string[] = []
-  inDegree.forEach((degree, node) => {
+  for (const [node, degree] of inDegree.entries()) {
     if (degree === 0) queue.push(node)
-  })
+  }
 
   const order: string[] = []
-  while (queue.length) {
+  while (queue.length > 0) {
     const node = queue.shift()
     if (!node) continue
     order.push(node)
@@ -98,7 +98,7 @@ const topologicalSort = (dependencyMap: DependencyMap): string[] => {
 const toNumber = (value: MathType): number => {
   if (typeof value === "number") return value
   if (typeof value === "boolean") {
-    throw new Error("Formula must evaluate to a numeric value, not boolean.")
+    throw new TypeError("Formula must evaluate to a numeric value, not boolean.")
   }
   if (typeof value === "bigint") return Number(value)
   if (math.isBigNumber(value) || math.isFraction(value)) {
@@ -134,9 +134,9 @@ export const parseFormula = (expression: string): MathNode => {
 export const compileMetricFormulas = (metrics: Metric[]): FormulaRegistry => {
   const registry: FormulaRegistry = {}
 
-  metrics.forEach((metric) => {
+  for (const metric of metrics) {
     const rawFormula = metric.formula?.trim()
-    if (!rawFormula) return
+    if (!rawFormula) continue
     const node = parseFormula(rawFormula)
     registry[metric.id] = {
       raw: rawFormula,
@@ -144,7 +144,7 @@ export const compileMetricFormulas = (metrics: Metric[]): FormulaRegistry => {
       compiled: node.compile(),
       dependencies: extractDependencies(node),
     }
-  })
+  }
 
   return registry
 }
@@ -156,19 +156,19 @@ export const evaluateFormulas = (
   const dependencyMap = buildDependencyMap(registry)
 
   const cycles = detectCircularDependencies(dependencyMap)
-  if (cycles.length) {
+  if (cycles.length > 0) {
     throw new Error(`Circular formula dependency: ${cycles.join(", ")}`)
   }
 
   const order = topologicalSort(dependencyMap)
   const evaluated = { ...baseValues }
 
-  order.forEach((metricId) => {
+  for (const metricId of order) {
     const compilation = registry[metricId]
-    if (!compilation) return
+    if (!compilation) continue
     const value = compilation.compiled.evaluate(evaluated)
     evaluated[metricId] = toNumber(value)
-  })
+  }
 
   return evaluated
 }

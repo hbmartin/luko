@@ -1,5 +1,4 @@
 import type { Metadata } from "next"
-import Link from "next/link"
 import { redirect } from "next/navigation"
 
 import { MagicLinkForm } from "@/components/auth/MagicLinkForm"
@@ -9,13 +8,13 @@ export const metadata: Metadata = {
   title: "Sign in",
 }
 
-type LoginPageProps = {
+type LoginPageProperties = {
   searchParams?: {
     error?: string
   }
 }
 
-export default async function LoginPage({ searchParams }: LoginPageProps) {
+export default async function LoginPage({ searchParams }: LoginPageProperties) {
   const supabase = await createServerSupabaseClient()
   const {
     data: { session },

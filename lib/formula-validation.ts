@@ -37,7 +37,7 @@ export const validateFormulaExpression = ({
       message: "Formula is invalid",
     }
   }
-  const missingIds = Array.from(dependencies).filter((dependency) => {
+  const missingIds = [...dependencies].filter((dependency) => {
     if (referenceableIds[dependency]) {
       return false
     }
