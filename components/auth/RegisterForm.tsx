@@ -11,6 +11,7 @@ export function RegisterForm() {
   const { supabase } = useSupabase()
 
   const handleCredentials = async ({ email, password }: { email: string; password: string }) => {
+    console.log("handleCredentials emailRedirectTo:", AUTH_CALLBACK_URL)
     const { error, data } = await supabase.auth.signUp({
       email,
       password,
