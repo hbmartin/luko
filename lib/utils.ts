@@ -1,3 +1,4 @@
+/* eslint-disable unicorn/prevent-abbreviations */
 import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
 

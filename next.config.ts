@@ -1,3 +1,5 @@
+/* eslint-disable unicorn/prevent-abbreviations */
+/* eslint-disable @typescript-eslint/require-await */
 import withBundleAnalyzer from "@next/bundle-analyzer"
 import { type NextConfig } from "next"
 

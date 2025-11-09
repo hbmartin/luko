@@ -1,9 +1,21 @@
 // https://github.com/francoismassart/eslint-plugin-tailwindcss/pull/381
 // import eslintPluginTailwindcss from "eslint-plugin-tailwindcss"
+import js from "@eslint/js"
 import eslintPluginNext from "@next/eslint-plugin-next"
+import codeComplete from "eslint-plugin-code-complete"
 import eslintPluginImport from "eslint-plugin-import"
+import pluginPromise from "eslint-plugin-promise"
+import reactPerfPlugin from "eslint-plugin-react-perf"
+import reactRefresh from "eslint-plugin-react-refresh"
+import eslintPluginSecurity from "eslint-plugin-security"
+import eslintPluginUnicorn from "eslint-plugin-unicorn"
+import unusedImports from "eslint-plugin-unused-imports"
+
 import typescriptEslint from "typescript-eslint"
+
 import * as fs from "fs"
+import path from "node:path"
+import { fileURLToPath } from "node:url"
 
 const eslintIgnore = [
   ".git/",
@@ -17,21 +29,65 @@ const eslintIgnore = [
   "*.d.ts",
 ]
 
+const tsconfigRootDir = path.dirname(fileURLToPath(import.meta.url))
+const tsFiles = ["**/*.{ts,tsx}", "**/*.cts", "**/*.mts"]
+
+function scopeTypeScriptConfigs(configs) {
+  return configs.map((singleConfig) => {
+    const scopedConfig = {
+      ...singleConfig,
+      files: singleConfig.files ?? tsFiles,
+    }
+
+    if (singleConfig.languageOptions?.parser === typescriptEslint.parser) {
+      scopedConfig.languageOptions = {
+        ...singleConfig.languageOptions,
+        parserOptions: {
+          ...(singleConfig.languageOptions.parserOptions ?? {}),
+          project: ["./tsconfig.json"],
+          tsconfigRootDir,
+        },
+      }
+    }
+
+    return scopedConfig
+  })
+}
+
 const config = typescriptEslint.config(
   {
     ignores: eslintIgnore,
   },
   //  https://github.com/francoismassart/eslint-plugin-tailwindcss/pull/381
   // ...eslintPluginTailwindcss.configs["flat/recommended"],
-  typescriptEslint.configs.recommended,
+  scopeTypeScriptConfigs(typescriptEslint.configs.recommended),
+  scopeTypeScriptConfigs(typescriptEslint.configs.recommendedTypeChecked),
+  scopeTypeScriptConfigs(typescriptEslint.configs.strictTypeChecked),
   eslintPluginImport.flatConfigs.recommended,
+  eslintPluginImport.flatConfigs.typescript,
+  reactPerfPlugin.configs.flat.all,
+  js.configs.recommended,
+  eslintPluginUnicorn.configs.all,
+  pluginPromise.configs["flat/recommended"],
+  eslintPluginSecurity.configs.recommended,
+  reactPerfPlugin.configs.flat.all,
+  reactRefresh.configs.recommended,
   {
     plugins: {
       "@next/next": eslintPluginNext,
+      "react-perf": reactPerfPlugin,
+      "code-complete": codeComplete,
+      "unused-imports": unusedImports,
     },
     rules: {
       ...eslintPluginNext.configs.recommended.rules,
       ...eslintPluginNext.configs["core-web-vitals"].rules,
+    },
+  },
+  {
+    files: tsFiles,
+    rules: {
+      "@typescript-eslint/no-unused-vars": "error",
     },
   },
   {
@@ -49,13 +105,6 @@ const config = typescriptEslint.config(
       },
     },
     rules: {
-      "@typescript-eslint/no-unused-vars": [
-        "warn",
-        {
-          argsIgnorePattern: "^_",
-          varsIgnorePattern: "^_",
-        },
-      ],
       "sort-imports": [
         "error",
         {
