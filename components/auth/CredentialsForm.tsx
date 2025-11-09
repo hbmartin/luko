@@ -28,10 +28,6 @@ export function CredentialsForm({ submitLabel, submittingLabel, onSubmit }: Cred
   const [feedbackMessage, setFeedbackMessage] = useState<FeedbackMessage | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const updateFeedbackMessage = (message: FeedbackMessage | null) => {
-    setFeedbackMessage(message)
-  }
-
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
 
@@ -39,18 +35,21 @@ export function CredentialsForm({ submitLabel, submittingLabel, onSubmit }: Cred
     const email = formData.get("email")
 
     if (typeof email !== "string") {
-      setErrorMessage("Invalid form submission.")
+      setFeedbackMessage({
+        type: "error",
+        message: "Invalid form submission.",
+      })
       return
     }
 
     setIsSubmitting(true)
-    updateFeedbackMessage(null)
+    setFeedbackMessage(null)
 
     try {
       const result = await onSubmit({ email })
 
       if (result?.errorMessage) {
-        updateFeedbackMessage({
+        setFeedbackMessage({
           type: "error",
           message: result.errorMessage,
         })
@@ -58,7 +57,7 @@ export function CredentialsForm({ submitLabel, submittingLabel, onSubmit }: Cred
       }
 
       if (result?.successMessage) {
-        updateFeedbackMessage({
+        setFeedbackMessage({
           type: "success",
           message: result.successMessage,
         })
@@ -66,7 +65,7 @@ export function CredentialsForm({ submitLabel, submittingLabel, onSubmit }: Cred
     } catch (error) {
       console.error("Credentials submission failed", error)
       const errorMessage = error instanceof Error ? error.message : "Something went wrong. Please try again."
-      updateFeedbackMessage({
+      setFeedbackMessage({
         type: "error",
         message: errorMessage,
       })
@@ -78,7 +77,7 @@ export function CredentialsForm({ submitLabel, submittingLabel, onSubmit }: Cred
   return (
     <div className="space-y-6">
       <MicrosoftSignInButton
-        onErrorChange={(message) => updateFeedbackMessage(message ? { type: "error", message } : null)}
+        onErrorChange={(message) => setFeedbackMessage(message ? { type: "error", message } : null)}
       />
 
       <div className="flex items-center gap-2 text-xs font-semibold tracking-wide text-[var(--color-text-muted)] uppercase">
