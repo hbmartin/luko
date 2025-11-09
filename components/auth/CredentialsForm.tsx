@@ -13,6 +13,11 @@ export type CredentialsFormResult = {
   successMessage?: string | null
 }
 
+type FeedbackMessage = {
+  type: "error" | "success"
+  message: string
+}
+
 type CredentialsFormProps = {
   submitLabel: string
   submittingLabel: string
@@ -20,8 +25,7 @@ type CredentialsFormProps = {
 }
 
 export function CredentialsForm({ submitLabel, submittingLabel, onSubmit }: CredentialsFormProps) {
-  const [errorMessage, setErrorMessage] = useState<string | null>(null)
-  const [successMessage, setSuccessMessage] = useState<string | null>(null)
+  const [feedbackMessage, setFeedbackMessage] = useState<FeedbackMessage | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -31,29 +35,40 @@ export function CredentialsForm({ submitLabel, submittingLabel, onSubmit }: Cred
     const email = formData.get("email")
 
     if (typeof email !== "string") {
-      setErrorMessage("Invalid form submission.")
+      setFeedbackMessage({
+        type: "error",
+        message: "Invalid form submission.",
+      })
       return
     }
 
     setIsSubmitting(true)
-    setErrorMessage(null)
-    setSuccessMessage(null)
+    setFeedbackMessage(null)
 
     try {
       const result = await onSubmit({ email })
 
       if (result?.errorMessage) {
-        setErrorMessage(result.errorMessage)
+        setFeedbackMessage({
+          type: "error",
+          message: result.errorMessage,
+        })
         return
       }
 
       if (result?.successMessage) {
-        setSuccessMessage(result.successMessage)
+        setFeedbackMessage({
+          type: "success",
+          message: result.successMessage,
+        })
       }
     } catch (error) {
       console.error("Credentials submission failed", error)
       const errorMessage = error instanceof Error ? error.message : "Something went wrong. Please try again."
-      setErrorMessage(errorMessage)
+      setFeedbackMessage({
+        type: "error",
+        message: errorMessage,
+      })
     } finally {
       setIsSubmitting(false)
     }
@@ -61,7 +76,9 @@ export function CredentialsForm({ submitLabel, submittingLabel, onSubmit }: Cred
 
   return (
     <div className="space-y-6">
-      <MicrosoftSignInButton onErrorChange={setErrorMessage} />
+      <MicrosoftSignInButton
+        onErrorChange={(message) => setFeedbackMessage(message ? { type: "error", message } : null)}
+      />
 
       <div className="flex items-center gap-2 text-xs font-semibold tracking-wide text-[var(--color-text-muted)] uppercase">
         <span className="h-px flex-1 bg-[var(--color-border-soft)]" />
@@ -88,8 +105,15 @@ export function CredentialsForm({ submitLabel, submittingLabel, onSubmit }: Cred
           />
         </div>
 
-        {errorMessage ? <p className="text-sm text-[var(--color-danger)]">{errorMessage}</p> : null}
-        {successMessage ? <p className="text-sm text-[var(--color-success)]">{successMessage}</p> : null}
+        {feedbackMessage ? (
+          <p
+            className={`text-sm ${
+              feedbackMessage.type === "error" ? "text-[var(--color-danger)]" : "text-[var(--color-success)]"
+            }`}
+          >
+            {feedbackMessage.message}
+          </p>
+        ) : null}
 
         <button
           type="submit"

@@ -67,7 +67,7 @@
     "react-is": "^19.2.0",
     "react-mentions-ts": "^5.4.5",
     "recharts": "^3.3.0",
-    "tailwind-merge": "^3.3.1",
+    "tailwind-merge": "^3.4.0",
     "zod": "^4.1.12"
   },
   "devDependencies": {
@@ -91,7 +91,6 @@
     "@typescript-eslint/parser": "^8.46.3",
     "@vitejs/plugin-react": "^5.1.0",
     "@vitest/ui": "^4.0.8",
-    "all-contributors-cli": "^6.26.1",
     "cross-env": "^10.1.0",
     "drizzle-kit": "^0.31.6",
     "eslint": "^9.39.1",
