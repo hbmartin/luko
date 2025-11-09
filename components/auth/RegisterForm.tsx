@@ -1,45 +1,109 @@
 "use client"
 
+import { type FormEvent, useState } from "react"
 import { useRouter } from "next/navigation"
 
-import { CredentialsForm } from "@/components/auth/CredentialsForm"
+import { MicrosoftSignInButton } from "@/components/auth/MicrosoftSignInButton"
 import { useSupabase } from "@/components/supabase/SupabaseProvider"
 import { AUTH_CALLBACK_URL } from "@/lib/auth"
 
 export function RegisterForm() {
   const router = useRouter()
   const { supabase } = useSupabase()
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [successMessage, setSuccessMessage] = useState<string | null>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const handleCredentials = async ({ email, password }: { email: string; password: string }) => {
-    console.log("handleCredentials emailRedirectTo:", AUTH_CALLBACK_URL)
-    const { error, data } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: AUTH_CALLBACK_URL,
-      },
-    })
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
 
-    if (error) {
-      return { errorMessage: error.message }
-    }
+    const formData = new FormData(event.currentTarget)
+    const email = formData.get("email")
 
-    if (data.session) {
-      router.replace("/")
+    if (typeof email !== "string") {
+      setErrorMessage("Invalid form submission.")
       return
     }
 
-    return { successMessage: "Check your inbox to confirm your email before signing in." }
+    setIsSubmitting(true)
+    setErrorMessage(null)
+    setSuccessMessage(null)
+
+    try {
+      const { error, data } = await supabase.auth.signInWithOtp({
+        email,
+        options: {
+          emailRedirectTo: AUTH_CALLBACK_URL,
+        },
+      })
+
+      if (error) {
+        setErrorMessage(error.message)
+        return
+      }
+
+      if (data.session) {
+        router.replace("/")
+        return
+      }
+
+      setSuccessMessage("Check your inbox to confirm your email before signing in.")
+    } catch (error) {
+      console.error("Email sign-up failed", error)
+      const message = error instanceof Error ? error.message : "Something went wrong. Please try again."
+      setErrorMessage(message)
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
-    <CredentialsForm
-      submitLabel="Create account"
-      submittingLabel="Creating account..."
-      passwordPlaceholder="Create a strong password"
-      passwordAutoComplete="new-password"
-      passwordMinLength={8}
-      onSubmit={handleCredentials}
-    />
+    <div className="space-y-6">
+      <MicrosoftSignInButton
+        onErrorChange={(message) => {
+          setErrorMessage(message)
+          if (message) {
+            setSuccessMessage(null)
+          }
+        }}
+      />
+
+      <div className="flex items-center gap-2 text-xs font-semibold tracking-wide text-[var(--color-text-muted)] uppercase">
+        <span className="h-px flex-1 bg-[var(--color-border-soft)]" />
+        <span>Or continue with email</span>
+        <span className="h-px flex-1 bg-[var(--color-border-soft)]" />
+      </div>
+
+      <form className="space-y-6" onSubmit={handleSubmit}>
+        <div className="space-y-2">
+          <label
+            className="text-xs font-semibold tracking-wide text-[var(--color-text-muted)] uppercase"
+            htmlFor="email"
+          >
+            Email
+          </label>
+          <input
+            id="email"
+            name="email"
+            type="email"
+            required
+            autoComplete="email"
+            className="focus-visible:ring-primary/40 block w-full rounded-lg border border-[var(--color-border-soft)] bg-[var(--color-surface)] px-4 py-2.5 text-sm text-[var(--color-text-primary)] shadow-sm transition outline-none focus-visible:ring-2"
+            placeholder="you@example.com"
+          />
+        </div>
+
+        {errorMessage ? <p className="text-sm text-[var(--color-danger)]">{errorMessage}</p> : null}
+        {successMessage ? <p className="text-sm text-[var(--color-success)]">{successMessage}</p> : null}
+
+        <button
+          type="submit"
+          disabled={isSubmitting}
+          className="bg-primary text-primary-foreground inline-flex w-full items-center justify-center rounded-lg px-4 py-2.5 text-sm font-semibold shadow-sm transition hover:brightness-95 focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-surface-elevated)] focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {isSubmitting ? "Creating account..." : "Create account"}
+        </button>
+      </form>
+    </div>
   )
 }

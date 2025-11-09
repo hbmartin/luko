@@ -6,7 +6,6 @@ import { MicrosoftSignInButton } from "@/components/auth/MicrosoftSignInButton"
 
 type Credentials = {
   email: string
-  password: string
 }
 
 export type CredentialsFormResult = {
@@ -17,20 +16,10 @@ export type CredentialsFormResult = {
 type CredentialsFormProps = {
   submitLabel: string
   submittingLabel: string
-  passwordPlaceholder?: string
-  passwordAutoComplete?: string
-  passwordMinLength?: number
   onSubmit: (credentials: Credentials) => Promise<CredentialsFormResult | void>
 }
 
-export function CredentialsForm({
-  submitLabel,
-  submittingLabel,
-  passwordPlaceholder = "••••••••",
-  passwordAutoComplete = "current-password",
-  passwordMinLength,
-  onSubmit,
-}: CredentialsFormProps) {
+export function CredentialsForm({ submitLabel, submittingLabel, onSubmit }: CredentialsFormProps) {
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -40,9 +29,8 @@ export function CredentialsForm({
 
     const formData = new FormData(event.currentTarget)
     const email = formData.get("email")
-    const password = formData.get("password")
 
-    if (typeof email !== "string" || typeof password !== "string") {
+    if (typeof email !== "string") {
       setErrorMessage("Invalid form submission.")
       return
     }
@@ -52,7 +40,7 @@ export function CredentialsForm({
     setSuccessMessage(null)
 
     try {
-      const result = await onSubmit({ email, password })
+      const result = await onSubmit({ email })
 
       if (result?.errorMessage) {
         setErrorMessage(result.errorMessage)
@@ -97,25 +85,6 @@ export function CredentialsForm({
             autoComplete="email"
             className="focus-visible:ring-primary/40 block w-full rounded-lg border border-[var(--color-border-soft)] bg-[var(--color-surface)] px-4 py-2.5 text-sm text-[var(--color-text-primary)] shadow-sm transition outline-none focus-visible:ring-2"
             placeholder="you@example.com"
-          />
-        </div>
-
-        <div className="space-y-2">
-          <label
-            className="text-xs font-semibold tracking-wide text-[var(--color-text-muted)] uppercase"
-            htmlFor="password"
-          >
-            Password
-          </label>
-          <input
-            id="password"
-            name="password"
-            type="password"
-            required
-            autoComplete={passwordAutoComplete}
-            minLength={passwordMinLength}
-            className="focus-visible:ring-primary/40 block w-full rounded-lg border border-[var(--color-border-soft)] bg-[var(--color-surface)] px-4 py-2.5 text-sm text-[var(--color-text-primary)] shadow-sm transition outline-none focus-visible:ring-2"
-            placeholder={passwordPlaceholder}
           />
         </div>
 
