@@ -30,14 +30,17 @@ export function CredentialsForm({ submitLabel, submittingLabel, onSubmit }: Cred
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
+    if (isSubmitting) {
+      return
+    }
 
     const formData = new FormData(event.currentTarget)
-    const email = formData.get("email")
+    const email = formData.get("email")?.toString().trim()
 
-    if (typeof email !== "string") {
+    if (!email) {
       setFeedbackMessage({
         type: "error",
-        message: "Invalid form submission.",
+        message: "Please enter a valid email.",
       })
       return
     }
