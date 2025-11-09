@@ -2,7 +2,7 @@ import type { Metadata } from "next"
 import Link from "next/link"
 import { redirect } from "next/navigation"
 
-import { LoginForm } from "@/components/auth/LoginForm"
+import { MagicLinkForm } from "@/components/auth/MagicLinkForm"
 import { createServerSupabaseClient } from "@/lib/supabase/server"
 
 export const metadata: Metadata = {
@@ -40,14 +40,8 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           </div>
         )}
         <div className="mt-8">
-          <LoginForm />
+          <MagicLinkForm />
         </div>
-        <p className="mt-8 text-center text-sm text-[var(--color-text-muted)]">
-          Don&apos;t have an account?{" "}
-          <Link href="/register" className="font-semibold text-[var(--color-text-primary)] hover:underline">
-            Create one
-          </Link>
-        </p>
       </div>
     </div>
   )
