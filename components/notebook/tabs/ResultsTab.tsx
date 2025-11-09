@@ -16,7 +16,7 @@ interface ScenarioSummary {
   createdAt: string
 }
 
-interface ResultsTabProps {
+interface ResultsTabProperties {
   simulationResult: SimulationResult | null
   scenarios: ScenarioSummary[]
   activeScenarioId: string | null
@@ -33,7 +33,7 @@ export function ResultsTab({
   activeScenarioId,
   onSelectScenario,
   onRenameScenario,
-}: ResultsTabProps) {
+}: ResultsTabProperties) {
   const { handleRunSimulation, isSimulating } = useNotebook()
 
   const [comparisonIds, setComparisonIds] = useState<string[]>([])
@@ -42,11 +42,11 @@ export function ResultsTab({
   const hasRequestedInitialRun = useRef(false)
 
   const activeScenario = useMemo(() => {
-    if (!scenarios.length) return null
+    if (scenarios.length === 0) return null
     if (activeScenarioId) {
-      return scenarios.find((scenario) => scenario.id === activeScenarioId) ?? scenarios[scenarios.length - 1]
+      return scenarios.find((scenario) => scenario.id === activeScenarioId) ?? scenarios.at(-1)
     }
-    return scenarios[scenarios.length - 1]
+    return scenarios.at(-1)
   }, [activeScenarioId, scenarios])
 
   const comparisonScenarios = scenarios.filter(
@@ -127,7 +127,9 @@ export function ResultsTab({
               <button
                 key={scenario.id}
                 type="button"
-                onClick={() => onSelectScenario(scenario.id)}
+                onClick={() => {
+                  onSelectScenario(scenario.id)
+                }}
                 className={`min-w-[180px] rounded-2xl border px-4 py-3 text-left transition ${
                   isActive
                     ? "border-blue-500 bg-blue-50"
@@ -140,8 +142,12 @@ export function ResultsTab({
                       className="focus-visible:data-[focus=strong] rounded border border-blue-200 bg-white px-2 py-1 text-xs font-semibold text-[var(--color-text-primary)]"
                       value={draftName}
                       autoFocus
-                      onClick={(event) => event.stopPropagation()}
-                      onChange={(event) => setDraftName(event.target.value)}
+                      onClick={(event) => {
+                        event.stopPropagation()
+                      }}
+                      onChange={(event) => {
+                        setDraftName(event.target.value)
+                      }}
                       onBlur={() => {
                         onRenameScenario(scenario.id, draftName.trim())
                         setEditingScenarioId(null)
@@ -183,7 +189,9 @@ export function ResultsTab({
                           return current.filter((id) => id !== scenario.id)
                         })
                       }}
-                      onClick={(event) => event.stopPropagation()}
+                      onClick={(event) => {
+                        event.stopPropagation()
+                      }}
                     />
                     Compare
                   </label>

@@ -6,12 +6,12 @@ import { CredentialsForm } from "@/components/auth/CredentialsForm"
 import { useSupabase } from "@/components/supabase/SupabaseProvider"
 import { AUTH_CALLBACK_URL } from "@/lib/auth"
 
-type MagicLinkFormProps = {
+type MagicLinkFormProperties = {
   submitLabel?: string
   submittingLabel?: string
 }
 
-export function MagicLinkForm({ submitLabel = "Sign in", submittingLabel = "Signing in..." }: MagicLinkFormProps) {
+export function MagicLinkForm({ submitLabel = "Sign in", submittingLabel = "Signing in..." }: MagicLinkFormProperties) {
   const router = useRouter()
   const { supabase } = useSupabase()
 

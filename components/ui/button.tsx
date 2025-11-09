@@ -36,21 +36,23 @@ const buttonVariants = cva(
   }
 )
 
-export interface ButtonProps extends React.ComponentPropsWithoutRef<"button">, VariantProps<typeof buttonVariants> {
+export interface ButtonProperties
+  extends React.ComponentPropsWithoutRef<"button">,
+    VariantProps<typeof buttonVariants> {
   asChild?: boolean
 }
 
-const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, asChild = false, type, ...props }, ref) => {
+const Button = React.forwardRef<HTMLButtonElement, ButtonProperties>(
+  ({ className, variant, size, asChild = false, type, ...properties }, reference) => {
     const Comp = asChild ? Slot : "button"
 
     return (
       <Comp
         data-slot="button"
         className={cn(buttonVariants({ variant, size }), className)}
-        ref={ref}
+        ref={reference}
         type={type ?? (asChild ? undefined : "button")}
-        {...props}
+        {...properties}
       />
     )
   }

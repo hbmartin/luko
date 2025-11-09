@@ -1,14 +1,6 @@
 "use client"
 
-import {
-  cloneElement,
-  type MouseEvent as ReactMouseEvent,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react"
+import { type MouseEvent as ReactMouseEvent, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   type CellMouseArgs,
   type CellMouseEvent,
@@ -51,7 +43,7 @@ interface GroupRow<TRow> {
   readonly startRowIndex: number
 }
 
-interface DataGridComponentProps {
+interface DataGridComponentProperties {
   notebook: Notebook
   density: "comfortable" | "compact"
   onMetricChange: (metricId: string, field: "min" | "mode" | "max" | "value", value: number) => void
@@ -118,21 +110,21 @@ export function DataGridComponent({
   onFormulaRename,
   onAddFormula,
   onDeleteFormula,
-}: DataGridComponentProps) {
-  const gridRef = useRef<DataGridHandle>(null)
+}: DataGridComponentProperties) {
+  const gridReference = useRef<DataGridHandle>(null)
   const [expandedGroupIds, setExpandedGroupIds] = useState<ReadonlySet<unknown>>(
     () => new Set<unknown>(notebook.categories.map((category) => category.id))
   )
   const [contextMenuState, setContextMenuState] = useState<GridContextMenuState | null>(null)
   const [activeFormulaId, setActiveFormulaId] = useState<string | null>(null)
   const [highlightedMetricId, setHighlightedMetricId] = useState<string | null>(null)
-  const previousNotebookIdRef = useRef(notebook.id)
-  const hasPositionedInitialCellRef = useRef(false)
+  const previousNotebookIdReference = useRef(notebook.id)
+  const hasPositionedInitialCellReference = useRef(false)
   useEffect(() => {
-    if (previousNotebookIdRef.current !== notebook.id) {
-      previousNotebookIdRef.current = notebook.id
+    if (previousNotebookIdReference.current !== notebook.id) {
+      previousNotebookIdReference.current = notebook.id
       setExpandedGroupIds(new Set<unknown>(notebook.categories.map((category) => category.id)))
-      hasPositionedInitialCellRef.current = false
+      hasPositionedInitialCellReference.current = false
     }
   }, [notebook.categories, notebook.id])
   useEffect(() => {
@@ -155,9 +147,9 @@ export function DataGridComponent({
   const rows = useMemo(() => notebookToGridRows(notebook), [notebook])
   const categoryLabels = useMemo(() => {
     const map = new Map<string, string>()
-    notebook.categories.forEach((category) => {
+    for (const category of notebook.categories) {
       map.set(category.id, category.name)
-    })
+    }
     return map
   }, [notebook.categories])
   const openCategoryContextMenu = useCallback(
@@ -194,6 +186,7 @@ export function DataGridComponent({
 
       event.currentTarget.dispatchEvent(
         new MouseEvent("contextmenu", {
+          // eslint-disable-next-line no-undef, unicorn/prefer-global-this
           view: window,
           bubbles: true,
           cancelable: true,
@@ -205,12 +198,12 @@ export function DataGridComponent({
     [openCategoryContextMenu]
   )
 
-  const safeTextEditor = useCallback((props: RenderEditCellProps<GridRow>) => {
-    const rowWithIndex = props.row as GridRow & { [key: string]: unknown }
-    const rawValue = rowWithIndex[props.column.key]
-    const normalizedValue = rawValue == null ? "" : String(rawValue)
+  const safeTextEditor = useCallback((properties: RenderEditCellProps<GridRow>) => {
+    const rowWithIndex = properties.row as GridRow & { [key: string]: unknown }
+    const rawValue = rowWithIndex[properties.column.key]
+    const normalizedValue = rawValue == undefined ? "" : String(rawValue)
 
-    return textEditor({ ...props, row: { ...props.row, [props.column.key]: normalizedValue } })
+    return textEditor({ ...properties, row: { ...properties.row, [properties.column.key]: normalizedValue } })
   }, [])
 
   const columns = useMemo<Column<GridRow>[]>(() => {
@@ -228,23 +221,25 @@ export function DataGridComponent({
         }
         return null
       },
-      renderGroupCell: (props: RenderGroupCellProps<GridRow>) => {
-        const rawKey = props.groupKey == null ? "" : String(props.groupKey)
+      renderGroupCell: (properties: RenderGroupCellProps<GridRow>) => {
+        const rawKey = properties.groupKey == undefined ? "" : String(properties.groupKey)
         const label = categoryLabels.get(rawKey) ?? rawKey ?? "Uncategorized"
         if (rawKey === "__ungrouped__" || rawKey === "") {
           return renderToggleGroup({
-            ...props,
+            ...properties,
             groupKey: label,
           })
         }
         return (
           <div
             className="flex w-full items-center justify-between gap-2 pr-2"
-            onContextMenu={(event) => handleGroupContextMenu(rawKey, label, event)}
+            onContextMenu={(event) => {
+              handleGroupContextMenu(rawKey, label, event)
+            }}
           >
             <div className="min-w-0 flex-1">
               {renderToggleGroup({
-                ...props,
+                ...properties,
                 groupKey: label,
               })}
             </div>
@@ -271,11 +266,16 @@ export function DataGridComponent({
           )
         },
         renderGroupCell: ({ groupKey }: RenderGroupCellProps<GridRow>) => {
-          const rawKey = groupKey == null ? "" : String(groupKey)
+          const rawKey = groupKey == undefined ? "" : String(groupKey)
           const label = categoryLabels.get(rawKey) ?? rawKey ?? "Uncategorized"
 
           return (
-            <Button variant="outline" onClick={(event) => handleGroupMenuButtonClick(rawKey, label, event)}>
+            <Button
+              variant="outline"
+              onClick={(event) => {
+                handleGroupMenuButtonClick(rawKey, label, event)
+              }}
+            >
               Add new...
             </Button>
           )
@@ -287,9 +287,9 @@ export function DataGridComponent({
         width: 120,
         cellClass: unitCellClass,
         editable: (row) => !isFormulaRow(row),
-        colSpan: (args) => {
-          if (args.type !== "ROW") return undefined
-          if (args.row.type === "formula") return 4
+        colSpan: (arguments_) => {
+          if (arguments_.type !== "ROW") return
+          if (arguments_.row.type === "formula") return 4
           return 1
         },
         renderCell: ({ row, column, onRowChange, rowIdx, tabIndex }: RenderCellProps<GridRow>) => {
@@ -352,17 +352,17 @@ export function DataGridComponent({
     [highlightedMetricId]
   )
 
-  const lastDetailsTriggerRef = useRef<{ id: string; time: number } | null>(null)
+  const lastDetailsTriggerReference = useRef<{ id: string; time: number } | null>(null)
 
   const triggerDetails = useCallback(
     (rowId: string) => {
       console.log("triggering details for", rowId)
       const now = Date.now()
-      const lastTrigger = lastDetailsTriggerRef.current
+      const lastTrigger = lastDetailsTriggerReference.current
       if (lastTrigger && lastTrigger.id === rowId && now - lastTrigger.time < 100) {
         return
       }
-      lastDetailsTriggerRef.current = { id: rowId, time: now }
+      lastDetailsTriggerReference.current = { id: rowId, time: now }
       onOpenDetails(rowId)
     },
     [onOpenDetails]
@@ -435,35 +435,31 @@ export function DataGridComponent({
       console.log("rows changed updatedRows", updatedRows)
       const columnKey = data.column?.key
 
-      data.indexes.forEach((rowIndex) => {
+      for (const rowIndex of data.indexes) {
         const row = updatedRows[rowIndex]
-        if (!row || !columnKey) return
+        if (!row || !columnKey) continue
 
         if (isMetricRow(row)) {
           if (columnKey === "name") {
             onMetricRename?.(row.id, typeof row.name === "string" ? row.name : "")
-            return
+            continue
           }
           if (columnKey !== "min" && columnKey !== "mode" && columnKey !== "max" && columnKey !== "value") {
-            return
+            continue
           }
 
           let rawValue: unknown
-          if (columnKey === "value") {
-            rawValue = (row as typeof row & { value?: unknown }).value
-          } else {
-            rawValue = row[columnKey]
-          }
+          rawValue = columnKey === "value" ? (row as typeof row & { value?: unknown }).value : row[columnKey]
           const parsedValue = parseNumeric(rawValue)
 
           onMetricChange(row.id, columnKey, parsedValue)
-          return
+          continue
         }
 
         if (isFormulaRow(row) && columnKey === "name") {
           onFormulaRename?.(row.id, typeof row.name === "string" ? row.name : "")
         }
-      })
+      }
     },
     [onFormulaRename, onMetricChange, onMetricRename]
   )
@@ -536,7 +532,7 @@ export function DataGridComponent({
       <ContextMenuTrigger asChild>
         <div className="h-full">
           <TreeDataGrid
-            ref={gridRef}
+            ref={gridReference}
             className="rdg-light rdg-spreadsheet"
             columns={columns}
             rows={rows}
@@ -645,11 +641,11 @@ export function DataGridComponent({
 function rowGrouper(rows: readonly GridRow[], columnKey: string) {
   return rows.reduce<Record<string, GridRow[]>>((groups, row) => {
     const rawKey = (row as unknown as Record<string, unknown>)[columnKey]
-    const key = rawKey == null ? "__ungrouped__" : String(rawKey)
+    const key = rawKey == undefined ? "__ungrouped__" : String(rawKey)
     if (!groups[key]) {
       groups[key] = []
     }
-    groups[key]!.push(row)
+    groups[key].push(row)
     return groups
   }, {})
 }

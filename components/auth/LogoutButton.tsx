@@ -6,12 +6,12 @@ import { useState } from "react"
 
 import { useSupabase } from "@/components/supabase/SupabaseProvider"
 
-type LogoutButtonProps = {
+type LogoutButtonProperties = {
   variant?: "text" | "icon"
   className?: string
 }
 
-export function LogoutButton({ variant = "text", className }: LogoutButtonProps) {
+export function LogoutButton({ variant = "text", className }: LogoutButtonProperties) {
   const { supabase } = useSupabase()
   const [isSigningOut, setIsSigningOut] = useState(false)
 

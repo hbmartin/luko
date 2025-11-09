@@ -4,14 +4,14 @@ import { DistributionChart } from "@/components/notebook/charts/DistributionChar
 import { FormulaEditor } from "@/components/notebook/FormulaEditor"
 import { Formula, Metric, Notebook } from "@/lib/types/notebook"
 
-interface MetricDetailPanelProps {
+interface MetricDetailPanelProperties {
   notebook: Notebook
   metric: Metric | null
   formula?: Formula | null
   onFormulaChange?: (formulaId: string, expression: string) => void
 }
 
-export function MetricDetailPanel({ notebook, metric, formula = null, onFormulaChange }: MetricDetailPanelProps) {
+export function MetricDetailPanel({ notebook, metric, formula = null, onFormulaChange }: MetricDetailPanelProperties) {
   const distribution = metric?.distribution ?? null
   const metricValidationFields = metric?.validation?.fields ?? {}
 

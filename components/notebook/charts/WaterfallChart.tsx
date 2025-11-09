@@ -9,11 +9,11 @@ interface CategoryContribution {
   percentage: number
 }
 
-interface WaterfallChartProps {
+interface WaterfallChartProperties {
   data: CategoryContribution[]
 }
 
-export function WaterfallChart({ data }: WaterfallChartProps) {
+export function WaterfallChart({ data }: WaterfallChartProperties) {
   const width = 600
   const height = 400
   const padding = { top: 20, right: 40, bottom: 120, left: 80 }
@@ -106,8 +106,8 @@ export function WaterfallChart({ data }: WaterfallChartProps) {
 
         {/* Bars and connectors */}
         <g transform={`translate(${padding.left}, ${padding.top})`}>
-          {waterfallData.map((item, i) => {
-            const x = xScale(i)
+          {waterfallData.map((item, index) => {
+            const x = xScale(index)
             const barW = barWidth * 0.7
             const y1 = yScale(item.start)
             const y2 = yScale(item.end)
@@ -118,12 +118,12 @@ export function WaterfallChart({ data }: WaterfallChartProps) {
             const color = isTotal ? "#1e40af" : item.isPositive ? "#10b981" : "#ef4444"
 
             return (
-              <g key={i}>
+              <g key={index}>
                 {/* Connector line to previous bar */}
-                {i > 0 && !isTotal && (
+                {index > 0 && !isTotal && (
                   <line
-                    x1={xScale(i - 1) + barW / 2}
-                    y1={yScale(waterfallData[i - 1]!.end)}
+                    x1={xScale(index - 1) + barW / 2}
+                    y1={yScale(waterfallData[index - 1]!.end)}
                     x2={x - barW / 2}
                     y2={yScale(item.start)}
                     stroke="#9ca3af"
@@ -148,7 +148,7 @@ export function WaterfallChart({ data }: WaterfallChartProps) {
                   transform={`rotate(-45, ${x}, ${chartHeight + 10})`}
                   className="fill-gray-600 text-xs"
                 >
-                  {item.categoryName.length > 25 ? item.categoryName.substring(0, 25) + "..." : item.categoryName}
+                  {item.categoryName.length > 25 ? item.categoryName.slice(0, 25) + "..." : item.categoryName}
                 </text>
               </g>
             )

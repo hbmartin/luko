@@ -12,9 +12,9 @@ export async function createServerSupabaseClient() {
         return cookieStore.getAll()
       },
       setAll(cookiesToSet) {
-        cookiesToSet.forEach(({ name, value, options }) => {
-          cookieStore.set({ name, value, ...(options ?? {}) })
-        })
+        for (const { name, value, options } of cookiesToSet) {
+          cookieStore.set({ name, value, ...options })
+        }
       },
     },
   })

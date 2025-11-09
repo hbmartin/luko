@@ -1,12 +1,12 @@
 "use client"
 
-interface PaybackChartProps {
+interface PaybackChartProperties {
   paybackPeriod: {
     p50: number // in months
   }
 }
 
-export function PaybackChart({ paybackPeriod }: PaybackChartProps) {
+export function PaybackChart({ paybackPeriod }: PaybackChartProperties) {
   const width = 600
   const height = 300
   const padding = { top: 40, right: 40, bottom: 60, left: 60 }
@@ -15,7 +15,7 @@ export function PaybackChart({ paybackPeriod }: PaybackChartProps) {
 
   // Generate mock distribution data around the median
   // In a real implementation, this would come from the simulation
-  const months = Array.from({ length: 24 }, (_, i) => i + 1)
+  const months = Array.from({ length: 24 }, (_, index) => index + 1)
   const median = paybackPeriod.p50
 
   // Create a normal-ish distribution around the median
@@ -40,10 +40,10 @@ export function PaybackChart({ paybackPeriod }: PaybackChartProps) {
   })
 
   const cumulativePath = cumulativeData
-    .map((d, i) => {
-      const x = xScale(i) + barWidth / 2
+    .map((d, index) => {
+      const x = xScale(index) + barWidth / 2
       const y = chartHeight - d.cumulative * chartHeight
-      return i === 0 ? `M ${x},${y}` : `L ${x},${y}`
+      return index === 0 ? `M ${x},${y}` : `L ${x},${y}`
     })
     .join(" ")
 
@@ -80,14 +80,14 @@ export function PaybackChart({ paybackPeriod }: PaybackChartProps) {
 
         {/* Bars (histogram) */}
         <g transform={`translate(${padding.left}, ${padding.top})`}>
-          {distribution.map((d, i) => {
-            const x = xScale(i)
+          {distribution.map((d, index) => {
+            const x = xScale(index)
             const barH = chartHeight - yScale(d.probability)
             const isMedian = Math.abs(d.month - median) < 0.5
 
             return (
               <rect
-                key={i}
+                key={index}
                 x={x}
                 y={yScale(d.probability)}
                 width={barWidth * 0.9}

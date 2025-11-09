@@ -70,7 +70,6 @@ const config = typescriptEslint.config(
   eslintPluginUnicorn.configs.all,
   pluginPromise.configs["flat/recommended"],
   eslintPluginSecurity.configs.recommended,
-  reactPerfPlugin.configs.flat.all,
   reactRefresh.configs.recommended,
   {
     plugins: {
@@ -82,6 +81,9 @@ const config = typescriptEslint.config(
     rules: {
       ...eslintPluginNext.configs.recommended.rules,
       ...eslintPluginNext.configs["core-web-vitals"].rules,
+      "unused-imports/no-unused-imports": "error",
+      "unused-imports/no-unused-vars": "error",
+      "@typescript-eslint/no-unnecessary-condition": "off",
     },
   },
   {

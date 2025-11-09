@@ -82,7 +82,9 @@ export function ExportTab() {
               </label>
               <select
                 value={complexity}
-                onChange={(event) => setComplexity(event.target.value)}
+                onChange={(event) => {
+                  setComplexity(event.target.value)
+                }}
                 className="w-full rounded-md border border-[var(--color-border-soft)] bg-white px-4 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
               >
                 {complexityOptions.map((option) => (
@@ -106,7 +108,9 @@ export function ExportTab() {
                       name="export-format"
                       value={value}
                       checked={format === value}
-                      onChange={(event) => setFormat(event.target.value as typeof format)}
+                      onChange={(event) => {
+                        setFormat(event.target.value as typeof format)
+                      }}
                       className="size-4 text-blue-600 focus:ring-blue-500"
                     />
                     {label}
@@ -123,7 +127,9 @@ export function ExportTab() {
                   <input
                     type="text"
                     value={companyName}
-                    onChange={(event) => setCompanyName(event.target.value)}
+                    onChange={(event) => {
+                      setCompanyName(event.target.value)
+                    }}
                     placeholder="Prospect Inc."
                     className="w-full rounded-md border border-[var(--color-border-soft)] px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
                   />
@@ -134,13 +140,17 @@ export function ExportTab() {
                     <input
                       type="color"
                       value={primaryColor}
-                      onChange={(event) => setPrimaryColor(event.target.value)}
+                      onChange={(event) => {
+                        setPrimaryColor(event.target.value)
+                      }}
                       className="size-10 rounded border border-[var(--color-border-soft)]"
                     />
                     <input
                       type="text"
                       value={primaryColor}
-                      onChange={(event) => setPrimaryColor(event.target.value)}
+                      onChange={(event) => {
+                        setPrimaryColor(event.target.value)
+                      }}
                       className="flex-1 rounded-md border border-[var(--color-border-soft)] px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
                     />
                   </div>
@@ -157,7 +167,9 @@ export function ExportTab() {
                   <input
                     type="checkbox"
                     checked={options.methodology}
-                    onChange={(event) => setOptions((prev) => ({ ...prev, methodology: event.target.checked }))}
+                    onChange={(event) => {
+                      setOptions((previous) => ({ ...previous, methodology: event.target.checked }))
+                    }}
                     className="size-4 rounded text-blue-600 focus:ring-blue-500"
                   />
                   Include methodology section
@@ -166,7 +178,9 @@ export function ExportTab() {
                   <input
                     type="checkbox"
                     checked={options.citations}
-                    onChange={(event) => setOptions((prev) => ({ ...prev, citations: event.target.checked }))}
+                    onChange={(event) => {
+                      setOptions((previous) => ({ ...previous, citations: event.target.checked }))
+                    }}
                     className="size-4 rounded text-blue-600 focus:ring-blue-500"
                   />
                   Include assumption citations
@@ -175,7 +189,9 @@ export function ExportTab() {
                   <input
                     type="checkbox"
                     checked={options.rawTables}
-                    onChange={(event) => setOptions((prev) => ({ ...prev, rawTables: event.target.checked }))}
+                    onChange={(event) => {
+                      setOptions((previous) => ({ ...previous, rawTables: event.target.checked }))
+                    }}
                     className="size-4 rounded text-blue-600 focus:ring-blue-500"
                   />
                   Include raw data tables

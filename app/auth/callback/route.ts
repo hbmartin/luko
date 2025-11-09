@@ -46,8 +46,8 @@ export async function POST(request: Request) {
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url)
   const code = requestUrl.searchParams.get("code")
-  const nextParam = requestUrl.searchParams.get("next")
-  const next = nextParam && nextParam.startsWith("/") && !nextParam.startsWith("//") ? nextParam : "/"
+  const nextParameter = requestUrl.searchParams.get("next")
+  const next = nextParameter && nextParameter.startsWith("/") && !nextParameter.startsWith("//") ? nextParameter : "/"
 
   if (code) {
     const supabase = await createServerSupabaseClient()

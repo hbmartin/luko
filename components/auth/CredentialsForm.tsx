@@ -18,13 +18,13 @@ type FeedbackMessage = {
   message: string
 }
 
-type CredentialsFormProps = {
+type CredentialsFormProperties = {
   submitLabel: string
   submittingLabel: string
   onSubmit: (credentials: Credentials) => Promise<CredentialsFormResult | void>
 }
 
-export function CredentialsForm({ submitLabel, submittingLabel, onSubmit }: CredentialsFormProps) {
+export function CredentialsForm({ submitLabel, submittingLabel, onSubmit }: CredentialsFormProperties) {
   const [feedbackMessage, setFeedbackMessage] = useState<FeedbackMessage | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -80,7 +80,9 @@ export function CredentialsForm({ submitLabel, submittingLabel, onSubmit }: Cred
   return (
     <div className="space-y-6">
       <MicrosoftSignInButton
-        onErrorChange={(message) => setFeedbackMessage(message ? { type: "error", message } : null)}
+        onErrorChange={(message) => {
+          setFeedbackMessage(message ? { type: "error", message } : null)
+        }}
       />
 
       <div className="flex items-center gap-2 text-xs font-semibold tracking-wide text-[var(--color-text-muted)] uppercase">

@@ -51,8 +51,8 @@ export function NotebookProvider({
   }, [])
 
   const handleRenameScenario = (scenarioId: string, name: string) => {
-    setScenarios((prev) =>
-      prev.map((scenario) => (scenario.id === scenarioId ? { ...scenario, name: name || scenario.name } : scenario))
+    setScenarios((previous) =>
+      previous.map((scenario) => (scenario.id === scenarioId ? { ...scenario, name: name || scenario.name } : scenario))
     )
   }
 
@@ -63,8 +63,8 @@ export function NotebookProvider({
   useEffect(() => {
     if (typeof document === "undefined") return
     const root = document.documentElement
-    root.setAttribute("data-theme", theme)
-    root.setAttribute("data-density", density)
+    root.dataset.theme = theme
+    root.dataset.density = density
   }, [theme, density])
 
   const handleRunSimulation = useCallback(async () => {
@@ -82,19 +82,19 @@ export function NotebookProvider({
 
     setSimulationResult(augmentedResult)
     const scenarioId = `scenario-${Date.now()}`
-    setScenarios((prev) => {
+    setScenarios((previous) => {
       const scenario: Scenario = {
         id: scenarioId,
-        name: `Scenario ${prev.length + 1}`,
+        name: `Scenario ${previous.length + 1}`,
         result: augmentedResult,
         createdAt: augmentedResult.metadata.timestamp,
       }
       setActiveScenarioId(scenarioId)
-      return [...prev, scenario]
+      return [...previous, scenario]
     })
-    setNotebookState((prev) =>
+    setNotebookState((previous) =>
       applyNotebookValidations({
-        ...prev,
+        ...previous,
         isDirty: false,
         dirtyMetrics: [],
         dirtyFormulas: [],

@@ -5,7 +5,7 @@ import { Mention, type MentionDataItem, MentionsInput } from "react-mentions-ts"
 import type { Formula, Notebook } from "@/lib/types/notebook"
 import { buildFormulaMarkup } from "./utils/formulaMarkup"
 
-type FormulaEditorSingleLineProps = {
+type FormulaEditorSingleLineProperties = {
   notebook: Notebook
   formulaId: Formula["id"] | null
   className?: string
@@ -21,7 +21,7 @@ export type MetricMentionExtra = {
 
 export type MetricMentionItem = MentionDataItem<MetricMentionExtra>
 
-export function FormulaEditorSingleLine({ notebook, formulaId, className }: FormulaEditorSingleLineProps) {
+export function FormulaEditorSingleLine({ notebook, formulaId, className }: FormulaEditorSingleLineProperties) {
   const mentionOptions = useMemo<MetricMentionItem[]>(() => {
     const sortedCategories = [...notebook.categories].sort((a, b) => a.order - b.order)
     return sortedCategories.flatMap((category) => {

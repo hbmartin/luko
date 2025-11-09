@@ -10,18 +10,18 @@ export function notebookToGridRows(notebook: Notebook): GridRow[] {
   // Sort categories by order
   const sortedCategories = [...notebook.categories].sort((a, b) => a.order - b.order)
 
-  sortedCategories.forEach((category) => {
+  for (const category of sortedCategories) {
     const categoryMetrics = notebook.metrics.filter((m) => m.categoryId === category.id)
 
-    categoryMetrics.forEach((metric) => {
+    for (const metric of categoryMetrics) {
       rows.push(metricToGridRow(metric, notebook.dirtyMetrics))
-    })
+    }
 
     const categoryFormulas = notebook.formulas.filter((formula) => formula.categoryId === category.id)
-    categoryFormulas.forEach((formula) => {
+    for (const formula of categoryFormulas) {
       rows.push(formulaToGridRow(formula, notebook.dirtyFormulas))
-    })
-  })
+    }
+  }
 
   return rows
 }
