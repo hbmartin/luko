@@ -66,7 +66,7 @@
     "react-dom": "19.2.0",
     "react-is": "^19.2.0",
     "react-mentions-ts": "^5.4.5",
-    "recharts": "^3.3.0",
+    "recharts": "^3.4.1",
     "tailwind-merge": "^3.4.0",
     "zod": "^4.1.12"
   },
