@@ -84,6 +84,7 @@ const config = typescriptEslint.config(
       "unused-imports/no-unused-imports": "error",
       "unused-imports/no-unused-vars": "error",
       "@typescript-eslint/no-unnecessary-condition": "off",
+      "unicorn/no-array-callback-reference": "off",
     },
   },
   {
@@ -107,6 +108,7 @@ const config = typescriptEslint.config(
       },
     },
     rules: {
+      "unicorn/no-array-reduce": "off",
       "sort-imports": [
         "error",
         {

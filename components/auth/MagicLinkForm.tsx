@@ -16,6 +16,7 @@ export function MagicLinkForm({ submitLabel = "Sign in", submittingLabel = "Sign
   const { supabase } = useSupabase()
 
   const handleCredentials = async ({ email }: { email: string }) => {
+    console.log("handleCredentials", AUTH_CALLBACK_URL)
     const { error, data } = await supabase.auth.signInWithOtp({
       email,
       options: { emailRedirectTo: AUTH_CALLBACK_URL },

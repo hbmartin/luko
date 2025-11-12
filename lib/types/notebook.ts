@@ -248,6 +248,7 @@ export type GridRow = MetricRow | CategoryRow | FormulaRow
 export interface DirtyState {
   metricId: string
   oldValue: Distribution | number
+  // eslint-disable-next-line unicorn/no-keyword-prefix
   newValue: Distribution | number
   timestamp: string
 }

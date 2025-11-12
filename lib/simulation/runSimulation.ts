@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-non-null-assertion */
+
 import { compileMetricFormulas, evaluateFormulas } from "@/lib/formulas"
 import { Metric, Notebook, SimulationResult } from "@/lib/types/notebook"
 
@@ -50,7 +52,7 @@ const samplePert = (min: number, mode: number, max: number): number => {
 
 const quantile = (values: number[], q: number): number => {
   if (values.length === 0) return 0
-  const sorted = [...values].sort((a, b) => a - b)
+  const sorted = values.toSorted((a, b) => a - b)
   const index = (sorted.length - 1) * q
   const lower = Math.floor(index)
   const upper = Math.ceil(index)
@@ -97,6 +99,7 @@ interface MetricSampleTrack {
   values: number[]
 }
 
+// eslint-disable-next-line @typescript-eslint/require-await
 export async function runSimulation(
   notebook: Notebook,
   iterations: number = DEFAULT_ITERATIONS
@@ -177,7 +180,7 @@ export async function runSimulation(
       metricName: metric.name,
       impact: correlation(values, npvSamples),
     }))
-    .sort((a, b) => Math.abs(b.impact) - Math.abs(a.impact))
+    .toSorted((a, b) => Math.abs(b.impact) - Math.abs(a.impact))
     .slice(0, 8)
 
   const categoryContributions = notebook.categories.map((category) => {

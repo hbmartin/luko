@@ -8,7 +8,7 @@ export function notebookToGridRows(notebook: Notebook): GridRow[] {
   const rows: GridRow[] = []
 
   // Sort categories by order
-  const sortedCategories = [...notebook.categories].sort((a, b) => a.order - b.order)
+  const sortedCategories = notebook.categories.toSorted((a, b) => a.order - b.order)
 
   for (const category of sortedCategories) {
     const categoryMetrics = notebook.metrics.filter((m) => m.categoryId === category.id)
