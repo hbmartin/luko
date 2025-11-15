@@ -5,17 +5,14 @@ import type { ReactNode } from "react"
 
 import { SupabaseListener } from "@/components/supabase/SupabaseListener"
 import { SupabaseProvider } from "@/components/supabase/SupabaseProvider"
-import { createServerSupabaseClient } from "@/lib/supabase/server"
+import { getSessionFromHeaders } from "@/lib/supabase/session"
 
 const lexend = Lexend({
   subsets: ["latin"],
 })
 
-export default async function RootLayout({ children }: { children: ReactNode }) {
-  const supabase = await createServerSupabaseClient()
-  const {
-    data: { session },
-  } = await supabase.auth.getSession()
+export default function RootLayout({ children }: { children: ReactNode }) {
+  const session = getSessionFromHeaders()
 
   return (
     <html lang="en" className={lexend.className}>
