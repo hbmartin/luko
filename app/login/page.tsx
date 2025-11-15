@@ -2,7 +2,7 @@ import type { Metadata } from "next"
 import { redirect } from "next/navigation"
 
 import { MagicLinkForm } from "@/components/auth/MagicLinkForm"
-import { createServerSupabaseClient } from "@/lib/supabase/server"
+import { getSessionFromHeaders } from "@/lib/supabase/session"
 
 export const metadata: Metadata = {
   title: "Sign in",
@@ -14,11 +14,8 @@ type LoginPageProperties = {
   }
 }
 
-export default async function LoginPage({ searchParams }: LoginPageProperties) {
-  const supabase = await createServerSupabaseClient()
-  const {
-    data: { session },
-  } = await supabase.auth.getSession()
+export default function LoginPage({ searchParams }: LoginPageProperties) {
+  const session = getSessionFromHeaders()
 
   if (session) {
     redirect("/")

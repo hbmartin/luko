@@ -1,13 +1,10 @@
 import { redirect } from "next/navigation"
 import type { ReactNode } from "react"
 
-import { createServerSupabaseClient } from "@/lib/supabase/server"
+import { getSessionFromHeaders } from "@/lib/supabase/session"
 
-export default async function ProtectedLayout({ children }: { children: ReactNode }) {
-  const supabase = await createServerSupabaseClient()
-  const {
-    data: { session },
-  } = await supabase.auth.getSession()
+export default function ProtectedLayout({ children }: { children: ReactNode }) {
+  const session = getSessionFromHeaders()
 
   if (!session) {
     redirect("/login")
