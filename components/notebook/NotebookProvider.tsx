@@ -61,6 +61,33 @@ export function NotebookProvider({
   }, [notebook.name])
 
   useEffect(() => {
+    if (typeof window === "undefined") {
+      return
+    }
+
+    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)")
+    const applySystemTheme = (event: MediaQueryList | MediaQueryListEvent) => {
+      setTheme(event.matches ? "dark" : "light")
+    }
+
+    applySystemTheme(mediaQuery)
+
+    if (typeof mediaQuery.addEventListener === "function") {
+      mediaQuery.addEventListener("change", applySystemTheme)
+    } else if (typeof mediaQuery.addListener === "function") {
+      mediaQuery.addListener(applySystemTheme)
+    }
+
+    return () => {
+      if (typeof mediaQuery.removeEventListener === "function") {
+        mediaQuery.removeEventListener("change", applySystemTheme)
+      } else if (typeof mediaQuery.removeListener === "function") {
+        mediaQuery.removeListener(applySystemTheme)
+      }
+    }
+  }, [])
+
+  useEffect(() => {
     if (typeof document === "undefined") return
     const root = document.documentElement
     root.dataset.theme = theme
