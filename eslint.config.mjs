@@ -109,6 +109,7 @@ const config = typescriptEslint.config(
     },
     rules: {
       "unicorn/no-array-reduce": "off",
+      "unicorn/prefer-string-raw": "off",
       "sort-imports": [
         "error",
         {

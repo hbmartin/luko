@@ -1,22 +1,40 @@
-"use client"
+import { Metadata } from "next"
+import type { ReactNode } from "react"
 
-import { use } from "react"
 import { NotebookHeader } from "@/components/notebook/NotebookHeader"
 import { NotebookProvider } from "@/components/notebook/NotebookProvider"
 import { mockNotebook } from "@/lib/mock-data"
 
-export default function NotebookLayout({
-  children,
-  params,
-}: {
-  children: React.ReactNode
+type NotebookLayoutParameters = {
   params: Promise<{ id: string }>
-}) {
-  const unwrappedParameters = use(params)
+}
+
+type NotebookLayoutProperties = NotebookLayoutParameters & {
+  children: ReactNode
+}
+
+async function loadNotebook(_notebookId: string) {
+  // TODO: Load real notebook data once backend is wired up
+  return mockNotebook
+}
+
+export async function generateMetadata({ params }: NotebookLayoutParameters): Promise<Metadata> {
+  const { id } = await params
+  const notebook = await loadNotebook(id)
+
+  return {
+    title: `Luko - ${notebook.name}`,
+    description: notebook.description,
+  }
+}
+
+export default async function NotebookLayout({ children, params }: NotebookLayoutProperties) {
+  const { id } = await params
+  const notebook = await loadNotebook(id)
 
   return (
-    <NotebookProvider notebook={mockNotebook}>
-      <NotebookHeader notebookId={unwrappedParameters.id} />
+    <NotebookProvider notebook={notebook}>
+      <NotebookHeader notebookId={id} />
       <main className="absolute top-32 right-0 bottom-0 left-0 mx-auto flex flex-col px-[var(--space-500)] py-[var(--space-500)]">
         {children}
       </main>
