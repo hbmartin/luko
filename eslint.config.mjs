@@ -110,6 +110,10 @@ const config = typescriptEslint.config(
     rules: {
       "unicorn/no-array-reduce": "off",
       "unicorn/prefer-string-raw": "off",
+      "react-refresh/only-export-components": [
+        "error",
+        { allowExportNames: ["generateMetadata", "generateStaticParams"] },
+      ],
       "sort-imports": [
         "error",
         {
