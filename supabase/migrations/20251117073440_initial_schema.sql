@@ -13,6 +13,170 @@ begin
 end;
 $$;
 
+create or replace function public.is_notebook_member(p_notebook_id uuid)
+returns boolean
+language sql
+stable
+security invoker
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.notebooks n
+    where n.id = p_notebook_id
+      and (
+        n.owner_id = auth.uid()
+        or exists (
+          select 1
+          from public.notebook_collaborators nc
+          where nc.notebook_id = n.id
+            and nc.user_id = auth.uid()
+        )
+      )
+  );
+$$;
+
+create or replace function public.is_org_member(p_org_id uuid)
+returns boolean
+language sql
+stable
+security invoker
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.organization_members om
+    where om.organization_id = p_org_id
+      and om.user_id = auth.uid()
+      and om.status = 'accepted'
+  );
+$$;
+
+create or replace function public.is_org_admin(p_org_id uuid)
+returns boolean
+language sql
+stable
+security invoker
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.organization_members om
+    where om.organization_id = p_org_id
+      and om.user_id = auth.uid()
+      and om.status = 'accepted'
+      and om.role = 'admin'
+  );
+$$;
+
+create or replace function public.is_notebook_owner(p_notebook_id uuid)
+returns boolean
+language sql
+stable
+security invoker
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.notebooks n
+    where n.id = p_notebook_id
+      and n.owner_id = auth.uid()
+  );
+$$;
+
+create or replace function public.is_notebook_editor(p_notebook_id uuid)
+returns boolean
+language sql
+stable
+security invoker
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.notebooks n
+    where n.id = p_notebook_id
+      and (
+        n.owner_id = auth.uid()
+        or exists (
+          select 1
+          from public.notebook_collaborators nc
+          where nc.notebook_id = n.id
+            and nc.user_id = auth.uid()
+            and nc.permission in ('owner','editor')
+        )
+      )
+  );
+$$;
+
+create or replace function public.can_manage_notebook_collaborators(p_notebook_id uuid)
+returns boolean
+language sql
+stable
+security invoker
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.notebooks n
+    where n.id = p_notebook_id
+      and (
+        n.owner_id = auth.uid()
+        or exists (
+          select 1
+          from public.notebook_collaborators nc
+          where nc.notebook_id = n.id
+            and nc.user_id = auth.uid()
+            and nc.permission = 'owner'
+        )
+      )
+  );
+$$;
+
+create or replace function public.is_branch_member(p_branch_id uuid)
+returns boolean
+language sql
+stable
+security invoker
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.notebook_branches nb
+    where nb.id = p_branch_id
+      and public.is_notebook_member(nb.notebook_id)
+  );
+$$;
+
+create or replace function public.is_branch_editor(p_branch_id uuid)
+returns boolean
+language sql
+stable
+security invoker
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.notebook_branches nb
+    where nb.id = p_branch_id
+      and public.is_notebook_editor(nb.notebook_id)
+  );
+$$;
+
+create or replace function public.can_manage_branch(p_branch_id uuid)
+returns boolean
+language sql
+stable
+security invoker
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.notebook_branches nb
+    where nb.id = p_branch_id
+      and public.can_manage_notebook_collaborators(nb.notebook_id)
+  );
+$$;
+
 -- Domain enums ---------------------------------------------------------------
 create type public.org_role as enum ('admin', 'modeler', 'viewer');
 create type public.membership_status as enum ('invited', 'accepted', 'suspended');
@@ -165,14 +329,6 @@ create table public.notebook_branches (
   merged_at timestamptz
 );
 
-create table public.branch_snapshots (
-  id uuid primary key default gen_random_uuid(),
-  branch_id uuid not null references public.notebook_branches on delete cascade,
-  base_simulation_id uuid references public.simulations on delete set null,
-  diff jsonb not null,
-  created_at timestamptz not null default now()
-);
-
 -- Activity, change log, simulations -----------------------------------------
 create table public.changes_log (
   id uuid primary key default gen_random_uuid(),
@@ -207,6 +363,14 @@ create table public.simulations (
 alter table public.notebooks
   add constraint notebooks_last_simulation_fk
   foreign key (last_simulation_id) references public.simulations on delete set null;
+
+create table public.branch_snapshots (
+  id uuid primary key default gen_random_uuid(),
+  branch_id uuid not null references public.notebook_branches on delete cascade,
+  base_simulation_id uuid references public.simulations on delete set null,
+  diff jsonb not null,
+  created_at timestamptz not null default now()
+);
 
 -- Indexes -------------------------------------------------------------------
 create index on public.organization_members (user_id);
@@ -285,6 +449,19 @@ create policy org_units_manage on public.organizations
     )
   );
 
+create policy select_org_members_for_members on public.organization_members
+  for select using (public.is_org_member(organization_id));
+
+create policy insert_org_members_for_admins on public.organization_members
+  for insert with check (public.is_org_admin(organization_id));
+
+create policy update_org_members_for_admins on public.organization_members
+  for update using (public.is_org_admin(organization_id))
+  with check (public.is_org_admin(organization_id));
+
+create policy delete_org_members_for_admins on public.organization_members
+  for delete using (public.is_org_admin(organization_id));
+
 create policy notebook_access on public.notebooks
   for select using (
     owner_id = auth.uid()
@@ -305,72 +482,85 @@ create policy notebook_access on public.notebooks
     )
   );
 
-create policy notebook_children_access on public.notebook_categories
-  for select using (
-    exists (
-      select 1 from public.notebooks n
-      where n.id = public.notebook_categories.notebook_id
-        and (n.owner_id = auth.uid()
-             or exists (
-               select 1 from public.notebook_collaborators nc
-               where nc.notebook_id = n.id
-                 and nc.user_id = auth.uid()
-             ))
+create policy insert_notebooks_for_owner on public.notebooks
+  for insert with check (
+    owner_id = auth.uid()
+    and (
+      organization_id is null
+      or public.is_org_member(organization_id)
     )
   );
 
-create policy notebook_children_access on public.notebook_metrics
-  for select using (
-    exists (
-      select 1 from public.notebooks n
-      where n.id = public.notebook_metrics.notebook_id
-        and (n.owner_id = auth.uid()
-             or exists (
-               select 1 from public.notebook_collaborators nc
-               where nc.notebook_id = n.id
-                 and nc.user_id = auth.uid()
-             ))
-    )
-  );
+create policy update_notebooks_for_editors on public.notebooks
+  for update using (public.is_notebook_editor(id))
+  with check (public.is_notebook_editor(id));
 
-create policy notebook_children_access on public.notebook_formulas
-  for select using (
-    exists (
-      select 1 from public.notebooks n
-      where n.id = public.notebook_formulas.notebook_id
-        and (n.owner_id = auth.uid()
-             or exists (
-               select 1 from public.notebook_collaborators nc
-               where nc.notebook_id = n.id
-                 and nc.user_id = auth.uid()
-             ))
-    )
-  );
+create policy delete_notebooks_for_managers on public.notebooks
+  for delete using (public.can_manage_notebook_collaborators(id));
 
-create policy notebook_audit_access on public.changes_log
-  for select using (
-    exists (
-      select 1 from public.notebooks n
-      where n.id = public.changes_log.notebook_id
-        and (n.owner_id = auth.uid()
-             or exists (
-               select 1 from public.notebook_collaborators nc
-               where nc.notebook_id = n.id
-                 and nc.user_id = auth.uid()
-             ))
-    )
-  );
+create policy select_notebook_categories_for_members on public.notebook_categories
+  for select using (public.is_notebook_member(notebook_id));
 
-create policy simulations_access on public.simulations
-  for select using (
-    exists (
-      select 1 from public.notebooks n
-      where n.id = public.simulations.notebook_id
-        and (n.owner_id = auth.uid()
-             or exists (
-               select 1 from public.notebook_collaborators nc
-               where nc.notebook_id = n.id
-                 and nc.user_id = auth.uid()
-             ))
-    )
-  );
+create policy select_notebook_metrics_for_members on public.notebook_metrics
+  for select using (public.is_notebook_member(notebook_id));
+
+create policy select_notebook_formulas_for_members on public.notebook_formulas
+  for select using (public.is_notebook_member(notebook_id));
+
+create policy select_notebook_collaborators_for_members on public.notebook_collaborators
+  for select using (public.is_notebook_member(notebook_id));
+
+create policy insert_notebook_collaborators_for_managers on public.notebook_collaborators
+  for insert with check (public.can_manage_notebook_collaborators(notebook_id));
+
+create policy update_notebook_collaborators_for_managers on public.notebook_collaborators
+  for update using (public.can_manage_notebook_collaborators(notebook_id))
+  with check (public.can_manage_notebook_collaborators(notebook_id));
+
+create policy delete_notebook_collaborators_for_managers on public.notebook_collaborators
+  for delete using (public.can_manage_notebook_collaborators(notebook_id));
+
+create policy select_notebook_invites_for_managers on public.notebook_invites
+  for select using (public.can_manage_notebook_collaborators(notebook_id));
+
+create policy insert_notebook_invites_for_managers on public.notebook_invites
+  for insert with check (public.can_manage_notebook_collaborators(notebook_id));
+
+create policy update_notebook_invites_for_managers on public.notebook_invites
+  for update using (public.can_manage_notebook_collaborators(notebook_id))
+  with check (public.can_manage_notebook_collaborators(notebook_id));
+
+create policy delete_notebook_invites_for_managers on public.notebook_invites
+  for delete using (public.can_manage_notebook_collaborators(notebook_id));
+
+create policy select_notebook_branches_for_members on public.notebook_branches
+  for select using (public.is_notebook_member(notebook_id));
+
+create policy insert_notebook_branches_for_editors on public.notebook_branches
+  for insert with check (public.is_notebook_editor(notebook_id));
+
+create policy update_notebook_branches_for_editors on public.notebook_branches
+  for update using (public.is_notebook_editor(notebook_id))
+  with check (public.is_notebook_editor(notebook_id));
+
+create policy delete_notebook_branches_for_managers on public.notebook_branches
+  for delete using (public.can_manage_notebook_collaborators(notebook_id));
+
+create policy select_branch_snapshots_for_members on public.branch_snapshots
+  for select using (public.is_branch_member(branch_id));
+
+create policy insert_branch_snapshots_for_editors on public.branch_snapshots
+  for insert with check (public.is_branch_editor(branch_id));
+
+create policy update_branch_snapshots_for_editors on public.branch_snapshots
+  for update using (public.is_branch_editor(branch_id))
+  with check (public.is_branch_editor(branch_id));
+
+create policy delete_branch_snapshots_for_managers on public.branch_snapshots
+  for delete using (public.can_manage_branch(branch_id));
+
+create policy select_changes_log_for_members on public.changes_log
+  for select using (public.is_notebook_member(notebook_id));
+
+create policy select_simulations_for_members on public.simulations
+  for select using (public.is_notebook_member(notebook_id));
