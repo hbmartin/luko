@@ -5,5 +5,6 @@ declare module "@/env.mjs" {
     NEXT_PUBLIC_VERCEL_URL: string
     NEXT_PUBLIC_SITE_URL?: string
     ANALYZE?: boolean
+    SUPABASE_DB_URL: string
   }
 }
