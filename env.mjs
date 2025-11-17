@@ -10,6 +10,14 @@ const normalizedUrl = z.preprocess((value) => {
   return value.startsWith("http://") || value.startsWith("https://") ? value : `https://${value}`
 }, z.string().url())
 
+const postgresUrl = z
+  .string()
+  .min(1)
+  .refine(
+    (value) => value.startsWith("postgres://") || value.startsWith("postgresql://"),
+    "SUPABASE_DB_URL must be a valid Postgres connection string."
+  )
+
 export const env = createEnv({
   server: {
     NEXT_PUBLIC_SUPABASE_URL: z.string().url(),
@@ -20,6 +28,7 @@ export const env = createEnv({
       .enum(["true", "false"])
       .optional()
       .transform((value) => value === "true"),
+    SUPABASE_DB_URL: postgresUrl,
   },
   client: {
     NEXT_PUBLIC_SUPABASE_URL: z.string().url(),
@@ -33,5 +42,6 @@ export const env = createEnv({
     NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
     NEXT_PUBLIC_VERCEL_URL: process.env.NEXT_PUBLIC_VERCEL_URL,
     NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL,
+    SUPABASE_DB_URL: process.env.SUPABASE_DB_URL,
   },
 })
