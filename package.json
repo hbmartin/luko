@@ -20,7 +20,8 @@
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "postinstall": "npx patch-package -y",
     "coupling-graph": "npx madge --extensions js,jsx,ts,tsx,css,md,mdx ./ --exclude '.next|tailwind.config.js|reset.d.ts|prettier.config.js|postcss.config.js|playwright.config.ts|next.config.js|next-env.d.ts|instrumentation.ts|e2e/|README.md|.eslintrc.js' --image graph.svg",
-    "prepare": "husky"
+    "prepare": "husky",
+    "db:pull": "drizzle-kit pull && mv ./drizzle/*.ts ./lib/db"
   },
   "dependencies": {
     "@next/bundle-analyzer": "16.0.3",

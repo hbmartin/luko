@@ -27,6 +27,9 @@ const eslintIgnore = [
   "*.min.js",
   "*.config.js",
   "*.d.ts",
+  "drizzle/",
+  "lib/db/schema.ts",
+  "lib/db/relations.ts",
 ]
 
 const tsconfigRootDir = path.dirname(fileURLToPath(import.meta.url))
