@@ -21,18 +21,11 @@ security invoker
 set search_path = public
 as $$
   select exists (
-    select 1
-    from public.notebooks n
-    where n.id = p_notebook_id
-      and (
-        n.owner_id = auth.uid()
-        or exists (
-          select 1
-          from public.notebook_collaborators nc
-          where nc.notebook_id = n.id
-            and nc.user_id = auth.uid()
-        )
-      )
+    select 1 from public.notebooks
+    where id = p_notebook_id and owner_id = auth.uid()
+  ) or exists (
+    select 1 from public.notebook_collaborators
+    where notebook_id = p_notebook_id and user_id = auth.uid()
   );
 $$;
 
@@ -92,19 +85,13 @@ security invoker
 set search_path = public
 as $$
   select exists (
-    select 1
-    from public.notebooks n
-    where n.id = p_notebook_id
-      and (
-        n.owner_id = auth.uid()
-        or exists (
-          select 1
-          from public.notebook_collaborators nc
-          where nc.notebook_id = n.id
-            and nc.user_id = auth.uid()
-            and nc.permission in ('owner','editor')
-        )
-      )
+    select 1 from public.notebooks
+    where id = p_notebook_id and owner_id = auth.uid()
+  ) or exists (
+    select 1 from public.notebook_collaborators
+    where notebook_id = p_notebook_id
+      and user_id = auth.uid()
+      and permission in ('owner','editor')
   );
 $$;
 
@@ -116,19 +103,13 @@ security invoker
 set search_path = public
 as $$
   select exists (
-    select 1
-    from public.notebooks n
-    where n.id = p_notebook_id
-      and (
-        n.owner_id = auth.uid()
-        or exists (
-          select 1
-          from public.notebook_collaborators nc
-          where nc.notebook_id = n.id
-            and nc.user_id = auth.uid()
-            and nc.permission = 'owner'
-        )
-      )
+    select 1 from public.notebooks
+    where id = p_notebook_id and owner_id = auth.uid()
+  ) or exists (
+    select 1 from public.notebook_collaborators
+    where notebook_id = p_notebook_id
+      and user_id = auth.uid()
+      and permission = 'owner'
   );
 $$;
 
@@ -501,14 +482,59 @@ create policy delete_notebooks_for_managers on public.notebooks
 create policy select_notebook_categories_for_members on public.notebook_categories
   for select using (public.is_notebook_member(notebook_id));
 
+create policy insert_notebook_categories_for_editors on public.notebook_categories
+  for insert with check (public.is_notebook_editor(notebook_id));
+
+create policy update_notebook_categories_for_editors on public.notebook_categories
+  for update using (public.is_notebook_editor(notebook_id))
+  with check (public.is_notebook_editor(notebook_id));
+
+create policy delete_notebook_categories_for_editors on public.notebook_categories
+  for delete using (public.is_notebook_editor(notebook_id));
+
 create policy select_notebook_metrics_for_members on public.notebook_metrics
   for select using (public.is_notebook_member(notebook_id));
+
+create policy insert_notebook_metrics_for_editors on public.notebook_metrics
+  for insert with check (public.is_notebook_editor(notebook_id));
+
+create policy update_notebook_metrics_for_editors on public.notebook_metrics
+  for update using (public.is_notebook_editor(notebook_id))
+  with check (public.is_notebook_editor(notebook_id));
+
+create policy delete_notebook_metrics_for_editors on public.notebook_metrics
+  for delete using (public.is_notebook_editor(notebook_id));
 
 create policy select_notebook_formulas_for_members on public.notebook_formulas
   for select using (public.is_notebook_member(notebook_id));
 
+create policy insert_notebook_formulas_for_editors on public.notebook_formulas
+  for insert with check (public.is_notebook_editor(notebook_id));
+
+create policy update_notebook_formulas_for_editors on public.notebook_formulas
+  for update using (public.is_notebook_editor(notebook_id))
+  with check (public.is_notebook_editor(notebook_id));
+
+create policy delete_notebook_formulas_for_editors on public.notebook_formulas
+  for delete using (public.is_notebook_editor(notebook_id));
+
 create policy select_notebook_collaborators_for_members on public.notebook_collaborators
-  for select using (public.is_notebook_member(notebook_id));
+  for select using (
+    exists (
+      select 1
+      from public.notebooks n
+      where n.id = public.notebook_collaborators.notebook_id
+        and (
+          n.owner_id = auth.uid()
+          or exists (
+            select 1
+            from public.notebook_collaborators membership
+            where membership.notebook_id = n.id
+              and membership.user_id = auth.uid()
+          )
+        )
+    )
+  );
 
 create policy insert_notebook_collaborators_for_managers on public.notebook_collaborators
   for insert with check (public.can_manage_notebook_collaborators(notebook_id));
@@ -562,5 +588,11 @@ create policy delete_branch_snapshots_for_managers on public.branch_snapshots
 create policy select_changes_log_for_members on public.changes_log
   for select using (public.is_notebook_member(notebook_id));
 
+create policy insert_changes_log_for_members on public.changes_log
+  for insert with check (public.is_notebook_member(notebook_id));
+
 create policy select_simulations_for_members on public.simulations
   for select using (public.is_notebook_member(notebook_id));
+
+create policy insert_simulations_for_members on public.simulations
+  for insert with check (public.is_notebook_member(notebook_id));
