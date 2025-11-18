@@ -47,6 +47,7 @@ function scopeTypeScriptConfigs(configs) {
           project: ["./tsconfig.json"],
           tsconfigRootDir,
         },
+        globals: globals.node,
       }
     }
 

@@ -9,7 +9,7 @@ import * as schema from "./schema"
 
 type Database = NodePgDatabase<typeof schema>
 
-const globalForDb = globalThis as typeof globalThis & {
+const globalForDatabase = globalThis as typeof globalThis & {
   pgPool?: Pool
   drizzleDb?: Database
 }
@@ -17,26 +17,28 @@ const globalForDb = globalThis as typeof globalThis & {
 const shouldUseSSL = !env.SUPABASE_DB_URL.includes("localhost") && !env.SUPABASE_DB_URL.includes("127.0.0.1")
 
 const pool =
-  globalForDb.pgPool ??
+  globalForDatabase.pgPool ??
   new Pool({
     connectionString: env.SUPABASE_DB_URL,
-    ssl: shouldUseSSL ? { rejectUnauthorized: false } : undefined,
+    ssl: shouldUseSSL ? true : undefined,
   })
 
 if (process.env.NODE_ENV !== "production") {
-  globalForDb.pgPool = pool
+  globalForDatabase.pgPool = pool
 }
 
-const db =
-  globalForDb.drizzleDb ??
+const database =
+  globalForDatabase.drizzleDb ??
   drizzle(pool, {
     schema,
     logger: process.env.NODE_ENV === "development",
   })
 
 if (process.env.NODE_ENV !== "production") {
-  globalForDb.drizzleDb = db
+  globalForDatabase.drizzleDb = database
 }
 
-export { db, pool, schema }
+export { database as db, pool }
 export type { Database }
+
+export * as schema from "./schema"
