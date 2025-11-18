@@ -13,6 +13,8 @@ import {
   integer,
   numeric,
   pgEnum,
+  pgSchema,
+  type PgTableExtraConfigValue,
 } from "drizzle-orm/pg-core"
 import { sql } from "drizzle-orm"
 
@@ -21,6 +23,12 @@ export const membershipStatus = pgEnum("membership_status", ["invited", "accepte
 export const notebookPermission = pgEnum("notebook_permission", ["owner", "editor", "commenter", "viewer"])
 export const orgRole = pgEnum("org_role", ["admin", "modeler", "viewer"])
 export const simulationStatus = pgEnum("simulation_status", ["queued", "running", "succeeded", "failed"])
+
+const authSchema = pgSchema("auth")
+
+export const usersInAuth = authSchema.table("users", {
+  id: uuid("id").primaryKey().notNull(),
+})
 
 export const profiles = pgTable(
   "profiles",
@@ -43,7 +51,7 @@ export const profiles = pgTable(
     }).onDelete("set null"),
     foreignKey({
       columns: [table.userId],
-      foreignColumns: [users.id],
+      foreignColumns: [usersInAuth.id],
       name: "profiles_user_id_fkey",
     }).onDelete("cascade"),
     unique("profiles_handle_key").on(table.handle),
@@ -75,7 +83,7 @@ export const organizations = pgTable(
   (table) => [
     foreignKey({
       columns: [table.createdBy],
-      foreignColumns: [users.id],
+      foreignColumns: [usersInAuth.id],
       name: "organizations_created_by_fkey",
     }).onDelete("set null"),
     unique("organizations_domain_key").on(table.domain),
@@ -100,7 +108,7 @@ export const organizationMembers = pgTable(
     status: membershipStatus().default("invited").notNull(),
     invitedBy: uuid("invited_by"),
     // TODO: failed to parse database type 'citext'
-    invitedEmail: unknown("invited_email"),
+    invitedEmail: text("invited_email"),
     joinedAt: timestamp("joined_at", { withTimezone: true, mode: "string" }),
     createdAt: timestamp("created_at", { withTimezone: true, mode: "string" }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true, mode: "string" }).defaultNow().notNull(),
@@ -152,7 +160,7 @@ export const notebooks = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true, mode: "string" }).defaultNow().notNull(),
     deletedAt: timestamp("deleted_at", { withTimezone: true, mode: "string" }),
   },
-  (table) => [
+  (table): PgTableExtraConfigValue[] => [
     index("notebooks_owner_id_updated_at_idx").using(
       "btree",
       table.ownerId.asc().nullsLast().op("timestamptz_ops"),
@@ -203,7 +211,7 @@ export const notebookCategories = pgTable(
   (table) => [
     index("notebook_categories_notebook_id_order_index_idx").using(
       "btree",
-      table.notebookId.asc().nullsLast().op("int4_ops"),
+      table.notebookId.asc().nullsLast().op("uuid_ops"),
       table.orderIndex.asc().nullsLast().op("int4_ops")
     ),
     foreignKey({
@@ -239,7 +247,7 @@ export const notebookMetrics = pgTable(
     distribution: jsonb(),
     value: numeric(),
     description: text(),
-    tags: text().array().default([""]).notNull(),
+    tags: text().array().default([]).notNull(),
     isLocked: boolean("is_locked").default(false).notNull(),
     orderIndex: integer("order_index").default(0).notNull(),
     version: integer().default(1).notNull(),
@@ -252,8 +260,8 @@ export const notebookMetrics = pgTable(
     index("notebook_metrics_notebook_id_category_id_order_index_idx").using(
       "btree",
       table.notebookId.asc().nullsLast().op("uuid_ops"),
-      table.categoryId.asc().nullsLast().op("int4_ops"),
-      table.orderIndex.asc().nullsLast().op("uuid_ops")
+      table.categoryId.asc().nullsLast().op("uuid_ops"),
+      table.orderIndex.asc().nullsLast().op("int4_ops")
     ),
     foreignKey({
       columns: [table.categoryId],
@@ -296,8 +304,8 @@ export const notebookFormulas = pgTable(
     name: text().notNull(),
     expression: text().notNull(),
     ast: jsonb(),
-    dependentMetrics: uuid("dependent_metrics").array().default([""]).notNull(),
-    dependentFormulas: uuid("dependent_formulas").array().default([""]).notNull(),
+    dependentMetrics: uuid("dependent_metrics").array().default([]).notNull(),
+    dependentFormulas: uuid("dependent_formulas").array().default([]).notNull(),
     version: integer().default(1).notNull(),
     createUserId: uuid("create_user_id"),
     lastUpdatedUserId: uuid("last_updated_user_id"),
@@ -383,7 +391,7 @@ export const notebookInvites = pgTable(
     id: uuid().defaultRandom().primaryKey().notNull(),
     notebookId: uuid("notebook_id").notNull(),
     // TODO: failed to parse database type 'citext'
-    email: unknown("email").notNull(),
+    email: text("email").notNull(),
     permission: notebookPermission().default("viewer").notNull(),
     message: text(),
     invitedBy: uuid("invited_by"),
