@@ -163,7 +163,7 @@ export const notebooks = pgTable(
   (table): PgTableExtraConfigValue[] => [
     index("notebooks_owner_id_updated_at_idx").using(
       "btree",
-      table.ownerId.asc().nullsLast().op("timestamptz_ops"),
+      table.ownerId.asc().nullsLast().op("uuid_ops"),
       table.updatedAt.desc().nullsFirst().op("timestamptz_ops")
     ),
     foreignKey({
