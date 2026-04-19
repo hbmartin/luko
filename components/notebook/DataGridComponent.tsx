@@ -5,15 +5,15 @@ import {
   type CellMouseArgs,
   type CellMouseEvent,
   type CellSelectArgs,
-  Column,
+  type Column,
   type DataGridHandle,
-  RenderCellProps,
-  RenderEditCellProps,
+  type RenderCellProps,
+  type RenderEditCellProps,
   type RenderGroupCellProps,
+  type RowsChangeData,
+  renderTextEditor,
   renderToggleGroup,
   renderValue,
-  type RowsChangeData,
-  textEditor,
   TreeDataGrid,
 } from "react-data-grid"
 import { Button } from "@/components/ui/button"
@@ -199,11 +199,16 @@ export function DataGridComponent({
   )
 
   const safeTextEditor = useCallback((properties: RenderEditCellProps<GridRow>) => {
-    const rowWithIndex = properties.row as GridRow & { [key: string]: unknown }
+    const rowWithIndex = properties.row as GridRow & {
+      [key: string]: unknown
+    }
     const rawValue = rowWithIndex[properties.column.key]
     const normalizedValue = rawValue == undefined ? "" : String(rawValue)
 
-    return textEditor({ ...properties, row: { ...properties.row, [properties.column.key]: normalizedValue } })
+    return renderTextEditor({
+      ...properties,
+      row: { ...properties.row, [properties.column.key]: normalizedValue },
+    })
   }, [])
 
   const columns = useMemo<Column<GridRow>[]>(() => {
@@ -296,7 +301,14 @@ export function DataGridComponent({
           if (isFormulaRow(row)) {
             return <FormulaEditorSingleLine notebook={notebook} formulaId={row.id} />
           }
-          return renderValue({ row, column, onRowChange, rowIdx, tabIndex, isCellEditable: true })
+          return renderValue({
+            row,
+            column,
+            onRowChange,
+            rowIdx,
+            tabIndex,
+            isCellEditable: true,
+          })
         },
         renderEditCell: ({ row, column, onRowChange, rowIdx, onClose }: RenderEditCellProps<GridRow>) => {
           if (isFormulaRow(row)) {
@@ -352,7 +364,10 @@ export function DataGridComponent({
     [highlightedMetricId]
   )
 
-  const lastDetailsTriggerReference = useRef<{ id: string; time: number } | null>(null)
+  const lastDetailsTriggerReference = useRef<{
+    id: string
+    time: number
+  } | null>(null)
 
   const triggerDetails = useCallback(
     (rowId: string) => {
