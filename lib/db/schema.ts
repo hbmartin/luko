@@ -163,7 +163,7 @@ export const notebooks = pgTable(
   (table): PgTableExtraConfigValue[] => [
     index("notebooks_owner_id_updated_at_idx").using(
       "btree",
-      table.ownerId.asc().nullsLast().op("timestamptz_ops"),
+      table.ownerId.asc().nullsLast().op("uuid_ops"),
       table.updatedAt.desc().nullsFirst().op("timestamptz_ops")
     ),
     foreignKey({
@@ -597,3 +597,8 @@ export const simulations = pgTable(
     pgPolicy("select_simulations_for_members", { as: "permissive", for: "select", to: ["public"] }),
   ]
 )
+
+export type NotebookRecord = typeof notebooks.$inferSelect
+export type NotebookCategoryRecord = typeof notebookCategories.$inferSelect
+export type NotebookMetricRecord = typeof notebookMetrics.$inferSelect
+export type NotebookFormulaRecord = typeof notebookFormulas.$inferSelect

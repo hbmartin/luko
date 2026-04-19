@@ -1,9 +1,10 @@
 import { Metadata } from "next"
 import { cache, type ReactNode } from "react"
+import { notFound } from "next/navigation"
 
 import { NotebookHeader } from "@/components/notebook/NotebookHeader"
 import { NotebookProvider } from "@/components/notebook/NotebookProvider"
-import { mockNotebook } from "@/lib/mock-data"
+import { getNotebookById } from "@/lib/notebook/queries"
 import { Notebook } from "@/lib/types/notebook"
 
 type NotebookLayoutParameters = {
@@ -14,9 +15,12 @@ type NotebookLayoutProperties = NotebookLayoutParameters & {
   children: ReactNode
 }
 
-const loadNotebook = cache(async (_notebookId: string): Promise<Notebook> => {
-  // TODO: Load real notebook data once backend is wired up
-  return mockNotebook
+const loadNotebook = cache(async (notebookId: string): Promise<Notebook> => {
+  const notebook = await getNotebookById(notebookId)
+  if (!notebook) {
+    notFound()
+  }
+  return notebook
 })
 
 export async function generateMetadata({ params }: NotebookLayoutParameters): Promise<Metadata> {
