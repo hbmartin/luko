@@ -597,3 +597,8 @@ export const simulations = pgTable(
     pgPolicy("select_simulations_for_members", { as: "permissive", for: "select", to: ["public"] }),
   ]
 )
+
+export type NotebookRecord = typeof notebooks.$inferSelect
+export type NotebookCategoryRecord = typeof notebookCategories.$inferSelect
+export type NotebookMetricRecord = typeof notebookMetrics.$inferSelect
+export type NotebookFormulaRecord = typeof notebookFormulas.$inferSelect

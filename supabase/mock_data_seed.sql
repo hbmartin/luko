@@ -2,8 +2,8 @@
 -- ROI Mock Data Seeder
 -- =============================================================================
 -- This script hydrates the relational schema defined in
--- `supabase/migrations/20251117073440_initial_schema.sql` with the structures
--- published in `lib/mock-data.ts`.
+-- `supabase/migrations/20251117073440_initial_schema.sql` with the sample
+-- workbook previously mocked in the UI.
 --
 -- Usage:
 --   1. Ensure at least one Supabase auth user exists (via Dashboard or CLI).
@@ -14,7 +14,7 @@
 -- The script is idempotent thanks to the ON CONFLICT clauses, so running it
 -- multiple times will upsert the same notebook graph.
 -- =============================================================================
-\echo '🌱 Seeding ROI mock data (lib/mock-data.ts) into public schema...'
+\echo '🌱 Seeding ROI mock data into public schema...'
 
 begin;
 
@@ -121,21 +121,22 @@ begin
   with category_source as (
     select *
     from (values
-      ('cat-facts', 'Facts & Assumptions', 'Company-specific parameters', 0),
-      ('cat-time-savings', 'Time Savings Benefits (Internal)', 'Productivity improvements from AI automation', 1),
-      ('cat-quality', 'Quality Improvement Benefits', 'Preventing post-release bugs', 2),
-      ('cat-product-delivery', 'Product Delivery Benefits (External)', 'Revenue impact from faster feature delivery', 3),
-      ('cat-retention', 'Employee Retention Benefits', 'Cost savings from reduced turnover', 4),
-      ('cat-costs', 'AI Implementation Costs', 'Ongoing costs for AI tools and support', 5)
-    ) as cat(slug, name, description, order_index)
+      ('cat-facts', 'Facts & Assumptions', 'Company-specific parameters', 0, 'facts'),
+      ('cat-time-savings', 'Time Savings Benefits (Internal)', 'Productivity improvements from AI automation', 1, 'benefit'),
+      ('cat-quality', 'Quality Improvement Benefits', 'Preventing post-release bugs', 2, 'benefit'),
+      ('cat-product-delivery', 'Product Delivery Benefits (External)', 'Revenue impact from faster feature delivery', 3, 'benefit'),
+      ('cat-retention', 'Employee Retention Benefits', 'Cost savings from reduced turnover', 4, 'benefit'),
+      ('cat-costs', 'AI Implementation Costs', 'Ongoing costs for AI tools and support', 5, 'cost')
+    ) as cat(slug, name, description, order_index, category_type)
   )
-  insert into public.notebook_categories (id, notebook_id, name, description, order_index, created_by)
+  insert into public.notebook_categories (id, notebook_id, name, description, order_index, time_period, created_by)
   select
     uuid_generate_v5(category_namespace, slug),
     notebook_id,
     name,
     description,
     order_index,
+    category_type,
     owner_user_id
   from category_source
   on conflict (id) do update
@@ -144,6 +145,7 @@ begin
     name = excluded.name,
     description = excluded.description,
     order_index = excluded.order_index,
+    time_period = excluded.time_period,
     created_by = excluded.created_by,
     updated_at = now();
 
@@ -460,7 +462,7 @@ begin
     'mock-data:v1',
     jsonb_build_object(
       'notebookId', notebook_id,
-      'source', 'lib/mock-data.ts'
+      'source', 'supabase/mock_data_seed.sql'
     ),
     jsonb_build_object(
       'npv', jsonb_build_object(
@@ -516,7 +518,7 @@ begin
       )
     ),
     jsonb_build_object(
-      'notes', 'Seeded from lib/mock-data.ts',
+      'notes', 'Seeded from supabase/mock_data_seed.sql',
       'highlights', jsonb_build_array(
         'P50 NPV ≈ $1.85M',
         'Median payback ≈ 4.2 months'
