@@ -4,10 +4,11 @@ import { CircleUserRound, Moon, Sun } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import { memo, useCallback, useMemo } from "react"
 
 import { LogoutButton } from "@/components/auth/LogoutButton"
 
-import { useNotebook } from "./NotebookProvider"
+import { useNotebookActions, useNotebookSelector } from "./NotebookProvider"
 
 const dateFormatter = new Intl.DateTimeFormat("en-US", {
   month: "short",
@@ -22,22 +23,32 @@ interface NotebookHeaderProperties {
   notebookId: string
 }
 
-export function NotebookHeader({ notebookId }: NotebookHeaderProperties) {
+export const NotebookHeader = memo(function NotebookHeader({ notebookId }: NotebookHeaderProperties) {
   const pathname = usePathname()
-  const { notebook, simulationResult, theme, setTheme } = useNotebook()
+  const notebookName = useNotebookSelector((state) => state.notebook.name)
+  const metricCount = useNotebookSelector((state) => state.notebook.metrics.length)
+  const categoryCount = useNotebookSelector((state) => state.notebook.categories.length)
+  const updatedAt = useNotebookSelector((state) => state.notebook.updatedAt)
+  const dirtyMetricCount = useNotebookSelector((state) => state.notebook.dirtyMetrics.length)
+  const simulationIterations = useNotebookSelector((state) => state.simulationResult?.metadata.iterations ?? 0)
+  const simulationTimestamp = useNotebookSelector((state) => state.simulationResult?.metadata.timestamp ?? null)
+  const theme = useNotebookSelector((state) => state.theme)
+  const { setTheme } = useNotebookActions()
 
-  const currentPage = pathname.split("/").pop() || "results"
+  const currentPage = useMemo(() => pathname.split("/").pop() || "results", [pathname])
+  const toggleTheme = useCallback(() => {
+    setTheme(theme === "light" ? "dark" : "light")
+  }, [setTheme, theme])
+
   return (
     <header className="from-background absolute top-0 right-0 left-0 border-b border-[var(--color-border-soft)] bg-gradient-to-b to-(--secondary)/[10%]">
       <div className="bg-secondary text-secondary-foreground py-1 text-center text-sm">
-        {notebook.name}
+        {notebookName}
         <div className="absolute top-0 right-0 flex items-center gap-2 px-4 py-1">
           <button
             type="button"
             aria-label="Toggle theme"
-            onClick={() => {
-              setTheme(theme === "light" ? "dark" : "light")
-            }}
+            onClick={toggleTheme}
             className="rounded-md transition-opacity hover:opacity-80 focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:outline-none"
           >
             {theme === "dark" ? <Sun size={18} aria-hidden="true" /> : <Moon size={18} aria-hidden="true" />}
@@ -62,9 +73,9 @@ export function NotebookHeader({ notebookId }: NotebookHeaderProperties) {
               className={`transition-transform ${currentPage === "worksheet" ? "" : "group-hover:scale-110"}`}
             />
             <div className="gap-1/2 flex flex-col">
-              <p>{notebook.metrics.length} metrics</p>
-              <p>{notebook.categories.length} categories</p>
-              <p>{dateFormatter.format(new Date(notebook.updatedAt))}</p>
+              <p>{metricCount} metrics</p>
+              <p>{categoryCount} categories</p>
+              <p>{dateFormatter.format(new Date(updatedAt))}</p>
             </div>
           </Link>
           <Link
@@ -82,13 +93,11 @@ export function NotebookHeader({ notebookId }: NotebookHeaderProperties) {
             />
             <div className="gap-1/2 flex flex-col">
               <p>
-                {notebook.dirtyMetrics.length} change
-                {notebook.dirtyMetrics.length === 1 ? "" : "s"}
+                {dirtyMetricCount} change
+                {dirtyMetricCount === 1 ? "" : "s"}
               </p>
-              <p>{numberFormatter.format(simulationResult?.metadata.iterations ?? 0)} iterations</p>
-              <p>
-                {simulationResult ? dateFormatter.format(new Date(simulationResult.metadata.timestamp)) : "Not yet run"}
-              </p>
+              <p>{numberFormatter.format(simulationIterations)} iterations</p>
+              <p>{simulationTimestamp ? dateFormatter.format(new Date(simulationTimestamp)) : "Not yet run"}</p>
             </div>
           </Link>
           <Link
@@ -114,4 +123,4 @@ export function NotebookHeader({ notebookId }: NotebookHeaderProperties) {
       </div>
     </header>
   )
-}
+})

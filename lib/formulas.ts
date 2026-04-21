@@ -12,7 +12,14 @@ export interface FormulaCompilation {
 
 export type FormulaRegistry = Record<string, FormulaCompilation>
 
+export interface FormulaEvaluationPlan {
+  order: string[]
+  registry: FormulaRegistry
+}
+
 type DependencyMap = Record<string, Set<string>>
+
+const evaluationPlanCache = new WeakMap<FormulaRegistry, FormulaEvaluationPlan>()
 
 const extractDependencies = (node: MathNode): string[] => {
   const dependencies = new Set<string>()
@@ -91,9 +98,9 @@ const topologicalSort = (dependencyMap: DependencyMap): string[] => {
   }
 
   const order: string[] = []
-  while (queue.length > 0) {
-    const node = queue.shift()
-    if (!node) continue
+  for (let index = 0; index < queue.length; index += 1) {
+    const node = queue[index]
+    if (node === undefined) continue
     order.push(node)
 
     const nodeDependents = dependents.get(node)
@@ -185,10 +192,10 @@ export const compileNotebookFormulas = (notebook: Notebook): FormulaRegistry => 
   ...compileFormulaRows(notebook.formulas),
 })
 
-export const evaluateFormulas = (
-  registry: FormulaRegistry,
-  baseValues: Record<string, number>
-): Record<string, number> => {
+export const planEvaluation = (registry: FormulaRegistry): FormulaEvaluationPlan => {
+  const cachedPlan = evaluationPlanCache.get(registry)
+  if (cachedPlan) return cachedPlan
+
   const dependencyMap = buildDependencyMap(registry)
 
   const cycles = detectCircularDependencies(dependencyMap)
@@ -197,14 +204,38 @@ export const evaluateFormulas = (
   }
 
   const order = topologicalSort(dependencyMap)
-  const evaluated = { ...baseValues }
+  const plan = { order, registry }
+  evaluationPlanCache.set(registry, plan)
+  return plan
+}
 
-  for (const metricId of order) {
-    const compilation = registry[metricId]
-    if (!compilation) continue
-    const value = compilation.compiled.evaluate(evaluated) as unknown as MathType
-    evaluated[metricId] = toNumber(value)
+export const evaluatePlan = (
+  plan: FormulaEvaluationPlan,
+  baseValues: Record<string, number>,
+  target: Record<string, number> = {}
+): Record<string, number> => {
+  for (const key of Object.keys(target)) {
+    Reflect.deleteProperty(target, key)
   }
 
-  return evaluated
+  for (const key in baseValues) {
+    const value = baseValues[key]
+    if (value !== undefined) {
+      target[key] = value
+    }
+  }
+
+  for (const metricId of plan.order) {
+    const compilation = plan.registry[metricId]
+    if (!compilation) continue
+    const value = compilation.compiled.evaluate(target) as unknown as MathType
+    target[metricId] = toNumber(value)
+  }
+
+  return target
 }
+
+export const evaluateFormulas = (
+  registry: FormulaRegistry,
+  baseValues: Record<string, number>
+): Record<string, number> => evaluatePlan(planEvaluation(registry), baseValues)

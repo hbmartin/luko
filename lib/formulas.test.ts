@@ -2,7 +2,7 @@
 
 import { describe, expect, it } from "vitest"
 
-import { compileNotebookFormulas, evaluateFormulas } from "@/lib/formulas"
+import { compileNotebookFormulas, evaluateFormulas, evaluatePlan, planEvaluation } from "@/lib/formulas"
 import { mockNotebook } from "@/lib/mock-data"
 import type { Notebook } from "@/lib/types/notebook"
 
@@ -159,6 +159,21 @@ describe("notebook formula evaluation", () => {
     expect(getValue(values, "formula_npv_3_year")).toBeGreaterThan(0)
   })
 
+  it("reuses planned evaluation order without changing results", () => {
+    const focusedNotebook = createFocusedNotebook()
+    const registry = compileNotebookFormulas(focusedNotebook)
+    const baseValues = createBaseValues(focusedNotebook)
+    const expected = evaluateFormulas(registry, baseValues)
+    const plan = planEvaluation(registry)
+    const target: Record<string, number> = { stale_formula: 123 }
+    const plannedValues = evaluatePlan(plan, baseValues, target)
+
+    expect(plannedValues).toBe(target)
+    expect("stale_formula" in target).toBe(false)
+    expect(plannedValues).toEqual(expected)
+    expect(planEvaluation(registry)).toBe(plan)
+  })
+
   it("rejects circular dependencies across formula rows", () => {
     const notebook: Notebook = {
       ...mockNotebook,
@@ -183,5 +198,6 @@ describe("notebook formula evaluation", () => {
     const registry = compileNotebookFormulas(notebook)
 
     expect(() => evaluateFormulas(registry, createBaseValues(notebook))).toThrow("Circular formula dependency")
+    expect(() => planEvaluation(registry)).toThrow("Circular formula dependency")
   })
 })

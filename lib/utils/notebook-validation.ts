@@ -1,5 +1,6 @@
 import { validateFormulaExpression } from "@/lib/formula-validation"
 import { Formula, Metric, Notebook } from "@/lib/types/notebook"
+import { buildReferenceableIds } from "@/lib/utils/notebook-indices"
 
 export type MetricValidationFieldErrors = {
   min?: string
@@ -68,9 +69,7 @@ export const validateMetric = (metric: Metric): MetricValidationResult | undefin
 }
 
 export const validateFormula = (formula: Formula, notebook: Notebook): string | undefined => {
-  const referenceableIds = Object.fromEntries(
-    [...notebook.metrics, ...notebook.formulas].map((item) => [item.id, item])
-  )
+  const referenceableIds = buildReferenceableIds(notebook)
   const validation = validateFormulaExpression({
     expression: formula.expression,
     referenceableIds,
@@ -118,9 +117,7 @@ export const applyNotebookValidations = (notebook: Notebook): Notebook => {
   const metrics = notebook.metrics.map(mapMetricWithValidation)
 
   let formulasChanged = false
-  const referenceableIds = Object.fromEntries(
-    [...notebook.metrics, ...notebook.formulas].map((item) => [item.id, item])
-  )
+  const referenceableIds = buildReferenceableIds(notebook)
   const mapFormulaWithValidation = (formula: Formula): Formula => {
     const validation = validateFormulaExpression({
       expression: formula.expression,

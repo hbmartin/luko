@@ -1,32 +1,32 @@
 "use client"
 
+import { memo, useMemo } from "react"
+
 import type { SimulationStats } from "@/lib/types/notebook"
 
 interface PaybackChartProperties {
   paybackPeriod: SimulationStats
 }
 
-export function PaybackChart({ paybackPeriod }: PaybackChartProperties) {
-  const width = 600
-  const height = 260
-  const padding = { top: 40, right: 40, bottom: 60, left: 60 }
-  const chartWidth = width - padding.left - padding.right
-  const chartHeight = height - padding.top - padding.bottom
+const width = 600
+const height = 260
+const padding = { top: 40, right: 40, bottom: 60, left: 60 } as const
+const chartWidth = width - padding.left - padding.right
+const chartHeight = height - padding.top - padding.bottom
+const viewBox = ["0", "0", String(width), String(height)].join(" ")
+const chartTransform = ["translate(", String(padding.left), ", ", String(padding.top), ")"].join("")
+const tickRatios = [0, 0.25, 0.5, 0.75, 1] as const
 
+export const PaybackChart = memo(function PaybackChart({ paybackPeriod }: PaybackChartProperties) {
   const domainMax = Math.max(paybackPeriod.p90, paybackPeriod.mean, paybackPeriod.p50, 0)
   const maxMonth = Math.max(12, Math.ceil(domainMax * 1.15))
   const xScale = (month: number) => (month / maxMonth) * chartWidth
   const bandY = chartHeight / 2
-  const ticks = [0, 0.25, 0.5, 0.75, 1].map((ratio) => Math.round(maxMonth * ratio))
+  const ticks = useMemo(() => tickRatios.map((ratio) => Math.round(maxMonth * ratio)), [maxMonth])
 
   return (
     <div className="relative">
-      <svg
-        viewBox={`0 0 ${width} ${height}`}
-        className="w-full"
-        role="img"
-        aria-label="Payback period percentile chart"
-      >
+      <svg viewBox={viewBox} className="w-full" role="img" aria-label="Payback period percentile chart">
         {/* X-axis */}
         <line
           x1={padding.left}
@@ -50,7 +50,7 @@ export function PaybackChart({ paybackPeriod }: PaybackChartProperties) {
           )
         })}
 
-        <g transform={`translate(${padding.left}, ${padding.top})`}>
+        <g transform={chartTransform}>
           <line x1={0} y1={bandY} x2={chartWidth} y2={bandY} stroke="#e5e7eb" strokeWidth="8" strokeLinecap="round" />
           <line
             x1={xScale(paybackPeriod.p10)}
@@ -142,4 +142,4 @@ export function PaybackChart({ paybackPeriod }: PaybackChartProperties) {
       </div>
     </div>
   )
-}
+})

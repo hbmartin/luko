@@ -1,35 +1,59 @@
 "use client"
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react"
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react"
 import { Notebook, SimulationResult, SimulationResultSchema } from "@/lib/types/notebook"
 import { applyNotebookValidations } from "@/lib/utils/notebook-validation"
 
-interface Scenario {
+export interface Scenario {
   id: string
   name: string
   result: SimulationResult
   createdAt: string
 }
 
-interface NotebookContextType {
+type Theme = "light" | "dark"
+type Density = "comfortable" | "compact"
+type NotebookUpdate = Notebook | ((notebook: Notebook) => Notebook)
+
+export interface NotebookState {
   notebook: Notebook
-  setNotebook: (notebook: Notebook) => void
   simulationResult: SimulationResult | null
-  setSimulationResult: (result: SimulationResult | null) => void
   isSimulating: boolean
   simulationError: string | null
-  theme: "light" | "dark"
-  setTheme: (theme: "light" | "dark") => void
-  density: "comfortable" | "compact"
-  setDensity: (density: "comfortable" | "compact") => void
+  theme: Theme
+  density: Density
   scenarios: Scenario[]
   activeScenarioId: string | null
-  setActiveScenarioId: (id: string | null) => void
-  handleRunSimulation: () => Promise<void>
-  handleRenameScenario: (scenarioId: string, name: string) => void
 }
 
-const NotebookContext = createContext<NotebookContextType | undefined>(undefined)
+export interface NotebookActions {
+  setNotebook(this: void, notebook: NotebookUpdate): void
+  setSimulationResult(this: void, result: SimulationResult | null): void
+  setTheme(this: void, theme: Theme): void
+  setDensity(this: void, density: Density): void
+  setActiveScenarioId(this: void, id: string | null): void
+  handleRunSimulation(this: void): Promise<void>
+  handleRenameScenario(this: void, scenarioId: string, name: string): void
+}
+
+type NotebookContextType = NotebookState & NotebookActions
+
+interface NotebookStore {
+  actions: NotebookActions
+  getSnapshot(): NotebookState
+  subscribe(listener: () => void): () => void
+}
+
+const NotebookContext = createContext<NotebookStore | undefined>(undefined)
 
 const parseSimulationResponseBody = async (response: Response): Promise<unknown> => {
   const contentType = response.headers.get("content-type")
@@ -64,23 +88,66 @@ export function NotebookProvider({
   notebook: Notebook
 }) {
   const [notebook, setNotebookState] = useState<Notebook>(() => applyNotebookValidations(initialNotebook))
-  const [simulationResult, setSimulationResult] = useState<SimulationResult | null>(null)
+  const [simulationResult, setSimulationResultState] = useState<SimulationResult | null>(null)
   const [isSimulating, setIsSimulating] = useState(false)
   const [simulationError, setSimulationError] = useState<string | null>(null)
-  const [theme, setTheme] = useState<"light" | "dark">("light")
-  const [density, setDensity] = useState<"comfortable" | "compact">("comfortable")
+  const [theme, setTheme] = useState<Theme>("light")
+  const [density, setDensity] = useState<Density>("comfortable")
   const [scenarios, setScenarios] = useState<Scenario[]>([])
   const [activeScenarioId, setActiveScenarioId] = useState<string | null>(null)
   const isSimulatingReference = useRef(false)
+  const listenersReference = useRef(new Set<() => void>())
 
-  const setNotebook = useCallback((nextNotebook: Notebook) => {
-    setNotebookState(applyNotebookValidations(nextNotebook))
+  const stateSnapshot = useMemo<NotebookState>(
+    () => ({
+      notebook,
+      simulationResult,
+      isSimulating,
+      simulationError,
+      theme,
+      density,
+      scenarios,
+      activeScenarioId,
+    }),
+    [activeScenarioId, density, isSimulating, notebook, scenarios, simulationError, simulationResult, theme]
+  )
+  const stateReference = useRef(stateSnapshot)
+  stateReference.current = stateSnapshot
+
+  useEffect(() => {
+    for (const listener of listenersReference.current) {
+      listener()
+    }
+  }, [stateSnapshot])
+
+  const getSnapshot = useCallback(() => stateReference.current, [])
+
+  const subscribe = useCallback((listener: () => void) => {
+    listenersReference.current.add(listener)
+    return () => {
+      listenersReference.current.delete(listener)
+    }
+  }, [])
+
+  const setNotebook = useCallback((nextNotebook: NotebookUpdate) => {
+    setNotebookState((previous) => {
+      const resolvedNotebook = typeof nextNotebook === "function" ? nextNotebook(previous) : nextNotebook
+      return applyNotebookValidations(resolvedNotebook)
+    })
+  }, [])
+
+  const setSimulationResult = useCallback((result: SimulationResult | null) => {
+    setSimulationResultState(result)
   }, [])
 
   const handleRenameScenario = useCallback((scenarioId: string, name: string) => {
     setScenarios((previous) =>
       previous.map((scenario) => (scenario.id === scenarioId ? { ...scenario, name: name || scenario.name } : scenario))
     )
+  }, [])
+
+  const applySystemTheme = useCallback((event: MediaQueryList | MediaQueryListEvent) => {
+    setTheme(event.matches ? "dark" : "light")
   }, [])
 
   useEffect(() => {
@@ -93,9 +160,6 @@ export function NotebookProvider({
     }
 
     const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)")
-    const applySystemTheme = (event: MediaQueryList | MediaQueryListEvent) => {
-      setTheme(event.matches ? "dark" : "light")
-    }
 
     applySystemTheme(mediaQuery)
 
@@ -112,14 +176,17 @@ export function NotebookProvider({
         mediaQuery.removeListener(applySystemTheme)
       }
     }
-  }, [])
+  }, [applySystemTheme])
 
   useEffect(() => {
     if (typeof document === "undefined") return
-    const root = document.documentElement
-    root.dataset.theme = theme
-    root.dataset.density = density
-  }, [theme, density])
+    document.documentElement.dataset.theme = theme
+  }, [theme])
+
+  useEffect(() => {
+    if (typeof document === "undefined") return
+    document.documentElement.dataset.density = density
+  }, [density])
 
   const handleRunSimulation = useCallback(async () => {
     if (isSimulatingReference.current) {
@@ -131,12 +198,13 @@ export function NotebookProvider({
     setSimulationError(null)
 
     try {
-      const response = await globalThis.fetch(`/api/notebooks/${encodeURIComponent(notebook.id)}/simulation`, {
+      const currentNotebook = stateReference.current.notebook
+      const response = await globalThis.fetch(`/api/notebooks/${encodeURIComponent(currentNotebook.id)}/simulation`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ notebook }),
+        body: JSON.stringify({ notebook: currentNotebook }),
       })
 
       const body = await parseSimulationResponseBody(response)
@@ -145,9 +213,10 @@ export function NotebookProvider({
       }
 
       const augmentedResult = SimulationResultSchema.parse(body)
-
-      setSimulationResult(augmentedResult)
       const scenarioId = `scenario-${Date.now()}`
+
+      setSimulationResultState(augmentedResult)
+      setActiveScenarioId(scenarioId)
       setScenarios((previous) => {
         const scenario: Scenario = {
           id: scenarioId,
@@ -155,7 +224,6 @@ export function NotebookProvider({
           result: augmentedResult,
           createdAt: augmentedResult.metadata.timestamp,
         }
-        setActiveScenarioId(scenarioId)
         return [...previous, scenario]
       })
       setNotebookState((previous) =>
@@ -173,48 +241,56 @@ export function NotebookProvider({
       isSimulatingReference.current = false
       setIsSimulating(false)
     }
-  }, [notebook])
+  }, [])
 
-  const contextValue = useMemo<NotebookContextType>(
+  const actions = useMemo<NotebookActions>(
     () => ({
-      notebook,
       setNotebook,
-      simulationResult,
       setSimulationResult,
-      isSimulating,
-      simulationError,
-      theme,
       setTheme,
-      density,
       setDensity,
-      scenarios,
-      activeScenarioId,
       setActiveScenarioId,
       handleRunSimulation,
       handleRenameScenario,
     }),
-    [
-      activeScenarioId,
-      density,
-      handleRenameScenario,
-      handleRunSimulation,
-      isSimulating,
-      notebook,
-      scenarios,
-      setNotebook,
-      simulationError,
-      simulationResult,
-      theme,
-    ]
+    [handleRenameScenario, handleRunSimulation, setNotebook, setSimulationResult]
   )
 
-  return <NotebookContext.Provider value={contextValue}>{children}</NotebookContext.Provider>
+  const store = useMemo<NotebookStore>(
+    () => ({
+      actions,
+      getSnapshot,
+      subscribe,
+    }),
+    [actions, getSnapshot, subscribe]
+  )
+
+  return <NotebookContext.Provider value={store}>{children}</NotebookContext.Provider>
 }
 
-export function useNotebook() {
+const useNotebookStore = () => {
   const context = useContext(NotebookContext)
   if (!context) {
     throw new Error("useNotebook must be used within a NotebookProvider")
   }
   return context
+}
+
+export function useNotebookSelector<T>(selector: (state: NotebookState) => T): T {
+  const store = useNotebookStore()
+  return useSyncExternalStore(
+    store.subscribe,
+    () => selector(store.getSnapshot()),
+    () => selector(store.getSnapshot())
+  )
+}
+
+export function useNotebookActions() {
+  return useNotebookStore().actions
+}
+
+export function useNotebook(): NotebookContextType {
+  const state = useNotebookSelector((snapshot) => snapshot)
+  const actions = useNotebookActions()
+  return useMemo(() => ({ ...state, ...actions }), [actions, state])
 }

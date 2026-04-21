@@ -37,6 +37,8 @@ const complexityOptions = [
   },
 ]
 
+const complexityOptionsById = new Map(complexityOptions.map((option) => [option.value, option]))
+
 const formatLabels: Record<string, string> = {
   pptx: "PowerPoint (.pptx)",
   pdf: "PDF Document",
@@ -53,7 +55,7 @@ export function ExportTab() {
   const [lastExport, setLastExport] = useState<{ timestamp: string; format: string; pages: number } | null>(null)
 
   const sections = useMemo(() => {
-    const selected = complexityOptions.find((option) => option.value === complexity)
+    const selected = complexityOptionsById.get(complexity)
     return selected ? selected.sections : []
   }, [complexity])
 
@@ -229,7 +231,7 @@ export function ExportTab() {
             <div className="mb-4 flex items-center justify-between">
               <h3 className="text-sm font-medium text-[var(--color-text-primary)]">Export Preview</h3>
               <span className="rounded bg-[var(--color-surface-elevated)] px-2 py-1 text-xs text-[var(--color-text-muted)]">
-                {complexityOptions.find((option) => option.value === complexity)?.label}
+                {complexityOptionsById.get(complexity)?.label}
               </span>
             </div>
 

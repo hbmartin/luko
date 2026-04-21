@@ -1,5 +1,7 @@
 "use client"
 
+import { memo, useMemo } from "react"
+
 interface SensitivityItem {
   metricId: string
   metricName: string
@@ -10,25 +12,27 @@ interface TornadoChartProperties {
   data: SensitivityItem[]
 }
 
-export function TornadoChart({ data }: TornadoChartProperties) {
-  const width = 600
-  const height = 400
-  const padding = { top: 20, right: 60, bottom: 40, left: 200 }
-  const chartWidth = width - padding.left - padding.right
-  const chartHeight = height - padding.top - padding.bottom
+const width = 600
+const height = 400
+const padding = { top: 20, right: 60, bottom: 40, left: 200 } as const
+const chartWidth = width - padding.left - padding.right
+const chartHeight = height - padding.top - padding.bottom
+const viewBox = ["0", "0", String(width), String(height)].join(" ")
+const yAxisTitleTransform = ["rotate(-90, ", String(padding.left - 180), ", ", String(height / 2), ")"].join("")
 
+export const TornadoChart = memo(function TornadoChart({ data }: TornadoChartProperties) {
   // Sort by absolute impact (largest first)
-  const sortedData = [...data].sort((a, b) => Math.abs(b.impact) - Math.abs(a.impact))
+  const sortedData = useMemo(() => data.toSorted((a, b) => Math.abs(b.impact) - Math.abs(a.impact)), [data])
 
   const barHeight = chartHeight / (sortedData.length + 1)
-  const maxImpact = Math.max(...sortedData.map((d) => Math.abs(d.impact)))
+  const maxImpact = Math.max(1, ...sortedData.map((d) => Math.abs(d.impact)))
 
   // Scaling function
   const xScale = (value: number) => (Math.abs(value) / maxImpact) * (chartWidth / 2)
 
   return (
     <div className="relative">
-      <svg viewBox={`0 0 ${width} ${height}`} className="w-full" role="img" aria-label="Sensitivity tornado chart">
+      <svg viewBox={viewBox} className="w-full" role="img" aria-label="Sensitivity tornado chart">
         {/* Center line */}
         <line
           x1={padding.left + chartWidth / 2}
@@ -105,7 +109,7 @@ export function TornadoChart({ data }: TornadoChartProperties) {
           x={padding.left - 180}
           y={height / 2}
           textAnchor="middle"
-          transform={`rotate(-90, ${padding.left - 180}, ${height / 2})`}
+          transform={yAxisTitleTransform}
           className="fill-gray-700 text-sm font-medium"
         >
           Input Metrics
@@ -120,4 +124,4 @@ export function TornadoChart({ data }: TornadoChartProperties) {
       </div>
     </div>
   )
-}
+})

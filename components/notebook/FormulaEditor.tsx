@@ -1,9 +1,10 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { Mention, MentionsInput } from "react-mentions-ts"
+import { useCallback, useMemo, useRef, useState } from "react"
+import { Mention, type MentionsInputChangeEvent, MentionsInput } from "react-mentions-ts"
 import { validateFormulaExpression } from "@/lib/formula-validation"
 import type { Formula, Notebook } from "@/lib/types/notebook"
+import { buildReferenceableIds, type ReferenceableNotebookItem } from "@/lib/utils/notebook-indices"
 import type { MetricMentionExtra, MetricMentionItem } from "./FormulaEditorSingleLine"
 import { buildFormulaMarkup } from "./utils/formulaMarkup"
 
@@ -34,60 +35,81 @@ export function FormulaEditor({ notebook, formula, onFormulaChange, className }:
   }, [notebook.categories, notebook.metrics])
 
   const referenceableIds = useMemo(
-    () => Object.fromEntries([...notebook.metrics, ...notebook.formulas].map((item) => [item.id, item])),
-    [notebook.metrics, notebook.formulas]
+    () => buildReferenceableIds({ metrics: notebook.metrics, formulas: notebook.formulas }),
+    [notebook.formulas, notebook.metrics]
   )
 
-  const [draftExpression, setDraftExpression] = useState<string>(() => formula?.expression ?? "")
-  const [formulaExpressionMarkup, setFormulaExpressionMarkup] = useState<string>(() => formula?.expression ?? "")
+  if (!formula) return null
 
-  const lastSyncedFormulaReference = useRef<{ id: string | null; expression: string }>({
-    id: formula?.id ?? null,
-    expression: formula?.expression ?? "",
-  })
-
-  const buildMarkupFromExpression = useCallback(
-    (expression: string): string => buildFormulaMarkup(expression, referenceableIds),
-    [referenceableIds]
+  return (
+    <FormulaEditorBody
+      key={formula.id}
+      className={className}
+      formula={formula}
+      mentionOptions={mentionOptions}
+      onFormulaChange={onFormulaChange}
+      referenceableIds={referenceableIds}
+    />
   )
+}
 
-  useEffect(() => {
-    if (!formula) {
-      lastSyncedFormulaReference.current = { id: null, expression: "" }
-      setDraftExpression("")
-      setFormulaExpressionMarkup("")
-      return
-    }
+interface FormulaEditorBodyProperties {
+  className?: string
+  formula: Formula
+  mentionOptions: MetricMentionItem[]
+  onFormulaChange?: (formulaId: string, expression: string) => void
+  referenceableIds: ReadonlyMap<string, ReferenceableNotebookItem>
+}
 
-    const { id, expression } = formula
-    const { id: lastId, expression: lastExpression } = lastSyncedFormulaReference.current
-    const idChanged = lastId !== id
-    const expressionChanged = lastExpression !== expression
+function FormulaEditorBody({
+  className,
+  formula,
+  mentionOptions,
+  onFormulaChange,
+  referenceableIds,
+}: FormulaEditorBodyProperties) {
+  const [draftExpression, setDraftExpression] = useState(formula.expression)
+  const [draftMarkup, setDraftMarkup] = useState(() => buildFormulaMarkup(formula.expression, referenceableIds))
+  const lastSyncedFormulaReference = useRef({ id: formula.id, expression: formula.expression })
+  const formulaCaughtUpToDraft = formula.expression === draftExpression
+  const isDraftSynced = formulaCaughtUpToDraft || draftExpression === lastSyncedFormulaReference.current.expression
+  const normalizedExpression = isDraftSynced ? formula.expression : draftExpression
+  const canonicalMarkup = useMemo(
+    () => buildFormulaMarkup(normalizedExpression, referenceableIds),
+    [normalizedExpression, referenceableIds]
+  )
+  const formulaExpressionMarkup = isDraftSynced ? canonicalMarkup : draftMarkup
 
-    if (idChanged || expressionChanged) {
-      lastSyncedFormulaReference.current = { id, expression }
-      setDraftExpression(expression)
-      setFormulaExpressionMarkup(buildMarkupFromExpression(expression))
-      return
-    }
-
-    if (draftExpression === lastExpression) {
-      const canonical = buildMarkupFromExpression(lastExpression)
-      setFormulaExpressionMarkup((current) => (current === canonical ? current : canonical))
-    }
-  }, [buildMarkupFromExpression, draftExpression, formula])
-
-  const normalizedExpression = draftExpression
+  if (isDraftSynced && lastSyncedFormulaReference.current.expression !== formula.expression) {
+    lastSyncedFormulaReference.current = { id: formula.id, expression: formula.expression }
+  }
 
   const formulaValidation = useMemo(() => {
-    if (!formula) return null
     return validateFormulaExpression({
       expression: normalizedExpression,
       referenceableIds,
     })
-  }, [formula, normalizedExpression, referenceableIds])
+  }, [normalizedExpression, referenceableIds])
 
-  if (!formula) return null
+  const handleMentionsChange = useCallback(
+    (change: MentionsInputChangeEvent<MetricMentionExtra>) => {
+      const expressionWithIds = change.idValue ?? change.plainTextValue ?? ""
+      setDraftMarkup(change.value)
+      setDraftExpression(expressionWithIds)
+      const validation = validateFormulaExpression({
+        expression: expressionWithIds,
+        referenceableIds,
+      })
+      if (validation && validation.type === "error") {
+        return
+      }
+      if (!onFormulaChange) return
+      const normalized = expressionWithIds.trim()
+      if (normalized === formula.expression) return
+      onFormulaChange(formula.id, normalized)
+    },
+    [formula.expression, formula.id, onFormulaChange, referenceableIds]
+  )
 
   return (
     <div className={className}>
@@ -97,22 +119,7 @@ export function FormulaEditor({ notebook, formula, onFormulaChange, className }:
         placeholder="Build this formula by selecting metrics from the worksheet."
         className="mt-2"
         autoResize
-        onMentionsChange={(change) => {
-          const expressionWithIds = change.idValue ?? change.plainTextValue ?? ""
-          setFormulaExpressionMarkup(change.value)
-          setDraftExpression(expressionWithIds)
-          const validation = validateFormulaExpression({
-            expression: expressionWithIds,
-            referenceableIds,
-          })
-          if (validation && validation.type === "error") {
-            return
-          }
-          if (!onFormulaChange) return
-          const normalized = expressionWithIds.trim()
-          if (normalized === formula.expression) return
-          onFormulaChange(formula.id, normalized)
-        }}
+        onMentionsChange={handleMentionsChange}
       >
         <Mention<MetricMentionExtra>
           data={mentionOptions}

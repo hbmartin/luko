@@ -1,10 +1,13 @@
 "use client"
 
-import { useNotebook } from "@/components/notebook/NotebookProvider"
+import { useNotebookActions, useNotebookSelector } from "@/components/notebook/NotebookProvider"
 import { ResultsTab } from "@/components/notebook/tabs/ResultsTab"
 
 export default function ResultsPage() {
-  const { simulationResult, scenarios, activeScenarioId, setActiveScenarioId, handleRenameScenario } = useNotebook()
+  const simulationResult = useNotebookSelector((state) => state.simulationResult)
+  const scenarios = useNotebookSelector((state) => state.scenarios)
+  const activeScenarioId = useNotebookSelector((state) => state.activeScenarioId)
+  const { handleRenameScenario, setActiveScenarioId } = useNotebookActions()
 
   return (
     <ResultsTab

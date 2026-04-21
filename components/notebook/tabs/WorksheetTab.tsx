@@ -1,15 +1,18 @@
 "use client"
 
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { Fragment, memo, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { validateFormulaExpression } from "@/lib/formula-validation"
-import { Metric, Notebook, SimulationResult } from "@/lib/types/notebook"
+import { Formula, Metric, Notebook, SimulationResult } from "@/lib/types/notebook"
+import { buildReferenceableIds, ReferenceableNotebookItem } from "@/lib/utils/notebook-indices"
 import { DataGridComponent } from "../DataGridComponent"
 import { MetricDetailPanel } from "../MetricDetailPanel"
 import { SimulationSummaryPanel } from "../SimulationSummaryPanel"
 
+type NotebookUpdate = Notebook | ((notebook: Notebook) => Notebook)
+
 interface WorksheetTabProperties {
   notebook: Notebook
-  onNotebookChange: (notebook: Notebook) => void
+  onNotebookChange: (notebook: NotebookUpdate) => void
   density: "comfortable" | "compact"
   simulationResult?: SimulationResult | null
 }
@@ -31,14 +34,88 @@ const createFormulaId = () => {
   return `formula_${Math.random().toString(36).slice(2, 10)}`
 }
 
+const useLatest = <T,>(value: T) => {
+  const reference = useRef(value)
+  reference.current = value
+  return reference
+}
+
+interface WorksheetIndexMaps {
+  categoryIndexById: Map<string, number>
+  formulasById: Map<string, Formula>
+  metricIndexById: Map<string, number>
+  metricPositionById: Map<string, number>
+  metricsById: Map<string, Metric>
+}
+
+const buildWorksheetIndexMaps = (
+  notebook: Pick<Notebook, "categories" | "formulas" | "metrics">
+): WorksheetIndexMaps => {
+  const categoryIndexById = new Map<string, number>()
+  const metricIndexById = new Map<string, number>()
+  const metricPositionById = new Map<string, number>()
+  const metricsById = new Map<string, Metric>()
+  const formulasById = new Map<string, Formula>()
+  const categoryMetricCounts = new Map<string, number>()
+
+  for (const [index, category] of notebook.categories.entries()) {
+    categoryIndexById.set(category.id, index)
+  }
+
+  for (const [index, metric] of notebook.metrics.entries()) {
+    metricIndexById.set(metric.id, index)
+    metricsById.set(metric.id, metric)
+    const categoryPosition = categoryMetricCounts.get(metric.categoryId) ?? 0
+    metricPositionById.set(metric.id, categoryPosition)
+    categoryMetricCounts.set(metric.categoryId, categoryPosition + 1)
+  }
+
+  for (const formula of notebook.formulas) {
+    formulasById.set(formula.id, formula)
+  }
+
+  return {
+    categoryIndexById,
+    formulasById,
+    metricIndexById,
+    metricPositionById,
+    metricsById,
+  }
+}
+
+const MetricValidationLiveRegion = memo(function MetricValidationLiveRegion({ metrics }: { metrics: Metric[] }) {
+  return (
+    <div className="sr-only">
+      {metrics.map((metric) => {
+        const fields = metric.validation?.fields
+        if (!fields) return null
+        return (
+          <Fragment key={metric.id}>
+            {fields.min && <span id={`${metric.id}-min-error`}>Min: {fields.min}</span>}
+            {fields.mode && <span id={`${metric.id}-mode-error`}>Most likely: {fields.mode}</span>}
+            {fields.max && <span id={`${metric.id}-max-error`}>Max: {fields.max}</span>}
+            {fields.value && <span id={`${metric.id}-value-error`}>Value: {fields.value}</span>}
+          </Fragment>
+        )
+      })}
+    </div>
+  )
+})
+
 export function WorksheetTab({ notebook, onNotebookChange, density, simulationResult }: WorksheetTabProperties) {
   const historyReference = useRef<Notebook[]>([notebook])
   const historyIndexReference = useRef(0)
   const [selectedRowId, setSelectedRowId] = useState<string | null>(null)
   const referenceableItems = useMemo(
-    () => Object.fromEntries([...notebook.metrics, ...notebook.formulas].map((item) => [item.id, item])),
-    [notebook.metrics, notebook.formulas]
+    () => buildReferenceableIds({ metrics: notebook.metrics, formulas: notebook.formulas }),
+    [notebook.formulas, notebook.metrics]
   )
+  const indexMaps = useMemo(
+    () => buildWorksheetIndexMaps(notebook),
+    [notebook.categories, notebook.formulas, notebook.metrics]
+  )
+  const referenceableItemsReference = useLatest<ReadonlyMap<string, ReferenceableNotebookItem>>(referenceableItems)
+  const indexMapsReference = useLatest(indexMaps)
 
   useEffect(() => {
     const existing = historyReference.current[historyIndexReference.current]
@@ -48,14 +125,20 @@ export function WorksheetTab({ notebook, onNotebookChange, density, simulationRe
   }, [notebook])
 
   const commitNotebook = useCallback(
-    (nextNotebook: Notebook) => {
-      const timestamped = {
-        ...nextNotebook,
-        updatedAt: new Date().toISOString(),
-      }
-      historyReference.current = [...historyReference.current.slice(0, historyIndexReference.current + 1), timestamped]
-      historyIndexReference.current = historyReference.current.length - 1
-      onNotebookChange(timestamped)
+    (nextNotebook: NotebookUpdate) => {
+      onNotebookChange((previous) => {
+        const resolvedNotebook = typeof nextNotebook === "function" ? nextNotebook(previous) : nextNotebook
+        const timestamped = {
+          ...resolvedNotebook,
+          updatedAt: new Date().toISOString(),
+        }
+        historyReference.current = [
+          ...historyReference.current.slice(0, historyIndexReference.current + 1),
+          timestamped,
+        ]
+        historyIndexReference.current = historyReference.current.length - 1
+        return timestamped
+      })
     },
     [onNotebookChange]
   )
@@ -105,232 +188,245 @@ export function WorksheetTab({ notebook, onNotebookChange, density, simulationRe
 
   const handleMetricChange = useCallback(
     (metricId: string, field: "min" | "mode" | "max" | "value", value: number) => {
-      const metrics = notebook.metrics.map((metric) => {
-        if (metric.id !== metricId) return metric
-        if (field === "value") {
-          return { ...metric, value }
-        }
+      commitNotebook((current) => {
+        const metrics = current.metrics.map((metric) => {
+          if (metric.id !== metricId) return metric
+          if (field === "value") {
+            return { ...metric, value }
+          }
+
+          return {
+            ...metric,
+            distribution: {
+              ...metric.distribution,
+              [field]: value,
+            },
+          }
+        })
+
+        const dirtySet = new Set(current.dirtyMetrics)
+        dirtySet.add(metricId)
 
         return {
-          ...metric,
-          distribution: {
-            ...metric.distribution,
-            [field]: value,
-          },
+          ...current,
+          metrics,
+          dirtyMetrics: [...dirtySet],
+          isDirty: true,
         }
       })
-
-      const dirtySet = new Set(notebook.dirtyMetrics)
-      dirtySet.add(metricId)
-
-      commitNotebook({
-        ...notebook,
-        metrics,
-        dirtyMetrics: [...dirtySet],
-        isDirty: true,
-      })
     },
-    [commitNotebook, notebook]
+    [commitNotebook]
   )
 
   const handleMetricRename = useCallback(
     (metricId: string, name: string) => {
-      const metrics = notebook.metrics.map((metric) => (metric.id === metricId ? { ...metric, name } : metric))
+      commitNotebook((current) => {
+        const metrics = current.metrics.map((metric) => (metric.id === metricId ? { ...metric, name } : metric))
+        const dirtySet = new Set(current.dirtyMetrics)
+        dirtySet.add(metricId)
 
-      const dirtySet = new Set(notebook.dirtyMetrics)
-      dirtySet.add(metricId)
-
-      commitNotebook({
-        ...notebook,
-        metrics,
-        dirtyMetrics: [...dirtySet],
-        isDirty: true,
+        return {
+          ...current,
+          metrics,
+          dirtyMetrics: [...dirtySet],
+          isDirty: true,
+        }
       })
     },
-    [commitNotebook, notebook]
+    [commitNotebook]
   )
 
   const handleAddFormula = useCallback(
     (categoryId: string): string => {
       const newId = createFormulaId()
-      const formulaCount = notebook.formulas.filter((formula) => formula.categoryId === categoryId).length
-      const newFormula = {
-        id: newId,
-        name: `Formula ${formulaCount + 1}`,
-        categoryId,
-        expression: "",
-        updatedAt: new Date().toISOString(),
-      }
+      commitNotebook((current) => {
+        const formulaCount = current.formulas.filter((formula) => formula.categoryId === categoryId).length
+        const newFormula = {
+          id: newId,
+          name: `Formula ${formulaCount + 1}`,
+          categoryId,
+          expression: "",
+          updatedAt: new Date().toISOString(),
+        }
 
-      const dirtySet = new Set(notebook.dirtyFormulas)
-      dirtySet.add(newId)
+        const dirtySet = new Set(current.dirtyFormulas)
+        dirtySet.add(newId)
 
-      commitNotebook({
-        ...notebook,
-        formulas: [...notebook.formulas, newFormula],
-        dirtyFormulas: [...dirtySet],
-        isDirty: true,
+        return {
+          ...current,
+          formulas: [...current.formulas, newFormula],
+          dirtyFormulas: [...dirtySet],
+          isDirty: true,
+        }
       })
 
       return newId
     },
-    [commitNotebook, notebook]
+    [commitNotebook]
   )
 
   const handleDeleteFormula = useCallback(
     (formulaId: string) => {
-      const formulas = notebook.formulas.filter((formula) => formula.id !== formulaId)
-      const dirtySet = new Set(notebook.dirtyFormulas)
-      dirtySet.delete(formulaId)
+      commitNotebook((current) => {
+        const formulas = current.formulas.filter((formula) => formula.id !== formulaId)
+        const dirtySet = new Set(current.dirtyFormulas)
+        dirtySet.delete(formulaId)
 
-      commitNotebook({
-        ...notebook,
-        formulas,
-        dirtyFormulas: [...dirtySet],
-        isDirty: true,
+        return {
+          ...current,
+          formulas,
+          dirtyFormulas: [...dirtySet],
+          isDirty: true,
+        }
       })
     },
-    [commitNotebook, notebook]
+    [commitNotebook]
   )
 
   const handleFormulaChange = useCallback(
     (formulaId: string, expression: string) => {
       const validation = validateFormulaExpression({
         expression,
-        referenceableIds: referenceableItems,
+        referenceableIds: referenceableItemsReference.current,
       })
-      const formulas = notebook.formulas.map((formula) => {
-        if (formula.id !== formulaId) return formula
+      commitNotebook((current) => {
+        const formulas = current.formulas.map((formula) => {
+          if (formula.id !== formulaId) return formula
 
-        const updatedFormula = {
-          ...formula,
-          expression,
-          updatedAt: new Date().toISOString(),
+          const updatedFormula = {
+            ...formula,
+            expression,
+            updatedAt: new Date().toISOString(),
+          }
+
+          if (validation?.type === "error") {
+            return { ...updatedFormula, error: validation.message }
+          }
+
+          delete updatedFormula.error
+          return updatedFormula
+        })
+
+        const dirtySet = new Set(current.dirtyFormulas)
+        dirtySet.add(formulaId)
+
+        return {
+          ...current,
+          formulas,
+          dirtyFormulas: [...dirtySet],
+          isDirty: true,
         }
-
-        if (validation?.type === "error") {
-          return { ...updatedFormula, error: validation.message }
-        }
-
-        delete updatedFormula.error
-        return updatedFormula
-      })
-
-      const dirtySet = new Set(notebook.dirtyFormulas)
-      dirtySet.add(formulaId)
-
-      commitNotebook({
-        ...notebook,
-        formulas,
-        dirtyFormulas: [...dirtySet],
-        isDirty: true,
       })
     },
-    [commitNotebook, notebook, referenceableItems]
+    [commitNotebook, referenceableItemsReference]
   )
 
   const handleFormulaRename = useCallback(
     (formulaId: string, name: string) => {
-      const formulas = notebook.formulas.map((formula) => {
-        if (formula.id !== formulaId) return formula
+      commitNotebook((current) => {
+        const formulas = current.formulas.map((formula) => {
+          if (formula.id !== formulaId) return formula
+
+          return {
+            ...formula,
+            name,
+            updatedAt: new Date().toISOString(),
+          }
+        })
+
+        const dirtySet = new Set(current.dirtyFormulas)
+        dirtySet.add(formulaId)
 
         return {
-          ...formula,
-          name,
-          updatedAt: new Date().toISOString(),
+          ...current,
+          formulas,
+          dirtyFormulas: [...dirtySet],
+          isDirty: true,
         }
       })
-
-      const dirtySet = new Set(notebook.dirtyFormulas)
-      dirtySet.add(formulaId)
-
-      commitNotebook({
-        ...notebook,
-        formulas,
-        dirtyFormulas: [...dirtySet],
-        isDirty: true,
-      })
     },
-    [commitNotebook, notebook]
+    [commitNotebook]
   )
 
   const handleCategoryToggle = useCallback(
     (categoryId: string) => {
-      const categories = notebook.categories.map((category) =>
-        category.id === categoryId ? { ...category, isExpanded: !category.isExpanded } : category
-      )
+      commitNotebook((current) => {
+        const categories = current.categories.map((category) =>
+          category.id === categoryId ? { ...category, isExpanded: !category.isExpanded } : category
+        )
 
-      commitNotebook({
-        ...notebook,
-        categories,
+        return {
+          ...current,
+          categories,
+        }
       })
     },
-    [commitNotebook, notebook]
+    [commitNotebook]
   )
 
   const handleRowReorder = useCallback(
     (sourceId: string, targetId: string) => {
-      const sourceCategoryIndex = notebook.categories.findIndex((category) => category.id === sourceId)
-      const targetCategoryIndex = notebook.categories.findIndex((category) => category.id === targetId)
+      const maps = indexMapsReference.current
+      const sourceCategoryIndex = maps.categoryIndexById.get(sourceId)
+      const targetCategoryIndex = maps.categoryIndexById.get(targetId)
 
-      if (sourceCategoryIndex !== -1 && targetCategoryIndex !== -1) {
-        const reorderedCategories = reorder(notebook.categories, sourceCategoryIndex, targetCategoryIndex).map(
-          (category, index) => ({
-            ...category,
-            order: index,
-          })
-        )
+      if (sourceCategoryIndex !== undefined && targetCategoryIndex !== undefined) {
+        commitNotebook((current) => {
+          const reorderedCategories = reorder(current.categories, sourceCategoryIndex, targetCategoryIndex).map(
+            (category, index) => ({
+              ...category,
+              order: index,
+            })
+          )
 
-        commitNotebook({
-          ...notebook,
-          categories: reorderedCategories,
+          return {
+            ...current,
+            categories: reorderedCategories,
+          }
         })
         return
       }
 
-      const sourceMetricIndex = notebook.metrics.findIndex((metric) => metric.id === sourceId)
-      const targetMetricIndex = notebook.metrics.findIndex((metric) => metric.id === targetId)
+      const sourceMetricIndex = maps.metricIndexById.get(sourceId)
+      const targetMetricIndex = maps.metricIndexById.get(targetId)
 
-      if (sourceMetricIndex !== -1 && targetMetricIndex !== -1) {
-        const sourceMetric = notebook.metrics[sourceMetricIndex]
-        if (sourceMetric === undefined) return
-        const targetMetric = notebook.metrics[targetMetricIndex]
-        if (sourceMetric?.categoryId !== targetMetric?.categoryId) return
+      if (sourceMetricIndex === undefined || targetMetricIndex === undefined) return
 
-        const metricsWithinCategory = notebook.metrics.filter((metric) => metric.categoryId === sourceMetric.categoryId)
-        const sourcePosition = metricsWithinCategory.findIndex((metric) => metric.id === sourceId)
-        const targetPosition = metricsWithinCategory.findIndex((metric) => metric.id === targetId)
-        if (sourcePosition === -1 || targetPosition === -1) return
+      const sourceMetric = maps.metricsById.get(sourceId)
+      const targetMetric = maps.metricsById.get(targetId)
+      if (!sourceMetric || !targetMetric || sourceMetric.categoryId !== targetMetric.categoryId) return
 
+      const sourcePosition = maps.metricPositionById.get(sourceId)
+      const targetPosition = maps.metricPositionById.get(targetId)
+      if (sourcePosition === undefined || targetPosition === undefined) return
+
+      commitNotebook((current) => {
+        const metricsWithinCategory = current.metrics.filter((metric) => metric.categoryId === sourceMetric.categoryId)
         const reorderedWithinCategory = reorder(metricsWithinCategory, sourcePosition, targetPosition)
+        let nextMetricIndex = 0
         const mergedMetrics: Metric[] = []
-        for (const metric of notebook.metrics) {
-          if (metric.categoryId === sourceMetric?.categoryId) {
-            const next = reorderedWithinCategory.shift()
+        for (const metric of current.metrics) {
+          if (metric.categoryId === sourceMetric.categoryId) {
+            const next = reorderedWithinCategory[nextMetricIndex]
+            nextMetricIndex += 1
             if (next) mergedMetrics.push(next)
           } else {
             mergedMetrics.push(metric)
           }
         }
 
-        commitNotebook({
-          ...notebook,
+        return {
+          ...current,
           metrics: mergedMetrics,
-        })
-      }
+        }
+      })
     },
-    [commitNotebook, notebook]
+    [commitNotebook, indexMapsReference]
   )
 
-  const activeMetric = useMemo(
-    () => notebook.metrics.find((metric) => metric.id === selectedRowId) ?? null,
-    [notebook.metrics, selectedRowId]
-  )
+  const activeMetric = selectedRowId ? (indexMaps.metricsById.get(selectedRowId) ?? null) : null
 
-  const activeFormula = useMemo(
-    () => notebook.formulas.find((candidate) => candidate.id === selectedRowId) ?? null,
-    [notebook.formulas, selectedRowId]
-  )
+  const activeFormula = selectedRowId ? (indexMaps.formulasById.get(selectedRowId) ?? null) : null
 
   return (
     <div className="mx-auto flex h-full min-h-0 flex-1 items-stretch gap-4 p-6">
@@ -355,43 +451,9 @@ export function WorksheetTab({ notebook, onNotebookChange, density, simulationRe
           onFormulaChange={handleFormulaChange}
         />
         <SimulationSummaryPanel notebook={notebook} result={simulationResult ?? null} />
-        {/* <div className="rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface-elevated)] p-4 shadow-sm">
-          <div className="flex items-center justify-between">
-            <span className="font-semibold text-[var(--color-text-primary)]">History</span>
-            <div className="flex items-center gap-2 text-[var(--color-text-primary)]">
-              <button
-                type="button"
-                onClick={undo}
-                className="rounded-full border border-[var(--color-border-soft)] px-3 py-1 text-xs font-medium hover:bg-[var(--color-surface-muted)]"
-              >
-                Undo
-              </button>
-              <button
-                type="button"
-                onClick={redo}
-                className="rounded-full border border-[var(--color-border-soft)] px-3 py-1 text-xs font-medium hover:bg-[var(--color-surface-muted)]"
-              >
-                Redo
-              </button>
-            </div>
-          </div>
-        </div> */}
       </div>
 
-      <div className="sr-only">
-        {notebook.metrics.map((metric) => {
-          const fields = metric.validation?.fields
-          if (!fields) return null
-          return (
-            <Fragment key={metric.id}>
-              {fields.min && <span id={`${metric.id}-min-error`}>Min: {fields.min}</span>}
-              {fields.mode && <span id={`${metric.id}-mode-error`}>Most likely: {fields.mode}</span>}
-              {fields.max && <span id={`${metric.id}-max-error`}>Max: {fields.max}</span>}
-              {fields.value && <span id={`${metric.id}-value-error`}>Value: {fields.value}</span>}
-            </Fragment>
-          )
-        })}
-      </div>
+      <MetricValidationLiveRegion metrics={notebook.metrics} />
     </div>
   )
 }
