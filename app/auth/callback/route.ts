@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { z } from "zod"
 
-import { createServerSupabaseClient } from "@/lib/supabase/server"
+import { createMutableServerSupabaseClient } from "@/lib/supabase/server"
 
 const sessionSyncSchema = z.object({
   access_token: z.string().min(1),
@@ -13,39 +13,58 @@ const callbackSchema = z.object({
   session: sessionSyncSchema.nullable().optional(),
 })
 
+const authErrorResponse = (error: string, status: number) => NextResponse.json({ success: false, error }, { status })
+
 export async function POST(request: Request) {
   let body: unknown
 
   try {
     body = await request.json()
   } catch {
-    return NextResponse.json({ success: false, error: "Invalid JSON payload" }, { status: 400 })
+    return authErrorResponse("Invalid JSON payload", 400)
   }
 
   const parsedBody = callbackSchema.safeParse(body)
 
   if (!parsedBody.success) {
-    return NextResponse.json({ success: false, error: "Invalid payload" }, { status: 400 })
+    return authErrorResponse("Invalid payload", 400)
   }
 
   const { event, session } = parsedBody.data
-  const supabase = await createServerSupabaseClient()
+  const supabase = await createMutableServerSupabaseClient()
 
   if (event === "SIGNED_OUT") {
-    const { error } = await supabase.auth.signOut()
-    if (error) {
-      return NextResponse.json({ success: false, error: "Unable to sign out" }, { status: 500 })
+    try {
+      const { error } = await supabase.auth.signOut()
+      if (error) {
+        return authErrorResponse("Unable to sign out", 500)
+      }
+    } catch {
+      return authErrorResponse("Unable to sign out", 500)
     }
+
     return NextResponse.json({ success: true })
   }
 
   if (!session) {
-    return NextResponse.json({ success: false, error: "Missing session" }, { status: 400 })
+    return authErrorResponse("Missing session", 400)
   }
 
-  const { error: setSessionError } = await supabase.auth.setSession(session)
+  let setSessionError: Error | undefined
+  try {
+    const result = await supabase.auth.setSession(session)
+    setSessionError = result.error ?? undefined
+  } catch {
+    return authErrorResponse("Unable to update session", 500)
+  }
+
   if (setSessionError) {
-    return NextResponse.json({ success: false, error: "Invalid session" }, { status: 401 })
+    try {
+      await supabase.auth.signOut()
+    } catch {
+      return authErrorResponse("Unable to clear invalid session", 500)
+    }
+    return authErrorResponse("Invalid session", 401)
   }
 
   const {
@@ -54,8 +73,12 @@ export async function POST(request: Request) {
   } = await supabase.auth.getUser()
 
   if (userError || !user) {
-    await supabase.auth.signOut()
-    return NextResponse.json({ success: false, error: "Invalid session" }, { status: 401 })
+    try {
+      await supabase.auth.signOut()
+    } catch {
+      return authErrorResponse("Unable to clear invalid session", 500)
+    }
+    return authErrorResponse("Invalid session", 401)
   }
 
   return NextResponse.json({ success: true })
@@ -68,16 +91,22 @@ export async function GET(request: Request) {
   const next = nextParameter && nextParameter.startsWith("/") && !nextParameter.startsWith("//") ? nextParameter : "/"
 
   if (code) {
-    const supabase = await createServerSupabaseClient()
-    const { error } = await supabase.auth.exchangeCodeForSession(code)
-    if (!error) {
-      // NextResponse.redirect requires an absolute URL; keep redirect scoped to the app origin.
-      const redirectUrl = new URL(next, requestUrl.origin)
-      return NextResponse.redirect(redirectUrl)
-    }
+    const supabase = await createMutableServerSupabaseClient()
 
-    const redirectWithError = `${requestUrl.origin}/login?error=${encodeURIComponent(error.message)}`
-    return NextResponse.redirect(redirectWithError)
+    try {
+      const { error } = await supabase.auth.exchangeCodeForSession(code)
+      if (!error) {
+        // NextResponse.redirect requires an absolute URL; keep redirect scoped to the app origin.
+        const redirectUrl = new URL(next, requestUrl.origin)
+        return NextResponse.redirect(redirectUrl)
+      }
+
+      const redirectWithError = `${requestUrl.origin}/login?error=${encodeURIComponent(error.message)}`
+      return NextResponse.redirect(redirectWithError)
+    } catch {
+      const redirectWithError = `${requestUrl.origin}/login?error=${encodeURIComponent("Unable to complete sign in")}`
+      return NextResponse.redirect(redirectWithError)
+    }
   }
 
   const missingCodeRedirect = `${requestUrl.origin}/login?error=${encodeURIComponent("Missing authentication code")}`

@@ -13,7 +13,8 @@ export function PaybackChart({ paybackPeriod }: PaybackChartProperties) {
   const chartWidth = width - padding.left - padding.right
   const chartHeight = height - padding.top - padding.bottom
 
-  const maxMonth = Math.max(12, Math.ceil(paybackPeriod.p90 * 1.15))
+  const domainMax = Math.max(paybackPeriod.p90, paybackPeriod.mean, paybackPeriod.p50, 0)
+  const maxMonth = Math.max(12, Math.ceil(domainMax * 1.15))
   const xScale = (month: number) => (month / maxMonth) * chartWidth
   const bandY = chartHeight / 2
   const ticks = [0, 0.25, 0.5, 0.75, 1].map((ratio) => Math.round(maxMonth * ratio))

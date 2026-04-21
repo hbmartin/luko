@@ -1,3 +1,5 @@
+/* eslint-disable unicorn/no-null */
+
 import { describe, expect, it } from "vitest"
 
 import { compileNotebookFormulas, evaluateFormulas } from "@/lib/formulas"
@@ -17,10 +19,134 @@ const getValue = (values: Record<string, number>, key: string) => {
   return value
 }
 
+const createFocusedNotebook = (): Notebook => ({
+  id: "formula-test-notebook",
+  name: "Formula test notebook",
+  categories: [],
+  metrics: [
+    {
+      id: "salary",
+      name: "Salary",
+      unit: "$/year",
+      distribution: null,
+      value: 208_000,
+      categoryId: "cat-facts",
+    },
+    {
+      id: "hours_per_year",
+      name: "Hours per year",
+      unit: "hours/year",
+      distribution: null,
+      value: 2080,
+      categoryId: "cat-facts",
+    },
+    {
+      id: "derived_hourly_rate",
+      name: "Derived hourly rate",
+      unit: "$/hour",
+      distribution: null,
+      formula: "salary / hours_per_year",
+      categoryId: "cat-facts",
+    },
+    {
+      id: "hours_saved",
+      name: "Hours saved",
+      unit: "hours/year",
+      distribution: null,
+      value: 10,
+      categoryId: "cat-facts",
+    },
+    {
+      id: "quality_savings",
+      name: "Quality savings",
+      unit: "$",
+      distribution: null,
+      value: 250,
+      categoryId: "cat-facts",
+    },
+    {
+      id: "revenue_impact",
+      name: "Revenue impact",
+      unit: "$",
+      distribution: null,
+      value: 500,
+      categoryId: "cat-facts",
+    },
+    {
+      id: "retention_savings",
+      name: "Retention savings",
+      unit: "$",
+      distribution: null,
+      value: 125,
+      categoryId: "cat-facts",
+    },
+    {
+      id: "npv_multiplier",
+      name: "NPV multiplier",
+      unit: "dimensionless",
+      distribution: null,
+      value: 2,
+      categoryId: "cat-facts",
+    },
+  ],
+  formulas: [
+    {
+      id: "formula_time_savings_total",
+      name: "Annual Time Savings",
+      categoryId: "cat-facts",
+      expression: "hours_saved * derived_hourly_rate",
+      updatedAt: "2026-01-01T00:00:00.000Z",
+    },
+    {
+      id: "formula_quality_savings",
+      name: "Annual Quality Savings",
+      categoryId: "cat-facts",
+      expression: "quality_savings",
+      updatedAt: "2026-01-01T00:00:00.000Z",
+    },
+    {
+      id: "formula_product_revenue_impact",
+      name: "Annual Revenue Impact",
+      categoryId: "cat-facts",
+      expression: "revenue_impact",
+      updatedAt: "2026-01-01T00:00:00.000Z",
+    },
+    {
+      id: "formula_retention_savings",
+      name: "Annual Retention Savings",
+      categoryId: "cat-facts",
+      expression: "retention_savings",
+      updatedAt: "2026-01-01T00:00:00.000Z",
+    },
+    {
+      id: "formula_total_annual_benefits",
+      name: "Total Annual Benefits",
+      categoryId: "cat-facts",
+      expression:
+        "formula_time_savings_total + formula_quality_savings + formula_product_revenue_impact + formula_retention_savings",
+      updatedAt: "2026-01-01T00:00:00.000Z",
+    },
+    {
+      id: "formula_npv_3_year",
+      name: "NPV (3 Years)",
+      categoryId: "cat-facts",
+      expression: "formula_total_annual_benefits * npv_multiplier",
+      updatedAt: "2026-01-01T00:00:00.000Z",
+    },
+  ],
+  lastSimulationId: null,
+  createdAt: "2026-01-01T00:00:00.000Z",
+  updatedAt: "2026-01-01T00:00:00.000Z",
+  isDirty: false,
+  dirtyMetrics: [],
+  dirtyFormulas: [],
+})
+
 describe("notebook formula evaluation", () => {
   it("evaluates formula rows alongside metric formulas", () => {
-    const registry = compileNotebookFormulas(mockNotebook)
-    const values = evaluateFormulas(registry, createBaseValues(mockNotebook))
+    const focusedNotebook = createFocusedNotebook()
+    const registry = compileNotebookFormulas(focusedNotebook)
+    const values = evaluateFormulas(registry, createBaseValues(focusedNotebook))
 
     expect(getValue(values, "formula_time_savings_total")).toBeGreaterThan(0)
     expect(getValue(values, "formula_total_annual_benefits")).toBeCloseTo(

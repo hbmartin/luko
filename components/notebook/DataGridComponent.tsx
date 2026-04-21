@@ -100,7 +100,7 @@ const appendMetricReference = (expression: string, metricId: string) => {
   const trimmed = expression.trim()
   if (!trimmed) return metricId
 
-  const canAppendDirectly = /[(*+/-]\s*$/.test(trimmed)
+  const canAppendDirectly = /[(*+,/-]\s*$/.test(trimmed)
   return canAppendDirectly ? `${trimmed} ${metricId}` : `${trimmed} + ${metricId}`
 }
 

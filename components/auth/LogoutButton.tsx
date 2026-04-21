@@ -2,7 +2,7 @@
 
 import clsx from "clsx"
 import { LogOut } from "lucide-react"
-import { useState } from "react"
+import { useCallback, useState } from "react"
 
 import { useSupabase } from "@/components/supabase/SupabaseProvider"
 
@@ -15,7 +15,7 @@ export function LogoutButton({ variant = "text", className }: LogoutButtonProper
   const { supabase } = useSupabase()
   const [isSigningOut, setIsSigningOut] = useState(false)
 
-  const handleSignOut = async () => {
+  const handleSignOut = useCallback(async () => {
     setIsSigningOut(true)
     try {
       const { error } = await supabase.auth.signOut()
@@ -27,11 +27,11 @@ export function LogoutButton({ variant = "text", className }: LogoutButtonProper
       setIsSigningOut(false)
       console.error("Error signing out", error)
     }
-  }
+  }, [supabase])
 
-  const handleClick = () => {
+  const handleClick = useCallback(() => {
     void handleSignOut()
-  }
+  }, [handleSignOut])
 
   if (variant === "icon") {
     return (
