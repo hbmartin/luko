@@ -7,7 +7,7 @@ import { NPVChart, type NPVSeries } from "../charts/NPVChart"
 import { PaybackChart } from "../charts/PaybackChart"
 import { TornadoChart } from "../charts/TornadoChart"
 import { WaterfallChart } from "../charts/WaterfallChart"
-import { useNotebook } from "../NotebookProvider"
+import { useNotebookActions, useNotebookSelector } from "../NotebookProvider"
 
 interface ScenarioSummary {
   id: string
@@ -34,7 +34,9 @@ export function ResultsTab({
   onSelectScenario,
   onRenameScenario,
 }: ResultsTabProperties) {
-  const { handleRunSimulation, isSimulating, simulationError } = useNotebook()
+  const isSimulating = useNotebookSelector((state) => state.isSimulating)
+  const simulationError = useNotebookSelector((state) => state.simulationError)
+  const { handleRunSimulation } = useNotebookActions()
 
   const [comparisonIds, setComparisonIds] = useState<string[]>([])
   const [editingScenarioId, setEditingScenarioId] = useState<string | null>(null)

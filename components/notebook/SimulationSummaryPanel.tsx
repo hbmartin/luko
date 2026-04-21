@@ -2,7 +2,7 @@
 
 import { Notebook, SimulationResult } from "@/lib/types/notebook"
 import { formatAbbreviatedNumber } from "@/lib/utils/grid-helpers"
-import { useNotebook } from "./NotebookProvider"
+import { useNotebookActions, useNotebookSelector } from "./NotebookProvider"
 
 interface SimulationSummaryPanelProperties {
   notebook: Notebook
@@ -10,7 +10,9 @@ interface SimulationSummaryPanelProperties {
 }
 
 export function SimulationSummaryPanel({ notebook, result }: SimulationSummaryPanelProperties) {
-  const { handleRunSimulation, isSimulating, simulationError } = useNotebook()
+  const isSimulating = useNotebookSelector((state) => state.isSimulating)
+  const simulationError = useNotebookSelector((state) => state.simulationError)
+  const { handleRunSimulation } = useNotebookActions()
 
   const runSimulation = () => {
     void handleRunSimulation()

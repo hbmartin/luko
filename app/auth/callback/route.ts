@@ -60,7 +60,10 @@ export async function POST(request: Request) {
 
   if (setSessionError) {
     try {
-      await supabase.auth.signOut()
+      const { error: signOutError } = await supabase.auth.signOut()
+      if (signOutError) {
+        return authErrorResponse("Unable to clear invalid session", 500)
+      }
     } catch {
       return authErrorResponse("Unable to clear invalid session", 500)
     }
@@ -74,7 +77,10 @@ export async function POST(request: Request) {
 
   if (userError || !user) {
     try {
-      await supabase.auth.signOut()
+      const { error: signOutError } = await supabase.auth.signOut()
+      if (signOutError) {
+        return authErrorResponse("Unable to clear invalid session", 500)
+      }
     } catch {
       return authErrorResponse("Unable to clear invalid session", 500)
     }

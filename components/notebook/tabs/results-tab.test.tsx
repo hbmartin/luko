@@ -17,7 +17,6 @@ const context = vi.hoisted(() => ({
   simulationError: null as string | null,
 }))
 
-const noScenarios = []
 const scenarios = [
   {
     id: "base",
@@ -38,9 +37,18 @@ const scenarios = [
     createdAt: mockSimulationResult.metadata.timestamp,
   },
 ]
+const noScenarios: typeof scenarios = []
 
 vi.mock("../NotebookProvider", () => ({
-  useNotebook: () => context,
+  useNotebookActions: () => ({
+    handleRunSimulation: context.handleRunSimulation,
+  }),
+  // eslint-disable-next-line no-unused-vars
+  useNotebookSelector: (selector: (state: { isSimulating: boolean; simulationError: string | null }) => unknown) =>
+    selector({
+      isSimulating: context.isSimulating,
+      simulationError: context.simulationError,
+    }),
 }))
 
 describe("ResultsTab", () => {

@@ -82,6 +82,15 @@ describe("runSimulation", () => {
     expect(result.yearlyResults.at(0)?.costs.p50).toBeCloseTo(-1000)
   })
 
+  it("returns deterministic sensitivity output in notebook metric order", async () => {
+    const notebook = createDeterministicNotebook()
+    const result = await runSimulation(notebook, 5)
+
+    expect(result.sensitivityAnalysis.map((item) => item.metricId)).toEqual(
+      notebook.metrics.slice(0, result.sensitivityAnalysis.length).map((metric) => metric.id)
+    )
+  })
+
   it("rejects invalid metric distributions", async () => {
     const deterministicNotebook = createDeterministicNotebook()
     const invalidNotebook: Notebook = {

@@ -1,6 +1,6 @@
 "use client"
 
-import { type MouseEvent as ReactMouseEvent, useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { memo, type MouseEvent as ReactMouseEvent, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   type CellMouseArgs,
   type CellMouseEvent,
@@ -12,8 +12,8 @@ import {
   type RenderGroupCellProps,
   type RowsChangeData,
   renderTextEditor,
-  renderToggleGroup,
   renderValue,
+  ToggleGroup,
   TreeDataGrid,
 } from "react-data-grid"
 import { Button } from "@/components/ui/button"
@@ -80,6 +80,11 @@ type GridContextMenuState =
       categoryId: string
     }
 
+const gridStyle = { height: "100%" } as const
+const defaultColumnOptions = { resizable: false } as const
+const categoryGroupBy = ["categoryId"] as const
+const getRowId = (row: GridRow) => row.id
+
 function isMetricRow(row: GridRow): row is MetricRow {
   return row.type === "metric"
 }
@@ -104,7 +109,142 @@ const appendMetricReference = (expression: string, metricId: string) => {
   return canAppendDirectly ? `${trimmed} ${metricId}` : `${trimmed} + ${metricId}`
 }
 
-export function DataGridComponent({
+const rowGrouper = (rows: readonly GridRow[], columnKey: string) => {
+  return rows.reduce<Record<string, GridRow[]>>((groups, row) => {
+    const rawKey = (row as unknown as Record<string, unknown>)[columnKey]
+    const key = rawKey == undefined ? "__ungrouped__" : String(rawKey)
+    if (!groups[key]) {
+      groups[key] = []
+    }
+    groups[key].push(row)
+    return groups
+  }, {})
+}
+
+const UnitCell = memo(function UnitCell(properties: RenderCellProps<GridRow>) {
+  if (isFormulaRow(properties.row)) {
+    return <FormulaEditorSingleLine formulaId={properties.row.id} />
+  }
+
+  return renderValue({
+    ...properties,
+    isCellEditable: true,
+  })
+})
+
+const renderUnitCell = (properties: RenderCellProps<GridRow>) => <UnitCell {...properties} />
+
+interface GridContextMenuProperties {
+  state: GridContextMenuState | null
+  onAddCategory?: (categoryId: string) => void
+  onAddFormula?: (categoryId: string) => string | void
+  onAddMetric?: (categoryId: string) => void
+  onClose: () => void
+  onDeleteCategory?: (categoryId: string) => void
+  onDeleteFormula?: (formulaId: string) => void
+  onDeleteMetric?: (metricId: string) => void
+  onSetActiveFormulaId: (formulaId: string) => void
+}
+
+const GridContextMenu = memo(function GridContextMenu({
+  state,
+  onAddCategory,
+  onAddFormula,
+  onAddMetric,
+  onClose,
+  onDeleteCategory,
+  onDeleteFormula,
+  onDeleteMetric,
+  onSetActiveFormulaId,
+}: GridContextMenuProperties) {
+  if (!state) return null
+
+  return (
+    <ContextMenuContent>
+      {state.kind === "metric" && (
+        <>
+          <ContextMenuLabel inset>{state.metricName}</ContextMenuLabel>
+          <ContextMenuSeparator />
+          <ContextMenuItem
+            variant="destructive"
+            onSelect={() => {
+              onDeleteMetric?.(state.metricId)
+              onClose()
+            }}
+          >
+            Delete metric
+          </ContextMenuItem>
+          <ContextMenuItem
+            onSelect={() => {
+              onAddMetric?.(state.categoryId)
+              onClose()
+            }}
+          >
+            Add new metric
+          </ContextMenuItem>
+        </>
+      )}
+      {state.kind === "category" && (
+        <>
+          <ContextMenuLabel inset>{state.categoryName}</ContextMenuLabel>
+          <ContextMenuSeparator />
+          <ContextMenuItem
+            variant="destructive"
+            onSelect={() => {
+              onDeleteCategory?.(state.categoryId)
+              onClose()
+            }}
+          >
+            Delete category
+          </ContextMenuItem>
+          <ContextMenuItem
+            onSelect={() => {
+              onAddCategory?.(state.categoryId)
+              onClose()
+            }}
+          >
+            Add new category
+          </ContextMenuItem>
+          <ContextMenuSeparator />
+          <ContextMenuItem
+            onSelect={() => {
+              const newId = onAddFormula?.(state.categoryId)
+              if (newId) onSetActiveFormulaId(newId)
+              onClose()
+            }}
+          >
+            Add formula row
+          </ContextMenuItem>
+          <ContextMenuItem
+            onSelect={() => {
+              onAddMetric?.(state.categoryId)
+              onClose()
+            }}
+          >
+            Add new metric
+          </ContextMenuItem>
+        </>
+      )}
+      {state.kind === "formula" && (
+        <>
+          <ContextMenuLabel inset>{state.formulaName}</ContextMenuLabel>
+          <ContextMenuSeparator />
+          <ContextMenuItem
+            variant="destructive"
+            onSelect={() => {
+              onDeleteFormula?.(state.formulaId)
+              onClose()
+            }}
+          >
+            Delete formula
+          </ContextMenuItem>
+        </>
+      )}
+    </ContextMenuContent>
+  )
+})
+
+export const DataGridComponent = memo(function DataGridComponent({
   notebook,
   density,
   onMetricChange,
@@ -126,32 +266,15 @@ export function DataGridComponent({
   const [contextMenuState, setContextMenuState] = useState<GridContextMenuState | null>(null)
   const [activeFormulaId, setActiveFormulaId] = useState<string | null>(null)
   const [highlightedMetricId, setHighlightedMetricId] = useState<string | null>(null)
-  const previousNotebookIdReference = useRef(notebook.id)
-  const hasPositionedInitialCellReference = useRef(false)
+  const latestCategoriesReference = useRef(notebook.categories)
+  latestCategoriesReference.current = notebook.categories
+
   useEffect(() => {
-    if (previousNotebookIdReference.current !== notebook.id) {
-      previousNotebookIdReference.current = notebook.id
-      setExpandedGroupIds(new Set<unknown>(notebook.categories.map((category) => category.id)))
-      hasPositionedInitialCellReference.current = false
-    }
-  }, [notebook.categories, notebook.id])
+    setExpandedGroupIds(new Set<unknown>(latestCategoriesReference.current.map((category) => category.id)))
+  }, [notebook.id])
   useEffect(() => {
     setContextMenuState(null)
   }, [notebook.id])
-  useEffect(() => {
-    if (!activeFormulaId) return
-    const exists = notebook.formulas.some((formula) => formula.id === activeFormulaId)
-    if (!exists) {
-      setActiveFormulaId(null)
-    }
-  }, [activeFormulaId, notebook.formulas])
-  useEffect(() => {
-    if (!highlightedMetricId) return
-    const exists = notebook.metrics.some((metric) => metric.id === highlightedMetricId)
-    if (!exists) {
-      setHighlightedMetricId(null)
-    }
-  }, [highlightedMetricId, notebook.metrics])
   const rows = useMemo(() => notebookToGridRows(notebook), [notebook])
   const categoryLabels = useMemo(() => {
     const map = new Map<string, string>()
@@ -160,6 +283,14 @@ export function DataGridComponent({
     }
     return map
   }, [notebook.categories])
+  const formulasById = useMemo(
+    () => new Map(notebook.formulas.map((formula) => [formula.id, formula])),
+    [notebook.formulas]
+  )
+  const metricsById = useMemo(() => new Map(notebook.metrics.map((metric) => [metric.id, metric])), [notebook.metrics])
+  const safeActiveFormulaId = activeFormulaId && formulasById.has(activeFormulaId) ? activeFormulaId : null
+  const safeHighlightedMetricId =
+    highlightedMetricId && metricsById.has(highlightedMetricId) ? highlightedMetricId : null
   const openCategoryContextMenu = useCallback(
     (categoryId: string, categoryName: string) => {
       setContextMenuState({
@@ -238,10 +369,7 @@ export function DataGridComponent({
         const rawKey = properties.groupKey == undefined ? "" : String(properties.groupKey)
         const label = categoryLabels.get(rawKey) ?? rawKey ?? "Uncategorized"
         if (rawKey === "__ungrouped__" || rawKey === "") {
-          return renderToggleGroup({
-            ...properties,
-            groupKey: label,
-          })
+          return <ToggleGroup {...properties} groupKey={label} />
         }
         return (
           <div
@@ -251,10 +379,7 @@ export function DataGridComponent({
             }}
           >
             <div className="min-w-0 flex-1">
-              {renderToggleGroup({
-                ...properties,
-                groupKey: label,
-              })}
+              <ToggleGroup {...properties} groupKey={label} />
             </div>
           </div>
         )
@@ -305,19 +430,7 @@ export function DataGridComponent({
           if (arguments_.row.type === "formula") return 4
           return 1
         },
-        renderCell: ({ row, column, onRowChange, rowIdx, tabIndex }: RenderCellProps<GridRow>) => {
-          if (isFormulaRow(row)) {
-            return <FormulaEditorSingleLine notebook={notebook} formulaId={row.id} />
-          }
-          return renderValue({
-            row,
-            column,
-            onRowChange,
-            rowIdx,
-            tabIndex,
-            isCellEditable: true,
-          })
-        },
+        renderCell: renderUnitCell,
         renderEditCell: ({ row, column, onRowChange, rowIdx, onClose }: RenderEditCellProps<GridRow>) => {
           if (isFormulaRow(row)) {
             return String(row.expression)
@@ -349,27 +462,19 @@ export function DataGridComponent({
     ]
 
     return [groupColumn, ...baseColumns]
-  }, [
-    categoryLabels,
-    handleGroupContextMenu,
-    handleGroupMenuButtonClick,
-    notebook,
-    activeFormulaId,
-    onFormulaChange,
-    safeTextEditor,
-  ])
+  }, [categoryLabels, handleGroupContextMenu, handleGroupMenuButtonClick, safeTextEditor])
 
   const rowClass = useCallback(
     (row: GridRow) => {
       const classes = ["spreadsheet-row"]
       if (row.type === "category") classes.push("spreadsheet-row-category")
       if (row.type === "metric" && row.isDirty) classes.push("spreadsheet-row-dirty")
-      if (row.type === "metric" && highlightedMetricId && row.id === highlightedMetricId) {
+      if (row.type === "metric" && safeHighlightedMetricId && row.id === safeHighlightedMetricId) {
         classes.push("spreadsheet-row-highlight")
       }
       return classes.join(" ")
     },
-    [highlightedMetricId]
+    [safeHighlightedMetricId]
   )
 
   const lastDetailsTriggerReference = useRef<{
@@ -392,14 +497,14 @@ export function DataGridComponent({
 
   const addMetricToActiveFormula = useCallback(
     (metricId: string) => {
-      if (!activeFormulaId) return false
-      const formula = notebook.formulas.find((candidate) => candidate.id === activeFormulaId)
+      if (!safeActiveFormulaId) return false
+      const formula = formulasById.get(safeActiveFormulaId)
       if (!formula) return false
-      onFormulaChange(activeFormulaId, appendMetricReference(formula.expression, metricId))
+      onFormulaChange(safeActiveFormulaId, appendMetricReference(formula.expression, metricId))
       setHighlightedMetricId(metricId)
       return true
     },
-    [activeFormulaId, notebook.formulas, onFormulaChange]
+    [formulasById, onFormulaChange, safeActiveFormulaId]
   )
 
   const handleFormulaRowSelection = useCallback(
@@ -440,11 +545,11 @@ export function DataGridComponent({
         handleFormulaRowSelection(row)
         return
       }
-      if (isMetricRow(row) && !activeFormulaId) {
+      if (isMetricRow(row) && !safeActiveFormulaId) {
         triggerDetails(row.id)
       }
     },
-    [activeFormulaId, handleFormulaRowSelection, triggerDetails]
+    [handleFormulaRowSelection, safeActiveFormulaId, triggerDetails]
   )
 
   const handleRowsChange = useCallback(
@@ -488,6 +593,9 @@ export function DataGridComponent({
     },
     [setContextMenuState]
   )
+  const closeContextMenu = useCallback(() => {
+    setContextMenuState(null)
+  }, [])
 
   const handleCellContextMenu = useCallback(
     ({ row }: CellMouseArgs<GridRow>, event: CellMouseEvent) => {
@@ -552,15 +660,15 @@ export function DataGridComponent({
             className="rdg-light rdg-spreadsheet"
             columns={columns}
             rows={rows}
-            style={{ height: "100%" }}
+            style={gridStyle}
             rowHeight={density === "compact" ? 36 : 46}
-            rowKeyGetter={(row) => row.id}
-            rowClass={(row) => rowClass?.(row) ?? ""}
-            defaultColumnOptions={{ resizable: false }}
+            rowKeyGetter={getRowId}
+            rowClass={rowClass}
+            defaultColumnOptions={defaultColumnOptions}
             onCellClick={handleCellClick}
             onSelectedCellChange={handleCellFocus}
             onCellContextMenu={handleCellContextMenu}
-            groupBy={["categoryId"]}
+            groupBy={categoryGroupBy}
             rowGrouper={rowGrouper}
             expandedGroupIds={expandedGroupIds}
             onExpandedGroupIdsChange={setExpandedGroupIds}
@@ -568,102 +676,19 @@ export function DataGridComponent({
           />
         </div>
       </ContextMenuTrigger>
-      {contextMenuState && (
-        <ContextMenuContent>
-          {contextMenuState.kind === "metric" && (
-            <>
-              <ContextMenuLabel inset>{contextMenuState.metricName}</ContextMenuLabel>
-              <ContextMenuSeparator />
-              <ContextMenuItem
-                variant="destructive"
-                onSelect={() => {
-                  onDeleteMetric?.(contextMenuState.metricId)
-                  setContextMenuState(null)
-                }}
-              >
-                Delete metric
-              </ContextMenuItem>
-              <ContextMenuItem
-                onSelect={() => {
-                  onAddMetric?.(contextMenuState.categoryId)
-                  setContextMenuState(null)
-                }}
-              >
-                Add new metric
-              </ContextMenuItem>
-            </>
-          )}
-          {contextMenuState.kind === "category" && (
-            <>
-              <ContextMenuLabel inset>{contextMenuState.categoryName}</ContextMenuLabel>
-              <ContextMenuSeparator />
-              <ContextMenuItem
-                variant="destructive"
-                onSelect={() => {
-                  onDeleteCategory?.(contextMenuState.categoryId)
-                  setContextMenuState(null)
-                }}
-              >
-                Delete category
-              </ContextMenuItem>
-              <ContextMenuItem
-                onSelect={() => {
-                  onAddCategory?.(contextMenuState.categoryId)
-                  setContextMenuState(null)
-                }}
-              >
-                Add new category
-              </ContextMenuItem>
-              <ContextMenuSeparator />
-              <ContextMenuItem
-                onSelect={() => {
-                  const newId = onAddFormula?.(contextMenuState.categoryId)
-                  if (newId) setActiveFormulaId(newId)
-                  setContextMenuState(null)
-                }}
-              >
-                Add formula row
-              </ContextMenuItem>
-              <ContextMenuItem
-                onSelect={() => {
-                  onAddMetric?.(contextMenuState.categoryId)
-                  setContextMenuState(null)
-                }}
-              >
-                Add new metric
-              </ContextMenuItem>
-            </>
-          )}
-          {contextMenuState.kind === "formula" && (
-            <>
-              <ContextMenuLabel inset>{contextMenuState.formulaName}</ContextMenuLabel>
-              <ContextMenuSeparator />
-              <ContextMenuItem
-                variant="destructive"
-                onSelect={() => {
-                  onDeleteFormula?.(contextMenuState.formulaId)
-                  setContextMenuState(null)
-                }}
-              >
-                Delete formula
-              </ContextMenuItem>
-            </>
-          )}
-        </ContextMenuContent>
-      )}
+      <GridContextMenu
+        state={contextMenuState}
+        onAddCategory={onAddCategory}
+        onAddFormula={onAddFormula}
+        onAddMetric={onAddMetric}
+        onClose={closeContextMenu}
+        onDeleteCategory={onDeleteCategory}
+        onDeleteFormula={onDeleteFormula}
+        onDeleteMetric={onDeleteMetric}
+        onSetActiveFormulaId={setActiveFormulaId}
+      />
     </ContextMenu>
   )
-}
-function rowGrouper(rows: readonly GridRow[], columnKey: string) {
-  return rows.reduce<Record<string, GridRow[]>>((groups, row) => {
-    const rawKey = (row as unknown as Record<string, unknown>)[columnKey]
-    const key = rawKey == undefined ? "__ungrouped__" : String(rawKey)
-    if (!groups[key]) {
-      groups[key] = []
-    }
-    groups[key].push(row)
-    return groups
-  }, {})
-}
+})
 
 export default DataGridComponent

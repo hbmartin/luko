@@ -1,5 +1,7 @@
 "use client"
 
+import { memo, useMemo } from "react"
+
 import { formatAbbreviatedNumber } from "@/lib/utils/grid-helpers"
 
 interface CategoryContribution {
@@ -13,61 +15,75 @@ interface WaterfallChartProperties {
   data: CategoryContribution[]
 }
 
-export function WaterfallChart({ data }: WaterfallChartProperties) {
-  const width = 600
-  const height = 400
-  const padding = { top: 20, right: 40, bottom: 120, left: 80 }
-  const chartWidth = width - padding.left - padding.right
-  const chartHeight = height - padding.top - padding.bottom
+const width = 600
+const height = 400
+const padding = { top: 20, right: 40, bottom: 120, left: 80 } as const
+const chartWidth = width - padding.left - padding.right
+const chartHeight = height - padding.top - padding.bottom
+const viewBox = ["0", "0", String(width), String(height)].join(" ")
+const chartTransform = ["translate(", String(padding.left), ", ", String(padding.top), ")"].join("")
+const yTicks = [0, 0.25, 0.5, 0.75, 1] as const
 
-  // Calculate cumulative values for waterfall
-  let cumulative = 0
-  const waterfallData = data.map((item) => {
-    const start = cumulative
-    cumulative += item.contribution
-    const end = cumulative
-    return {
-      ...item,
-      start,
-      end,
-      isPositive: item.contribution >= 0,
+const getContributionColor = (isTotal: boolean, isPositive: boolean) => {
+  if (isTotal) return "#1e40af"
+  return isPositive ? "#10b981" : "#ef4444"
+}
+
+export const WaterfallChart = memo(function WaterfallChart({ data }: WaterfallChartProperties) {
+  const chart = useMemo(() => {
+    // Calculate cumulative values for waterfall
+    let cumulative = 0
+    const waterfallData = data.map((item) => {
+      const start = cumulative
+      cumulative += item.contribution
+      const end = cumulative
+      return {
+        ...item,
+        start,
+        end,
+        isPositive: item.contribution >= 0,
+      }
+    })
+
+    // Add total bar
+    const total = cumulative
+    waterfallData.push({
+      categoryId: "total",
+      categoryName: "Total NPV",
+      contribution: total,
+      percentage: 100,
+      start: 0,
+      end: total,
+      isPositive: total >= 0,
+    })
+
+    // Find min and max for scaling
+    const allValues = waterfallData.flatMap((d) => [d.start, d.end])
+    const minValue = Math.min(0, ...allValues)
+    const maxValue = Math.max(1, ...allValues)
+    const valueSpan = maxValue - minValue || 1
+
+    // Scaling functions
+    const barWidth = chartWidth / (waterfallData.length + 1)
+    const xScale = (index: number) => index * barWidth + barWidth / 2
+    const yScale = (value: number) => {
+      return chartHeight - ((value - minValue) / valueSpan) * chartHeight
     }
-  })
 
-  // Add total bar
-  const total = cumulative
-  waterfallData.push({
-    categoryId: "total",
-    categoryName: "Total NPV",
-    contribution: total,
-    percentage: 100,
-    start: 0,
-    end: total,
-    isPositive: total >= 0,
-  })
-
-  // Find min and max for scaling
-  const allValues = waterfallData.flatMap((d) => [d.start, d.end])
-  const minValue = Math.min(0, ...allValues)
-  const maxValue = Math.max(...allValues)
-
-  // Scaling functions
-  const barWidth = chartWidth / (waterfallData.length + 1)
-  const xScale = (index: number) => index * barWidth + barWidth / 2
-  const yScale = (value: number) => {
-    return chartHeight - ((value - minValue) / (maxValue - minValue)) * chartHeight
-  }
-
-  const zeroY = yScale(0)
+    return {
+      barWidth,
+      maxValue,
+      minValue,
+      waterfallData,
+      xScale,
+      yScale,
+      zeroY: yScale(0),
+    }
+  }, [data])
 
   return (
     <div className="relative">
-      <svg
-        viewBox={`0 0 ${width} ${height}`}
-        className="w-full"
-        role="img"
-        aria-label="Category contribution waterfall chart"
-      >
+      <svg viewBox={viewBox} className="w-full" role="img" aria-label="Category contribution waterfall chart">
         {/* Y-axis */}
         <line
           x1={padding.left}
@@ -81,17 +97,17 @@ export function WaterfallChart({ data }: WaterfallChartProperties) {
         {/* Zero line */}
         <line
           x1={padding.left}
-          y1={padding.top + zeroY}
+          y1={padding.top + chart.zeroY}
           x2={width - padding.right}
-          y2={padding.top + zeroY}
+          y2={padding.top + chart.zeroY}
           stroke="#9ca3af"
           strokeWidth="2"
           strokeDasharray="4 4"
         />
 
         {/* Y-axis ticks */}
-        {[0, 0.25, 0.5, 0.75, 1].map((t) => {
-          const value = minValue + t * (maxValue - minValue)
+        {yTicks.map((t) => {
+          const value = chart.minValue + t * (chart.maxValue - chart.minValue)
           const y = padding.top + chartHeight - t * chartHeight
           return (
             <g key={t}>
@@ -110,27 +126,29 @@ export function WaterfallChart({ data }: WaterfallChartProperties) {
         })}
 
         {/* Bars and connectors */}
-        <g transform={`translate(${padding.left}, ${padding.top})`}>
-          {waterfallData.map((item, index) => {
-            const x = xScale(index)
-            const barW = barWidth * 0.7
-            const y1 = yScale(item.start)
-            const y2 = yScale(item.end)
+        <g transform={chartTransform}>
+          {chart.waterfallData.map((item, index) => {
+            const x = chart.xScale(index)
+            const barW = chart.barWidth * 0.7
+            const y1 = chart.yScale(item.start)
+            const y2 = chart.yScale(item.end)
             const barHeight = Math.abs(y2 - y1)
             const barY = Math.min(y1, y2)
 
             const isTotal = item.categoryId === "total"
-            const color = isTotal ? "#1e40af" : item.isPositive ? "#10b981" : "#ef4444"
+            const color = getContributionColor(isTotal, item.isPositive)
+            const previousItem = chart.waterfallData[index - 1]
+            const labelTransform = ["rotate(-45, ", x.toFixed(3), ", ", String(chartHeight + 10), ")"].join("")
 
             return (
               <g key={index}>
                 {/* Connector line to previous bar */}
-                {index > 0 && !isTotal && (
+                {previousItem && !isTotal && (
                   <line
-                    x1={xScale(index - 1) + barW / 2}
-                    y1={yScale(waterfallData[index - 1]!.end)}
+                    x1={chart.xScale(index - 1) + barW / 2}
+                    y1={chart.yScale(previousItem.end)}
                     x2={x - barW / 2}
-                    y2={yScale(item.start)}
+                    y2={chart.yScale(item.start)}
                     stroke="#9ca3af"
                     strokeWidth="1"
                     strokeDasharray="2 2"
@@ -150,7 +168,7 @@ export function WaterfallChart({ data }: WaterfallChartProperties) {
                   x={x}
                   y={chartHeight + 10}
                   textAnchor="end"
-                  transform={`rotate(-45, ${x}, ${chartHeight + 10})`}
+                  transform={labelTransform}
                   className="fill-gray-600 text-xs"
                 >
                   {item.categoryName.length > 25 ? item.categoryName.slice(0, 25) + "..." : item.categoryName}
@@ -178,4 +196,4 @@ export function WaterfallChart({ data }: WaterfallChartProperties) {
       </div>
     </div>
   )
-}
+})

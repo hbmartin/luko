@@ -1,5 +1,12 @@
 import { Formula, FormulaRow, GridRow, Metric, MetricRow, Notebook } from "@/lib/types/notebook"
 
+const currencyFormatter = new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: "USD",
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 0,
+})
+
 /**
  * Converts notebook data to flattened grid rows for react-data-grid
  * Includes both categories and their metrics in a hierarchical structure
@@ -74,12 +81,7 @@ export function formatNumber(value: number | null | undefined, decimals: number 
  */
 export function formatCurrency(value: number | null | undefined): string {
   if (value === null || value === undefined) return ""
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(value)
+  return currencyFormatter.format(value)
 }
 
 /**

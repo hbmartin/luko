@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 
-import { compileNotebookFormulas, evaluateFormulas } from "@/lib/formulas"
+import { compileNotebookFormulas, evaluatePlan, planEvaluation } from "@/lib/formulas"
 import { Category, Metric, Notebook, SimulationResult } from "@/lib/types/notebook"
 
 const DEFAULT_ITERATIONS = 100_000
@@ -105,27 +105,23 @@ const sampleMetricValue = (metric: Metric): number => {
 
 const fallbackCategoryOutput = (
   category: Category,
-  metrics: Metric[],
+  financialMetrics: Metric[],
   evaluatedValues: Record<string, number>,
   sampledValues: Record<string, number>
 ) => {
-  return metrics
-    .filter((metric) => metric.categoryId === category.id)
-    .reduce((accumulator, metric) => {
-      const value = evaluatedValues[metric.id] ?? sampledValues[metric.id] ?? 0
-      if (!isFinancialMetric(metric)) return accumulator
-      return accumulator + value
-    }, 0)
+  let total = 0
+  for (const metric of financialMetrics) {
+    total += evaluatedValues[metric.id] ?? sampledValues[metric.id] ?? 0
+  }
+  return total
 }
 
 const getCategoryOutput = (
   category: Category,
-  metrics: Metric[],
+  financialMetrics: Metric[],
   evaluatedValues: Record<string, number>,
   sampledValues: Record<string, number>
 ) => {
-  if (category.type === "facts") return 0
-
   if (category.outputFormulaId) {
     const value = evaluatedValues[category.outputFormulaId]
     if (typeof value !== "number" || !Number.isFinite(value)) {
@@ -134,7 +130,7 @@ const getCategoryOutput = (
     return value
   }
 
-  return fallbackCategoryOutput(category, metrics, evaluatedValues, sampledValues)
+  return fallbackCategoryOutput(category, financialMetrics, evaluatedValues, sampledValues)
 }
 
 const normalizeFormulaKey = (value: string) => value.toLowerCase().replaceAll(/[\s-]+/g, "_")
@@ -144,7 +140,24 @@ const getEvaluatedFormulaNumber = (evaluatedValues: Record<string, number>, form
   return typeof value === "number" && Number.isFinite(value) ? value : undefined
 }
 
-const findYearFormulaId = (notebook: Notebook, year: number, term: string) => {
+interface YearFormulaLookup {
+  byNormalizedId: Map<string, string>
+  byNormalizedName: Map<string, string>
+}
+
+const buildYearFormulaLookup = (notebook: Notebook): YearFormulaLookup => {
+  const byNormalizedId = new Map<string, string>()
+  const byNormalizedName = new Map<string, string>()
+
+  for (const formula of notebook.formulas) {
+    byNormalizedId.set(normalizeFormulaKey(formula.id), formula.id)
+    byNormalizedName.set(normalizeFormulaKey(formula.name), formula.id)
+  }
+
+  return { byNormalizedId, byNormalizedName }
+}
+
+const findYearFormulaId = (lookup: YearFormulaLookup, year: number, term: string) => {
   const yearKey = String(year)
   const normalizedCandidates = new Set([
     `formula_year_${yearKey}_${term}`,
@@ -153,9 +166,9 @@ const findYearFormulaId = (notebook: Notebook, year: number, term: string) => {
     `year_${yearKey}_${term}_cash_flow`,
   ])
 
-  const formulaById = notebook.formulas.find((formula) => normalizedCandidates.has(normalizeFormulaKey(formula.id)))
-  if (formulaById) {
-    return formulaById.id
+  for (const candidate of normalizedCandidates) {
+    const formulaId = lookup.byNormalizedId.get(candidate)
+    if (formulaId) return formulaId
   }
 
   const normalizedNameCandidates = new Set([
@@ -164,44 +177,40 @@ const findYearFormulaId = (notebook: Notebook, year: number, term: string) => {
     `year_${yearKey}_${term}_cashflow`,
   ])
 
-  return notebook.formulas.find((formula) => normalizedNameCandidates.has(normalizeFormulaKey(formula.name)))?.id
+  for (const candidate of normalizedNameCandidates) {
+    const formulaId = lookup.byNormalizedName.get(candidate)
+    if (formulaId) return formulaId
+  }
+
+  return
 }
 
-const getExplicitYearNetFormulaIds = (notebook: Notebook) =>
-  Array.from({ length: SIMULATION_YEAR_COUNT }, (_value, index) => findYearFormulaId(notebook, index + 1, "net"))
+const getExplicitYearNetFormulaIds = (lookup: YearFormulaLookup) =>
+  Array.from({ length: SIMULATION_YEAR_COUNT }, (_value, index) => findYearFormulaId(lookup, index + 1, "net"))
 
-const getExplicitYearNetValues = (
-  explicitYearNetFormulaIds: Array<string | undefined>,
-  evaluatedValues: Record<string, number>
-) =>
-  explicitYearNetFormulaIds.map((formulaId) =>
-    formulaId ? getEvaluatedFormulaNumber(evaluatedValues, formulaId) : undefined
-  )
-
-const createYearlyCashFlows = (
+const writeYearlyCashFlows = (
   explicitYearNetFormulaIds: Array<string | undefined>,
   evaluatedValues: Record<string, number>,
   totalBenefits: number,
-  totalCosts: number
+  totalCosts: number,
+  yearlyBenefits: number[],
+  yearlyCosts: number[],
+  yearlyNet: number[]
 ) => {
-  const explicitYearNetValues = getExplicitYearNetValues(explicitYearNetFormulaIds, evaluatedValues)
-
-  return explicitYearNetValues.map((netValue) => {
+  for (let index = 0; index < SIMULATION_YEAR_COUNT; index += 1) {
+    const formulaId = explicitYearNetFormulaIds[index]
+    const netValue = formulaId ? getEvaluatedFormulaNumber(evaluatedValues, formulaId) : undefined
     if (typeof netValue === "number") {
-      const costs = totalBenefits - netValue
-      return {
-        benefits: totalBenefits,
-        costs,
-        net: netValue,
-      }
+      yearlyBenefits[index] = totalBenefits
+      yearlyCosts[index] = totalBenefits - netValue
+      yearlyNet[index] = netValue
+      continue
     }
 
-    return {
-      benefits: totalBenefits,
-      costs: totalCosts,
-      net: totalBenefits - totalCosts,
-    }
-  })
+    yearlyBenefits[index] = totalBenefits
+    yearlyCosts[index] = totalCosts
+    yearlyNet[index] = totalBenefits - totalCosts
+  }
 }
 
 const correlation = (x: number[], y: number[]) => {
@@ -229,6 +238,12 @@ interface MetricSampleTrack {
   values: number[]
 }
 
+interface CategorySimulationPlan {
+  category: Category
+  financialMetrics: Metric[]
+  samples: number[]
+}
+
 const yieldToEventLoop = () =>
   new Promise<void>((resolve) => {
     if (typeof globalThis.setImmediate === "function") {
@@ -244,64 +259,117 @@ export async function runSimulation(
   iterations: number = DEFAULT_ITERATIONS
 ): Promise<SimulationResult> {
   const registry = compileNotebookFormulas(notebook)
-  const explicitYearNetFormulaIds = getExplicitYearNetFormulaIds(notebook)
+  const evaluationPlan = planEvaluation(registry)
+  const expectedPlannedFormulaCount = Object.keys(registry).length
+  const plannedFormulaCount = evaluationPlan.order.reduce(
+    (count, formulaId) => (registry[formulaId] ? count + 1 : count),
+    0
+  )
+  if (plannedFormulaCount !== expectedPlannedFormulaCount) {
+    throw new Error("Formula evaluation plan is incomplete.")
+  }
+
+  const yearFormulaLookup = buildYearFormulaLookup(notebook)
+  const explicitYearNetFormulaIds = getExplicitYearNetFormulaIds(yearFormulaLookup)
+  const yieldInterval = SIMULATION_YIELD_INTERVAL
+  const metrics = notebook.metrics
+
   const metricSamples: Record<string, MetricSampleTrack> = {}
+  const sampledValues: Record<string, number> = {}
+  const evaluatedValues: Record<string, number> = {}
+  for (const metric of metrics) {
+    metricSamples[metric.id] = { metric, values: [] }
+  }
+
+  const financialMetricsByCategoryId = new Map<string, Metric[]>()
+  for (const metric of metrics) {
+    if (!isFinancialMetric(metric)) continue
+    const categoryMetrics = financialMetricsByCategoryId.get(metric.categoryId)
+    if (categoryMetrics) {
+      categoryMetrics.push(metric)
+    } else {
+      financialMetricsByCategoryId.set(metric.categoryId, [metric])
+    }
+  }
+
   const categorySamples: Record<string, number[]> = {}
-  const yearlyBenefitsSamples = Array.from({ length: 3 }, () => [] as number[])
-  const yearlyCostsSamples = Array.from({ length: 3 }, () => [] as number[])
-  const yearlyNetSamples = Array.from({ length: 3 }, () => [] as number[])
+  const benefitCategories: CategorySimulationPlan[] = []
+  const costCategories: CategorySimulationPlan[] = []
+  for (const category of notebook.categories) {
+    const samples: number[] = []
+    categorySamples[category.id] = samples
+    if (category.type === "facts") continue
+
+    const plan = {
+      category,
+      financialMetrics: financialMetricsByCategoryId.get(category.id) ?? [],
+      samples,
+    }
+    if (category.type === "benefit") {
+      benefitCategories.push(plan)
+    } else {
+      costCategories.push(plan)
+    }
+  }
+
+  const yearlyBenefitsSamples = Array.from({ length: SIMULATION_YEAR_COUNT }, () => [] as number[])
+  const yearlyCostsSamples = Array.from({ length: SIMULATION_YEAR_COUNT }, () => [] as number[])
+  const yearlyNetSamples = Array.from({ length: SIMULATION_YEAR_COUNT }, () => [] as number[])
+  const yearlyBenefits = Array.from({ length: SIMULATION_YEAR_COUNT }, () => 0)
+  const yearlyCosts = Array.from({ length: SIMULATION_YEAR_COUNT }, () => 0)
+  const yearlyNet = Array.from({ length: SIMULATION_YEAR_COUNT }, () => 0)
   const npvSamples: number[] = []
   const paybackSamples: number[] = []
 
   for (let index = 0; index < iterations; index += 1) {
-    if (index > 0 && index % SIMULATION_YIELD_INTERVAL === 0) {
+    if (index > 0 && index % yieldInterval === 0) {
       await yieldToEventLoop()
     }
 
-    const sampledValues: Record<string, number> = {}
-
-    for (const metric of notebook.metrics) {
+    for (const metric of metrics) {
       const value = sampleMetricValue(metric)
 
       sampledValues[metric.id] = value
-      if (!metricSamples[metric.id]) {
-        metricSamples[metric.id] = { metric, values: [] }
-      }
       metricSamples[metric.id]!.values.push(value)
     }
 
-    const evaluatedValues = evaluateFormulas(registry, sampledValues)
+    evaluatePlan(evaluationPlan, sampledValues, evaluatedValues)
 
-    const benefitsTotals: number[] = []
-    const costsTotals: number[] = []
+    let totalBenefits = 0
+    let totalCosts = 0
 
-    for (const category of notebook.categories) {
-      const rawContribution = getCategoryOutput(category, notebook.metrics, evaluatedValues, sampledValues)
-      const contribution = category.type === "cost" ? -Math.abs(rawContribution) : rawContribution
-      if (!categorySamples[category.id]) categorySamples[category.id] = []
-      categorySamples[category.id]!.push(contribution)
-
-      if (category.type === "benefit") benefitsTotals.push(Math.max(0, rawContribution))
-      if (category.type === "cost") costsTotals.push(Math.abs(rawContribution))
+    for (const { category, financialMetrics, samples } of benefitCategories) {
+      const rawContribution = getCategoryOutput(category, financialMetrics, evaluatedValues, sampledValues)
+      samples.push(rawContribution)
+      totalBenefits += Math.max(0, rawContribution)
     }
 
-    const totalBenefits = benefitsTotals.reduce((accumulator, value) => accumulator + value, 0)
-    const totalCosts = costsTotals.reduce((accumulator, value) => accumulator + value, 0)
+    for (const { category, financialMetrics, samples } of costCategories) {
+      const rawContribution = getCategoryOutput(category, financialMetrics, evaluatedValues, sampledValues)
+      const cost = Math.abs(rawContribution)
+      samples.push(-cost)
+      totalCosts += cost
+    }
 
-    const yearlyCashFlows = createYearlyCashFlows(explicitYearNetFormulaIds, evaluatedValues, totalBenefits, totalCosts)
-    const yearlyBenefits = yearlyCashFlows.map((cashFlow) => cashFlow.benefits)
-    const yearlyCosts = yearlyCashFlows.map((cashFlow) => cashFlow.costs)
-    const yearlyNet = yearlyCashFlows.map((cashFlow) => cashFlow.net)
-
-    for (const [index, value] of yearlyBenefits.entries()) yearlyBenefitsSamples[index]!.push(value)
-    for (const [index, value] of yearlyCosts.entries()) yearlyCostsSamples[index]!.push(value)
-    for (const [index, value] of yearlyNet.entries()) yearlyNetSamples[index]!.push(value)
+    writeYearlyCashFlows(
+      explicitYearNetFormulaIds,
+      evaluatedValues,
+      totalBenefits,
+      totalCosts,
+      yearlyBenefits,
+      yearlyCosts,
+      yearlyNet
+    )
 
     const discountRate = evaluatedValues.discount_rate ?? sampledValues.discount_rate ?? 0.25
-    const npvValue = yearlyNet.reduce(
-      (accumulator, cashFlow, index) => accumulator + cashFlow / Math.pow(1 + discountRate, index + 1),
-      0
-    )
+    let npvValue = 0
+    for (let yearIndex = 0; yearIndex < SIMULATION_YEAR_COUNT; yearIndex += 1) {
+      const net = yearlyNet[yearIndex]!
+      yearlyBenefitsSamples[yearIndex]!.push(yearlyBenefits[yearIndex]!)
+      yearlyCostsSamples[yearIndex]!.push(yearlyCosts[yearIndex]!)
+      yearlyNetSamples[yearIndex]!.push(net)
+      npvValue += net / Math.pow(1 + discountRate, yearIndex + 1)
+    }
     npvSamples.push(npvValue)
 
     paybackSamples.push(estimatePaybackMonths(yearlyBenefits, yearlyCosts))
@@ -309,14 +377,16 @@ export async function runSimulation(
 
   const npvStats = createStats(npvSamples)
 
-  const sensitivity = Object.values(metricSamples)
-    .map(({ metric, values }) => ({
+  const sensitivity = notebook.metrics
+    .map((metric, index) => ({
       metricId: metric.id,
       metricName: metric.name,
-      impact: correlation(values, npvSamples),
+      impact: correlation(metricSamples[metric.id]?.values ?? [], npvSamples),
+      index,
     }))
-    .toSorted((a, b) => Math.abs(b.impact) - Math.abs(a.impact))
+    .toSorted((a, b) => Math.abs(b.impact) - Math.abs(a.impact) || a.index - b.index)
     .slice(0, 8)
+    .map(({ metricId, metricName, impact }) => ({ metricId, metricName, impact }))
 
   const categoryContributions = notebook.categories.map((category) => {
     const values = categorySamples[category.id] ?? []

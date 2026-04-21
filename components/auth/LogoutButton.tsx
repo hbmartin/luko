@@ -21,11 +21,11 @@ export function LogoutButton({ variant = "text", className }: LogoutButtonProper
       const { error } = await supabase.auth.signOut()
       if (error) {
         console.error("Error signing out:", error.message)
-        setIsSigningOut(false)
       }
     } catch (error) {
-      setIsSigningOut(false)
       console.error("Error signing out", error)
+    } finally {
+      setIsSigningOut(false)
     }
   }, [supabase])
 

@@ -14,7 +14,7 @@ interface ReferenceableItem {
 
 export interface FormulaValidationOptions {
   expression: string
-  referenceableIds: Record<string, ReferenceableItem | undefined>
+  referenceableIds: ReadonlyMap<string, ReferenceableItem>
 }
 
 export const validateFormulaExpression = ({
@@ -38,7 +38,7 @@ export const validateFormulaExpression = ({
     }
   }
   const missingIds = [...dependencies].filter((dependency) => {
-    if (referenceableIds[dependency]) {
+    if (referenceableIds.has(dependency)) {
       return false
     }
 

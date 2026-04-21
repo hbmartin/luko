@@ -3,10 +3,11 @@
 import { useMemo } from "react"
 import { Mention, type MentionDataItem, MentionsInput } from "react-mentions-ts"
 import type { Formula, Notebook } from "@/lib/types/notebook"
+import { buildReferenceableIds } from "@/lib/utils/notebook-indices"
+import { useNotebookSelector } from "./NotebookProvider"
 import { buildFormulaMarkup } from "./utils/formulaMarkup"
 
 type FormulaEditorSingleLineProperties = {
-  notebook: Notebook
   formulaId: Formula["id"] | null
   className?: string
 }
@@ -21,11 +22,19 @@ export type MetricMentionExtra = {
 
 export type MetricMentionItem = MentionDataItem<MetricMentionExtra>
 
-export function FormulaEditorSingleLine({ notebook, formulaId, className }: FormulaEditorSingleLineProperties) {
+export function FormulaEditorSingleLine({ formulaId, className }: FormulaEditorSingleLineProperties) {
+  const categories = useNotebookSelector((state) => state.notebook.categories)
+  const metrics = useNotebookSelector((state) => state.notebook.metrics)
+  const formulas = useNotebookSelector((state) => state.notebook.formulas)
+  const formula = useNotebookSelector((state) => {
+    if (!formulaId) return null
+    return state.notebook.formulas.find((candidate) => candidate.id === formulaId) ?? null
+  })
+
   const mentionOptions = useMemo<MetricMentionItem[]>(() => {
-    const sortedCategories = notebook.categories.toSorted((a, b) => a.order - b.order)
+    const sortedCategories = categories.toSorted((a, b) => a.order - b.order)
     return sortedCategories.flatMap((category) => {
-      const categoryMetrics = notebook.metrics.filter((candidate) => candidate.categoryId === category.id)
+      const categoryMetrics = metrics.filter((candidate) => candidate.categoryId === category.id)
       return categoryMetrics.map<MetricMentionItem>((candidate) => ({
         id: candidate.id,
         display: candidate.name,
@@ -36,17 +45,9 @@ export function FormulaEditorSingleLine({ notebook, formulaId, className }: Form
         description: candidate.description,
       }))
     })
-  }, [notebook.categories, notebook.metrics])
+  }, [categories, metrics])
 
-  const referenceableIds = useMemo(
-    () => Object.fromEntries([...notebook.metrics, ...notebook.formulas].map((item) => [item.id, item])),
-    [notebook.metrics, notebook.formulas]
-  )
-
-  const formula = useMemo(() => {
-    if (!formulaId) return null
-    return notebook.formulas.find((candidate) => candidate.id === formulaId) ?? null
-  }, [notebook.formulas, formulaId])
+  const referenceableIds = useMemo(() => buildReferenceableIds({ metrics, formulas }), [formulas, metrics])
 
   const formulaExpressionMarkup = useMemo(() => {
     if (!formula) return ""
