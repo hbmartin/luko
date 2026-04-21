@@ -1,7 +1,11 @@
 "use client"
 
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react"
-import type { DragEvent as ReactDragEvent, MouseEvent as ReactMouseEvent } from "react"
+import type {
+  DragEvent as ReactDragEvent,
+  KeyboardEvent as ReactKeyboardEvent,
+  MouseEvent as ReactMouseEvent,
+} from "react"
 import { renderTextEditor, renderValue, ToggleGroup, TreeDataGrid } from "react-data-grid"
 import type {
   CellMouseArgs,
@@ -170,6 +174,7 @@ interface GroupCellHeaderProperties {
   onDragOver: (targetId: string, event: ReactDragEvent<HTMLDivElement>) => void
   onDragStart: (sourceId: string, event: ReactDragEvent<HTMLDivElement>) => void
   onDrop: (targetId: string, event: ReactDragEvent<HTMLDivElement>) => void
+  onKeyboardReorder: (sourceId: string, event: ReactKeyboardEvent<HTMLDivElement>) => void
 }
 
 const GroupCellHeader = memo(function GroupCellHeader({
@@ -181,6 +186,7 @@ const GroupCellHeader = memo(function GroupCellHeader({
   onDragOver,
   onDragStart,
   onDrop,
+  onKeyboardReorder,
 }: GroupCellHeaderProperties) {
   const handleContextMenu = useCallback(
     (event: ReactMouseEvent) => {
@@ -206,9 +212,17 @@ const GroupCellHeader = memo(function GroupCellHeader({
     },
     [categoryId, onDrop]
   )
+  const handleKeyDown = useCallback(
+    (event: ReactKeyboardEvent<HTMLDivElement>) => {
+      onKeyboardReorder(categoryId, event)
+    },
+    [categoryId, onKeyboardReorder]
+  )
 
   return (
     <div
+      aria-label={`${categoryName} category. Press Alt+ArrowUp or Alt+ArrowDown to move.`}
+      aria-roledescription="Draggable category row"
       className="flex w-full items-center justify-between gap-2 pr-2"
       draggable
       onContextMenu={handleContextMenu}
@@ -216,6 +230,8 @@ const GroupCellHeader = memo(function GroupCellHeader({
       onDragOver={handleDragOver}
       onDragStart={handleDragStart}
       onDrop={handleDrop}
+      onKeyDown={handleKeyDown}
+      tabIndex={0}
     >
       <div className="min-w-0 flex-1">
         <ToggleGroup {...groupCellProperties} groupKey={categoryName} />
@@ -254,10 +270,18 @@ interface NameCellProperties {
   onDragOver: (targetId: string, event: ReactDragEvent<HTMLDivElement>) => void
   onDragStart: (sourceId: string, event: ReactDragEvent<HTMLDivElement>) => void
   onDrop: (targetId: string, event: ReactDragEvent<HTMLDivElement>) => void
+  onKeyboardReorder: (sourceId: string, event: ReactKeyboardEvent<HTMLDivElement>) => void
   row: GridRow
 }
 
-const NameCell = memo(function NameCell({ onDragEnd, onDragOver, onDragStart, onDrop, row }: NameCellProperties) {
+const NameCell = memo(function NameCell({
+  onDragEnd,
+  onDragOver,
+  onDragStart,
+  onDrop,
+  onKeyboardReorder,
+  row,
+}: NameCellProperties) {
   const isMetric = isMetricRow(row)
   const handleDragOver = useCallback(
     (event: ReactDragEvent<HTMLDivElement>) => {
@@ -283,15 +307,27 @@ const NameCell = memo(function NameCell({ onDragEnd, onDragOver, onDragStart, on
     },
     [isMetric, onDrop, row.id]
   )
+  const handleKeyDown = useCallback(
+    (event: ReactKeyboardEvent<HTMLDivElement>) => {
+      if (isMetric) {
+        onKeyboardReorder(row.id, event)
+      }
+    },
+    [isMetric, onKeyboardReorder, row.id]
+  )
 
   return (
     <div
+      aria-label={isMetric ? `${row.name} metric. Press Alt+ArrowUp or Alt+ArrowDown to move.` : undefined}
+      aria-roledescription={isMetric ? "Draggable metric row" : undefined}
       className="spreadsheet-metric"
       draggable={isMetric}
       onDragEnd={onDragEnd}
       onDragOver={handleDragOver}
       onDragStart={handleDragStart}
       onDrop={handleDrop}
+      onKeyDown={handleKeyDown}
+      tabIndex={isMetric ? 0 : undefined}
     >
       <div>
         <p className="spreadsheet-metric-name">{row.name}</p>
@@ -453,7 +489,9 @@ export const DataGridComponent = memo(function DataGridComponent({
         }
       }
       for (const id of categoryIds) {
-        next.add(id)
+        if (!previous.has(id)) {
+          next.add(id)
+        }
       }
       return next
     })
@@ -509,6 +547,36 @@ export const DataGridComponent = memo(function DataGridComponent({
       onRowReorder(sourceId, targetId)
     },
     [onRowReorder]
+  )
+  const handleKeyboardReorder = useCallback(
+    (sourceId: string, event: ReactKeyboardEvent<HTMLDivElement>) => {
+      if (event.key !== "ArrowUp" && event.key !== "ArrowDown") return
+      if (!event.altKey && !event.ctrlKey) return
+
+      const direction = event.key === "ArrowUp" ? -1 : 1
+      const sourceCategoryIndex = categoryIds.indexOf(sourceId)
+      let targetId: string | undefined
+
+      if (sourceCategoryIndex !== -1) {
+        targetId = categoryIds[sourceCategoryIndex + direction]
+      } else {
+        const sourceMetric = metricsById.get(sourceId)
+        if (!sourceMetric) return
+
+        const metricIds = notebook.metrics
+          .filter((metric) => metric.categoryId === sourceMetric.categoryId)
+          .map((metric) => metric.id)
+        const sourceMetricIndex = metricIds.indexOf(sourceId)
+        targetId = metricIds[sourceMetricIndex + direction]
+      }
+
+      if (!targetId) return
+
+      event.preventDefault()
+      event.stopPropagation()
+      onRowReorder(sourceId, targetId)
+    },
+    [categoryIds, metricsById, notebook.metrics, onRowReorder]
   )
   const openCategoryContextMenu = useCallback(
     (categoryId: string, categoryName: string) => {
@@ -600,6 +668,7 @@ export const DataGridComponent = memo(function DataGridComponent({
             onDragOver={handleDragOver}
             onDragStart={handleDragStart}
             onDrop={handleDrop}
+            onKeyboardReorder={handleKeyboardReorder}
           />
         )
       },
@@ -620,6 +689,7 @@ export const DataGridComponent = memo(function DataGridComponent({
             onDragOver={handleDragOver}
             onDragStart={handleDragStart}
             onDrop={handleDrop}
+            onKeyboardReorder={handleKeyboardReorder}
           />
         ),
         renderGroupCell: ({ groupKey }: RenderGroupCellProps<GridRow>) => {
@@ -682,6 +752,7 @@ export const DataGridComponent = memo(function DataGridComponent({
     handleDrop,
     handleGroupContextMenu,
     handleGroupMenuButtonClick,
+    handleKeyboardReorder,
     mentionOptions,
     referenceableIds,
     safeTextEditor,

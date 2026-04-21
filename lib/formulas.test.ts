@@ -184,6 +184,12 @@ describe("notebook formula evaluation", () => {
       formulas: focusedNotebook.formulas.map((formula) => ({ ...formula })),
       updatedAt: "2026-01-02T00:00:00.000Z",
     })
+    const reorderedRegistry = compileNotebookFormulas({
+      ...focusedNotebook,
+      metrics: focusedNotebook.metrics.toReversed(),
+      formulas: focusedNotebook.formulas.toReversed(),
+      updatedAt: "2026-01-03T00:00:00.000Z",
+    })
     const changedRegistry = compileNotebookFormulas({
       ...focusedNotebook,
       formulas: focusedNotebook.formulas.map((formula) =>
@@ -192,6 +198,7 @@ describe("notebook formula evaluation", () => {
     })
 
     expect(equivalentRegistry).toBe(registry)
+    expect(reorderedRegistry).toBe(registry)
     expect(planEvaluation(equivalentRegistry)).toBe(planEvaluation(registry))
     expect(changedRegistry).not.toBe(registry)
   })

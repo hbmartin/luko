@@ -20,7 +20,7 @@
 		"format": "prettier --write \"**/*.{ts,tsx,md}\"",
 		"guardrails": "pnpm run guardrails:semgrep && pnpm run guardrails:deps",
 		"guardrails:deps": "pnpm dlx dependency-cruiser --config .dependency-cruiser.cjs \"app/**/*.{ts,tsx}\" \"components/**/*.{ts,tsx}\" \"lib/**/*.ts\"",
-		"guardrails:semgrep": "semgrep --config .semgrep.yml",
+		"guardrails:semgrep": "uvx semgrep --config .semgrep.yml",
 		"postinstall": "npx patch-package -y",
 		"coupling-graph": "npx madge --extensions js,jsx,ts,tsx,css,md,mdx ./ --exclude '.next|tailwind.config.js|reset.d.ts|prettier.config.js|postcss.config.js|playwright.config.ts|next.config.js|next-env.d.ts|instrumentation.ts|e2e/|README.md|.eslintrc.js' --image graph.svg",
 		"prepare": "husky",

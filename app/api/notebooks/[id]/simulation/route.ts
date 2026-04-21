@@ -2,7 +2,7 @@ import { trace } from "@opentelemetry/api"
 import { after, NextResponse } from "next/server"
 import { z } from "zod"
 
-import { runSimulation } from "@/lib/simulation/run-simulation"
+import { MAX_SIMULATION_ITERATIONS, MIN_SIMULATION_ITERATIONS, runSimulation } from "@/lib/simulation/run-simulation"
 import { createServerSupabaseClient } from "@/lib/supabase/server"
 import { NotebookSchema } from "@/lib/types/notebook"
 
@@ -10,7 +10,7 @@ export const runtime = "nodejs"
 
 const simulationRequestSchema = z.object({
   notebook: NotebookSchema,
-  iterations: z.number().int().min(1).max(250_000).optional(),
+  iterations: z.number().int().min(MIN_SIMULATION_ITERATIONS).max(MAX_SIMULATION_ITERATIONS).optional(),
 })
 
 type SimulationRouteContext = {
