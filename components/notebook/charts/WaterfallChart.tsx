@@ -60,7 +60,7 @@ export const WaterfallChart = memo(function WaterfallChart({ data }: WaterfallCh
     // Find min and max for scaling
     const allValues = waterfallData.flatMap((d) => [d.start, d.end])
     const minValue = Math.min(0, ...allValues)
-    const maxValue = Math.max(1, ...allValues)
+    const maxValue = Math.max(0, ...allValues)
     const valueSpan = maxValue - minValue || 1
 
     // Scaling functions

@@ -175,6 +175,27 @@ describe("notebook formula evaluation", () => {
     expect(planEvaluation(registry)).toBe(plan)
   })
 
+  it("reuses compiled registries for unchanged notebook formulas", () => {
+    const focusedNotebook = createFocusedNotebook()
+    const registry = compileNotebookFormulas(focusedNotebook)
+    const equivalentRegistry = compileNotebookFormulas({
+      ...focusedNotebook,
+      metrics: focusedNotebook.metrics.map((metric) => ({ ...metric })),
+      formulas: focusedNotebook.formulas.map((formula) => ({ ...formula })),
+      updatedAt: "2026-01-02T00:00:00.000Z",
+    })
+    const changedRegistry = compileNotebookFormulas({
+      ...focusedNotebook,
+      formulas: focusedNotebook.formulas.map((formula) =>
+        formula.id === "formula_npv_3_year" ? { ...formula, expression: "formula_total_annual_benefits" } : formula
+      ),
+    })
+
+    expect(equivalentRegistry).toBe(registry)
+    expect(planEvaluation(equivalentRegistry)).toBe(planEvaluation(registry))
+    expect(changedRegistry).not.toBe(registry)
+  })
+
   it("filters dependency graph entries to allowed formula and metric keys", () => {
     const notebook: Notebook = {
       ...createFocusedNotebook(),

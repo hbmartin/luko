@@ -4,8 +4,13 @@ import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } f
 import { Mention, MentionsInput, type MentionsInputChangeEvent } from "react-mentions-ts"
 import { validateFormulaExpression } from "@/lib/formula-validation"
 import type { Formula, Notebook } from "@/lib/types/notebook"
-import { buildReferenceableIds, type ReferenceableNotebookItem } from "@/lib/utils/notebook-indices"
-import type { MetricMentionExtra, MetricMentionItem } from "./FormulaEditorSingleLine"
+import {
+  buildMentionOptions,
+  buildReferenceableIds,
+  type MetricMentionExtra,
+  type MetricMentionItem,
+  type ReferenceableNotebookItem,
+} from "@/lib/utils/notebook-indices"
 import { buildFormulaMarkup } from "./utils/formulaMarkup"
 
 type FormulaEditorProperties = {
@@ -19,21 +24,10 @@ const alphabeticalTrigger = /(?:^|\s)((\p{L}+))$/u
 const displayMention = (id: number | string, display?: string | null) => display ?? String(id)
 
 export function FormulaEditor({ notebook, formula, onFormulaChange, className }: FormulaEditorProperties) {
-  const mentionOptions = useMemo<MetricMentionItem[]>(() => {
-    const sortedCategories = notebook.categories.toSorted((a, b) => a.order - b.order)
-    return sortedCategories.flatMap((category) => {
-      const categoryMetrics = notebook.metrics.filter((candidate) => candidate.categoryId === category.id)
-      return categoryMetrics.map<MetricMentionItem>((candidate) => ({
-        id: candidate.id,
-        display: candidate.name,
-        categoryId: category.id,
-        categoryName: category.name,
-        categoryType: category.type,
-        unit: candidate.unit,
-        description: candidate.description,
-      }))
-    })
-  }, [notebook.categories, notebook.metrics])
+  const mentionOptions = useMemo<MetricMentionItem[]>(
+    () => buildMentionOptions(notebook),
+    [notebook.categories, notebook.metrics]
+  )
 
   const referenceableIds = useMemo(
     () => buildReferenceableIds({ metrics: notebook.metrics, formulas: notebook.formulas }),
@@ -72,8 +66,10 @@ function FormulaEditorBody({
   const [draftExpression, setDraftExpression] = useState(formula.expression)
   const [draftMarkup, setDraftMarkup] = useState(() => buildFormulaMarkup(formula.expression, referenceableIds))
   const lastSyncedFormulaReference = useRef({ id: formula.id, expression: formula.expression })
-  const formulaCaughtUpToDraft = formula.expression === draftExpression
-  const isDraftSynced = formulaCaughtUpToDraft || draftExpression === lastSyncedFormulaReference.current.expression
+  const trimmedDraftExpression = draftExpression.trim()
+  const formulaCaughtUpToDraft = formula.expression === draftExpression || formula.expression === trimmedDraftExpression
+  const isDraftSynced =
+    formulaCaughtUpToDraft || trimmedDraftExpression === lastSyncedFormulaReference.current.expression
   const normalizedExpression = isDraftSynced ? formula.expression : draftExpression
   const deferredNormalizedExpression = useDeferredValue(normalizedExpression)
   const canonicalMarkup = useMemo(
@@ -82,18 +78,30 @@ function FormulaEditorBody({
   )
   const formulaExpressionMarkup = isDraftSynced ? canonicalMarkup : draftMarkup
 
+  // If formula.expression catches draftExpression, refresh lastSyncedFormulaReference.
+  // If draftExpression diverged from it, preserve edits; otherwise sync via setDraftExpression
+  // and setDraftMarkup(buildFormulaMarkup(..., referenceableIds)).
   useEffect(() => {
-    if (formula.expression === draftExpression) {
+    if (formula.expression === draftExpression || formula.expression === trimmedDraftExpression) {
       lastSyncedFormulaReference.current = { id: formula.id, expression: formula.expression }
+      if (formula.expression !== draftExpression) {
+        setDraftExpression(formula.expression)
+        setDraftMarkup(buildFormulaMarkup(formula.expression, referenceableIds))
+      }
       return
     }
 
-    if (draftExpression !== lastSyncedFormulaReference.current.expression) return
+    if (
+      draftExpression !== lastSyncedFormulaReference.current.expression &&
+      trimmedDraftExpression !== lastSyncedFormulaReference.current.expression
+    ) {
+      return
+    }
 
     lastSyncedFormulaReference.current = { id: formula.id, expression: formula.expression }
     setDraftExpression(formula.expression)
     setDraftMarkup(buildFormulaMarkup(formula.expression, referenceableIds))
-  }, [draftExpression, formula.expression, formula.id, referenceableIds])
+  }, [draftExpression, formula.expression, formula.id, referenceableIds, trimmedDraftExpression])
 
   const formulaValidation = useMemo(() => {
     return validateFormulaExpression({

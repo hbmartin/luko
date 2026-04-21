@@ -62,7 +62,7 @@ const createArea = (
   const upperPath = data.map((result, index) => createCoordinate(xScale(index), yScale(getUpper(result)))).join(" ")
   const lowerPath = data
     .map((result, index) => createCoordinate(xScale(index), yScale(getLower(result))))
-    .reverse()
+    .toReversed()
     .join(" ")
   return ["M ", upperPath, " L ", lowerPath, " Z"].join("")
 }
