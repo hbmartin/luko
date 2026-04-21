@@ -5,6 +5,8 @@ import { runSimulation } from "@/lib/simulation/runSimulation"
 import { createServerSupabaseClient } from "@/lib/supabase/server"
 import { NotebookSchema } from "@/lib/types/notebook"
 
+export const runtime = "nodejs"
+
 const simulationRequestSchema = z.object({
   notebook: NotebookSchema,
   iterations: z.number().int().min(1).max(250_000).optional(),

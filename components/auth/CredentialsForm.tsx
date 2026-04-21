@@ -113,7 +113,7 @@ export function CredentialsForm({ submitLabel, submittingLabel, onSubmit }: Cred
 
         {feedbackMessage ? (
           <p
-            aria-live="polite"
+            aria-live={feedbackMessage.type === "error" ? "assertive" : "polite"}
             role={feedbackMessage.type === "error" ? "alert" : "status"}
             className={`text-sm ${
               feedbackMessage.type === "error" ? "text-[var(--color-danger)]" : "text-[var(--color-success)]"

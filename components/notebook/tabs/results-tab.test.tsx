@@ -1,3 +1,5 @@
+/* eslint-disable unicorn/no-null */
+
 import { fireEvent, render, screen } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
@@ -6,13 +8,13 @@ import type { SimulationResult } from "@/lib/types/notebook"
 
 import { ResultsTab } from "./ResultsTab"
 
-const noActiveScenarioId = undefined as unknown as string | null
-const noSimulationError = undefined as unknown as string | null
-const noSimulationResult = undefined as unknown as SimulationResult | null
+const noActiveScenarioId: string | null = null
+const noSimulationError: string | null = null
+const noSimulationResult: SimulationResult | null = null
 const context = vi.hoisted(() => ({
   handleRunSimulation: vi.fn(() => Promise.resolve()),
   isSimulating: false,
-  simulationError: undefined as unknown as string | null,
+  simulationError: null as string | null,
 }))
 
 const noScenarios = []

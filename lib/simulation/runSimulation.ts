@@ -158,33 +158,37 @@ const findYearFormulaId = (notebook: Notebook, year: number, term: string) => {
     return formulaById.id
   }
 
-  return notebook.formulas.find((formula) => {
-    const normalizedNameParts = normalizeFormulaKey(formula.name).split("_")
-    return (
-      normalizedNameParts.includes("year") &&
-      normalizedNameParts.includes(yearKey) &&
-      normalizedNameParts.includes(term)
-    )
-  })?.id
+  const normalizedNameCandidates = new Set([
+    `year_${yearKey}_${term}`,
+    `year_${yearKey}_${term}_cash_flow`,
+    `year_${yearKey}_${term}_cashflow`,
+  ])
+
+  return notebook.formulas.find((formula) => normalizedNameCandidates.has(normalizeFormulaKey(formula.name)))?.id
 }
 
-const getExplicitYearNetValues = (notebook: Notebook, evaluatedValues: Record<string, number>) =>
-  Array.from({ length: SIMULATION_YEAR_COUNT }, (_value, index) => {
-    const formulaId = findYearFormulaId(notebook, index + 1, "net")
-    return formulaId ? getEvaluatedFormulaNumber(evaluatedValues, formulaId) : undefined
-  })
+const getExplicitYearNetFormulaIds = (notebook: Notebook) =>
+  Array.from({ length: SIMULATION_YEAR_COUNT }, (_value, index) => findYearFormulaId(notebook, index + 1, "net"))
+
+const getExplicitYearNetValues = (
+  explicitYearNetFormulaIds: Array<string | undefined>,
+  evaluatedValues: Record<string, number>
+) =>
+  explicitYearNetFormulaIds.map((formulaId) =>
+    formulaId ? getEvaluatedFormulaNumber(evaluatedValues, formulaId) : undefined
+  )
 
 const createYearlyCashFlows = (
-  notebook: Notebook,
+  explicitYearNetFormulaIds: Array<string | undefined>,
   evaluatedValues: Record<string, number>,
   totalBenefits: number,
   totalCosts: number
 ) => {
-  const explicitYearNetValues = getExplicitYearNetValues(notebook, evaluatedValues)
+  const explicitYearNetValues = getExplicitYearNetValues(explicitYearNetFormulaIds, evaluatedValues)
 
   return explicitYearNetValues.map((netValue) => {
     if (typeof netValue === "number") {
-      const costs = Math.max(0, totalBenefits - netValue)
+      const costs = totalBenefits - netValue
       return {
         benefits: totalBenefits,
         costs,
@@ -240,6 +244,7 @@ export async function runSimulation(
   iterations: number = DEFAULT_ITERATIONS
 ): Promise<SimulationResult> {
   const registry = compileNotebookFormulas(notebook)
+  const explicitYearNetFormulaIds = getExplicitYearNetFormulaIds(notebook)
   const metricSamples: Record<string, MetricSampleTrack> = {}
   const categorySamples: Record<string, number[]> = {}
   const yearlyBenefitsSamples = Array.from({ length: 3 }, () => [] as number[])
@@ -283,7 +288,7 @@ export async function runSimulation(
     const totalBenefits = benefitsTotals.reduce((accumulator, value) => accumulator + value, 0)
     const totalCosts = costsTotals.reduce((accumulator, value) => accumulator + value, 0)
 
-    const yearlyCashFlows = createYearlyCashFlows(notebook, evaluatedValues, totalBenefits, totalCosts)
+    const yearlyCashFlows = createYearlyCashFlows(explicitYearNetFormulaIds, evaluatedValues, totalBenefits, totalCosts)
     const yearlyBenefits = yearlyCashFlows.map((cashFlow) => cashFlow.benefits)
     const yearlyCosts = yearlyCashFlows.map((cashFlow) => cashFlow.costs)
     const yearlyNet = yearlyCashFlows.map((cashFlow) => cashFlow.net)

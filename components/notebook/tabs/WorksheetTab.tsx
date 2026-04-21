@@ -25,7 +25,7 @@ const reorder = <T,>(items: T[], sourceIndex: number, targetIndex: number): T[] 
 }
 
 const createFormulaId = () => {
-  if (typeof globalThis.crypto !== "undefined" && "randomUUID" in globalThis.crypto) {
+  if (globalThis.crypto !== undefined && "randomUUID" in globalThis.crypto) {
     return globalThis.crypto.randomUUID()
   }
   return `formula_${Math.random().toString(36).slice(2, 10)}`
@@ -74,6 +74,17 @@ export function WorksheetTab({ notebook, onNotebookChange, density, simulationRe
 
   useEffect(() => {
     const handleKey = (event: KeyboardEvent) => {
+      const target = event.target
+      if (
+        target instanceof HTMLElement &&
+        (target.isContentEditable ||
+          target instanceof HTMLInputElement ||
+          target instanceof HTMLTextAreaElement ||
+          target instanceof HTMLSelectElement)
+      ) {
+        return
+      }
+
       const controlOrMeta = event.metaKey || event.ctrlKey
       if (!controlOrMeta) return
       if (event.key === "z" && !event.shiftKey) {
