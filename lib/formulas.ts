@@ -19,7 +19,7 @@ export interface FormulaEvaluationPlan {
 
 type DependencyMap = Record<string, Set<string>>
 
-const evaluationPlanCache = new WeakMap<FormulaRegistry, FormulaEvaluationPlan>()
+const evaluationPlanCache = new WeakMap<FormulaRegistry, Map<string, FormulaEvaluationPlan>>()
 
 const extractDependencies = (node: MathNode): string[] => {
   const dependencies = new Set<string>()
@@ -31,13 +31,12 @@ const extractDependencies = (node: MathNode): string[] => {
   return [...dependencies]
 }
 
-// Currently all symbol names (e.g., pi) enter the graph, inflating sort order.
-// Consider filtering to keys present in the registry to avoid noise and speed up evaluation.
+const getAllowedKeysSignature = (allowedKeys: ReadonlySet<string>) => [...allowedKeys].toSorted().join("\u0000")
 
-const buildDependencyMap = (registry: FormulaRegistry): DependencyMap => {
+const buildDependencyMap = (registry: FormulaRegistry, allowedKeys: ReadonlySet<string>): DependencyMap => {
   const map: DependencyMap = {}
   for (const [metricId, { dependencies }] of Object.entries(registry)) {
-    map[metricId] = new Set(dependencies)
+    map[metricId] = new Set(dependencies.filter((dependency) => allowedKeys.has(dependency)))
   }
   return map
 }
@@ -192,11 +191,16 @@ export const compileNotebookFormulas = (notebook: Notebook): FormulaRegistry => 
   ...compileFormulaRows(notebook.formulas),
 })
 
-export const planEvaluation = (registry: FormulaRegistry): FormulaEvaluationPlan => {
-  const cachedPlan = evaluationPlanCache.get(registry)
+export const planEvaluation = (
+  registry: FormulaRegistry,
+  allowedKeys: ReadonlySet<string> = new Set(Object.keys(registry))
+): FormulaEvaluationPlan => {
+  const cacheKey = getAllowedKeysSignature(allowedKeys)
+  const registryCache = evaluationPlanCache.get(registry)
+  const cachedPlan = registryCache?.get(cacheKey)
   if (cachedPlan) return cachedPlan
 
-  const dependencyMap = buildDependencyMap(registry)
+  const dependencyMap = buildDependencyMap(registry, allowedKeys)
 
   const cycles = detectCircularDependencies(dependencyMap)
   if (cycles.length > 0) {
@@ -205,7 +209,11 @@ export const planEvaluation = (registry: FormulaRegistry): FormulaEvaluationPlan
 
   const order = topologicalSort(dependencyMap)
   const plan = { order, registry }
-  evaluationPlanCache.set(registry, plan)
+  if (registryCache) {
+    registryCache.set(cacheKey, plan)
+  } else {
+    evaluationPlanCache.set(registry, new Map([[cacheKey, plan]]))
+  }
   return plan
 }
 
@@ -214,10 +222,6 @@ export const evaluatePlan = (
   baseValues: Record<string, number>,
   target: Record<string, number> = {}
 ): Record<string, number> => {
-  for (const key of Object.keys(target)) {
-    Reflect.deleteProperty(target, key)
-  }
-
   for (const key in baseValues) {
     const value = baseValues[key]
     if (value !== undefined) {

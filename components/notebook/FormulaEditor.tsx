@@ -1,7 +1,7 @@
 "use client"
 
-import { useCallback, useMemo, useRef, useState } from "react"
-import { Mention, type MentionsInputChangeEvent, MentionsInput } from "react-mentions-ts"
+import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react"
+import { Mention, MentionsInput, type MentionsInputChangeEvent } from "react-mentions-ts"
 import { validateFormulaExpression } from "@/lib/formula-validation"
 import type { Formula, Notebook } from "@/lib/types/notebook"
 import { buildReferenceableIds, type ReferenceableNotebookItem } from "@/lib/utils/notebook-indices"
@@ -16,6 +16,7 @@ type FormulaEditorProperties = {
 }
 
 const alphabeticalTrigger = /(?:^|\s)((\p{L}+))$/u
+const displayMention = (id: number | string, display?: string | null) => display ?? String(id)
 
 export function FormulaEditor({ notebook, formula, onFormulaChange, className }: FormulaEditorProperties) {
   const mentionOptions = useMemo<MetricMentionItem[]>(() => {
@@ -74,22 +75,32 @@ function FormulaEditorBody({
   const formulaCaughtUpToDraft = formula.expression === draftExpression
   const isDraftSynced = formulaCaughtUpToDraft || draftExpression === lastSyncedFormulaReference.current.expression
   const normalizedExpression = isDraftSynced ? formula.expression : draftExpression
+  const deferredNormalizedExpression = useDeferredValue(normalizedExpression)
   const canonicalMarkup = useMemo(
     () => buildFormulaMarkup(normalizedExpression, referenceableIds),
     [normalizedExpression, referenceableIds]
   )
   const formulaExpressionMarkup = isDraftSynced ? canonicalMarkup : draftMarkup
 
-  if (isDraftSynced && lastSyncedFormulaReference.current.expression !== formula.expression) {
+  useEffect(() => {
+    if (formula.expression === draftExpression) {
+      lastSyncedFormulaReference.current = { id: formula.id, expression: formula.expression }
+      return
+    }
+
+    if (draftExpression !== lastSyncedFormulaReference.current.expression) return
+
     lastSyncedFormulaReference.current = { id: formula.id, expression: formula.expression }
-  }
+    setDraftExpression(formula.expression)
+    setDraftMarkup(buildFormulaMarkup(formula.expression, referenceableIds))
+  }, [draftExpression, formula.expression, formula.id, referenceableIds])
 
   const formulaValidation = useMemo(() => {
     return validateFormulaExpression({
-      expression: normalizedExpression,
+      expression: deferredNormalizedExpression,
       referenceableIds,
     })
-  }, [normalizedExpression, referenceableIds])
+  }, [deferredNormalizedExpression, referenceableIds])
 
   const handleMentionsChange = useCallback(
     (change: MentionsInputChangeEvent<MetricMentionExtra>) => {
@@ -124,7 +135,7 @@ function FormulaEditorBody({
         <Mention<MetricMentionExtra>
           data={mentionOptions}
           trigger={alphabeticalTrigger}
-          displayTransform={(id, display) => display ?? `${id}`}
+          displayTransform={displayMention}
         />
       </MentionsInput>
       {formulaValidation ? (

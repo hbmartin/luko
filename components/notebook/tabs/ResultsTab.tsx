@@ -1,12 +1,10 @@
 "use client"
 
-import { useCallback, useMemo, useState } from "react"
+import dynamic from "next/dynamic"
+import { type ChangeEvent, type KeyboardEvent, memo, type MouseEvent, useCallback, useMemo, useState } from "react"
 import { SimulationResult } from "@/lib/types/notebook"
 import { formatAbbreviatedNumber } from "@/lib/utils/grid-helpers"
-import { NPVChart, type NPVSeries } from "../charts/NPVChart"
-import { PaybackChart } from "../charts/PaybackChart"
-import { TornadoChart } from "../charts/TornadoChart"
-import { WaterfallChart } from "../charts/WaterfallChart"
+import type { NPVSeries } from "../charts/NPVChart"
 import { useNotebookActions, useNotebookSelector } from "../NotebookProvider"
 
 interface ScenarioSummary {
@@ -26,6 +24,163 @@ interface ResultsTabProperties {
 
 const primaryColor = "#1e40af"
 const palette = [primaryColor, "#0f766e", "#9d174d", "#9333ea"]
+
+type NPVChartProperties = { series: NPVSeries[] }
+type PaybackChartProperties = { paybackPeriod: SimulationResult["paybackPeriod"] }
+type TornadoChartProperties = { data: SimulationResult["sensitivityAnalysis"] }
+type WaterfallChartProperties = { data: SimulationResult["categoryContributions"] }
+
+const loadNPVChart = async () => {
+  const chartModule = await import("../charts/NPVChart.js")
+  return chartModule.NPVChart
+}
+
+const loadPaybackChart = async () => {
+  const chartModule = await import("../charts/PaybackChart.js")
+  return chartModule.PaybackChart
+}
+
+const loadTornadoChart = async () => {
+  const chartModule = await import("../charts/TornadoChart.js")
+  return chartModule.TornadoChart
+}
+
+const loadWaterfallChart = async () => {
+  const chartModule = await import("../charts/WaterfallChart.js")
+  return chartModule.WaterfallChart
+}
+
+const NPVChart = dynamic<NPVChartProperties>(loadNPVChart, {
+  ssr: false,
+})
+const PaybackChart = dynamic<PaybackChartProperties>(loadPaybackChart, {
+  ssr: false,
+})
+const TornadoChart = dynamic<TornadoChartProperties>(loadTornadoChart, {
+  ssr: false,
+})
+const WaterfallChart = dynamic<WaterfallChartProperties>(loadWaterfallChart, {
+  ssr: false,
+})
+
+interface ScenarioCardProperties {
+  draftName: string
+  isActive: boolean
+  isCompared: boolean
+  isEditing: boolean
+  onBeginRename: (scenario: ScenarioSummary) => void
+  onCancelRename: () => void
+  onCommitRename: (scenarioId: string) => void
+  onDraftNameChange: (name: string) => void
+  onSelectScenario: (scenarioId: string) => void
+  onToggleCompare: (scenarioId: string, checked: boolean) => void
+  scenario: ScenarioSummary
+}
+
+const ScenarioCard = memo(function ScenarioCard({
+  draftName,
+  isActive,
+  isCompared,
+  isEditing,
+  onBeginRename,
+  onCancelRename,
+  onCommitRename,
+  onDraftNameChange,
+  onSelectScenario,
+  onToggleCompare,
+  scenario,
+}: ScenarioCardProperties) {
+  const handleBeginRename = useCallback(
+    (event: MouseEvent<HTMLButtonElement>) => {
+      event.stopPropagation()
+      onBeginRename(scenario)
+    },
+    [onBeginRename, scenario]
+  )
+  const handleCommitRename = useCallback(() => {
+    onCommitRename(scenario.id)
+  }, [onCommitRename, scenario.id])
+  const handleDraftNameChange = useCallback(
+    (event: ChangeEvent<HTMLInputElement>) => {
+      onDraftNameChange(event.target.value)
+    },
+    [onDraftNameChange]
+  )
+  const handleKeyDown = useCallback(
+    (event: KeyboardEvent<HTMLInputElement>) => {
+      if (event.key === "Enter") {
+        event.preventDefault()
+        onCommitRename(scenario.id)
+      }
+      if (event.key === "Escape") {
+        event.preventDefault()
+        onCancelRename()
+      }
+    },
+    [onCancelRename, onCommitRename, scenario.id]
+  )
+  const handleSelectScenario = useCallback(() => {
+    onSelectScenario(scenario.id)
+  }, [onSelectScenario, scenario.id])
+  const handleToggleCompare = useCallback(
+    (event: ChangeEvent<HTMLInputElement>) => {
+      onToggleCompare(scenario.id, event.target.checked)
+    },
+    [onToggleCompare, scenario.id]
+  )
+
+  return (
+    <div
+      className={`min-w-[180px] rounded-md border px-4 py-3 text-left transition ${
+        isActive
+          ? "border-blue-500 bg-blue-50"
+          : "border-[var(--color-border-soft)] bg-[var(--color-surface-muted)] hover:border-blue-300"
+      }`}
+    >
+      <div className="flex items-center justify-between">
+        {isEditing ? (
+          <input
+            aria-label="Scenario name"
+            className="rounded border border-blue-200 bg-white px-2 py-1 text-xs font-semibold text-[var(--color-text-primary)] focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:outline-none"
+            value={draftName}
+            autoComplete="off"
+            spellCheck={false}
+            autoFocus
+            onChange={handleDraftNameChange}
+            onBlur={handleCommitRename}
+            onKeyDown={handleKeyDown}
+          />
+        ) : (
+          <button
+            type="button"
+            className="min-w-0 truncate text-left text-sm font-semibold text-[var(--color-text-primary)] focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:outline-none"
+            onClick={handleSelectScenario}
+            onDoubleClick={handleBeginRename}
+          >
+            {scenario.name}
+          </button>
+        )}
+        <label className="flex items-center gap-2 text-[10px] tracking-wide text-[var(--color-text-muted)] uppercase">
+          <input
+            type="checkbox"
+            className="size-3 rounded border border-[var(--color-border-soft)]"
+            checked={isCompared}
+            onChange={handleToggleCompare}
+          />
+          Compare
+        </label>
+      </div>
+      <button
+        type="button"
+        className="mt-1 block text-left text-xs text-[var(--color-text-muted)] tabular-nums focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:outline-none"
+        onClick={handleSelectScenario}
+      >
+        {formatAbbreviatedNumber(scenario.result.npv.p50)} median NPV • Payback{" "}
+        {scenario.result.paybackPeriod.p50.toFixed(1)} months
+      </button>
+    </div>
+  )
+})
 
 export function ResultsTab({
   simulationResult,
@@ -75,6 +230,31 @@ export function ResultsTab({
   const runSimulation = useCallback(() => {
     void handleRunSimulation()
   }, [handleRunSimulation])
+  const beginRenameScenario = useCallback((scenario: ScenarioSummary) => {
+    setEditingScenarioId(scenario.id)
+    setDraftName(scenario.name)
+  }, [])
+  const cancelRenameScenario = useCallback(() => {
+    setEditingScenarioId(null)
+  }, [])
+  const commitRenameScenario = useCallback(
+    (scenarioId: string) => {
+      onRenameScenario(scenarioId, draftName.trim())
+      setEditingScenarioId(null)
+    },
+    [draftName, onRenameScenario]
+  )
+  const updateDraftName = useCallback((name: string) => {
+    setDraftName(name)
+  }, [])
+  const toggleScenarioComparison = useCallback((scenarioId: string, checked: boolean) => {
+    setComparisonIds((current) => {
+      if (checked) {
+        return [...new Set([...current, scenarioId])]
+      }
+      return current.filter((id) => id !== scenarioId)
+    })
+  }, [])
 
   if (!simulationResult || !activeScenario || isSimulating) {
     return (
@@ -140,84 +320,20 @@ export function ResultsTab({
             const isActive = scenario.id === activeScenario.id
             const isCompared = comparisonIds.includes(scenario.id)
             return (
-              <div
+              <ScenarioCard
                 key={scenario.id}
-                className={`min-w-[180px] rounded-md border px-4 py-3 text-left transition ${
-                  isActive
-                    ? "border-blue-500 bg-blue-50"
-                    : "border-[var(--color-border-soft)] bg-[var(--color-surface-muted)] hover:border-blue-300"
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  {editingScenarioId === scenario.id ? (
-                    <input
-                      aria-label="Scenario name"
-                      className="rounded border border-blue-200 bg-white px-2 py-1 text-xs font-semibold text-[var(--color-text-primary)] focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:outline-none"
-                      value={draftName}
-                      autoFocus
-                      onChange={(event) => {
-                        setDraftName(event.target.value)
-                      }}
-                      onBlur={() => {
-                        onRenameScenario(scenario.id, draftName.trim())
-                        setEditingScenarioId(null)
-                      }}
-                      onKeyDown={(event) => {
-                        if (event.key === "Enter") {
-                          event.preventDefault()
-                          onRenameScenario(scenario.id, draftName.trim())
-                          setEditingScenarioId(null)
-                        }
-                        if (event.key === "Escape") {
-                          event.preventDefault()
-                          setEditingScenarioId(null)
-                        }
-                      }}
-                    />
-                  ) : (
-                    <button
-                      type="button"
-                      className="min-w-0 truncate text-left text-sm font-semibold text-[var(--color-text-primary)] focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:outline-none"
-                      onClick={() => {
-                        onSelectScenario(scenario.id)
-                      }}
-                      onDoubleClick={(event) => {
-                        event.stopPropagation()
-                        setEditingScenarioId(scenario.id)
-                        setDraftName(scenario.name)
-                      }}
-                    >
-                      {scenario.name}
-                    </button>
-                  )}
-                  <label className="flex items-center gap-2 text-[10px] tracking-wide text-[var(--color-text-muted)] uppercase">
-                    <input
-                      type="checkbox"
-                      className="size-3 rounded border border-[var(--color-border-soft)]"
-                      checked={isCompared}
-                      onChange={(event) => {
-                        setComparisonIds((current) => {
-                          if (event.target.checked) {
-                            return [...new Set([...current, scenario.id])]
-                          }
-                          return current.filter((id) => id !== scenario.id)
-                        })
-                      }}
-                    />
-                    Compare
-                  </label>
-                </div>
-                <button
-                  type="button"
-                  className="mt-1 block text-left text-xs text-[var(--color-text-muted)] focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:outline-none"
-                  onClick={() => {
-                    onSelectScenario(scenario.id)
-                  }}
-                >
-                  {formatAbbreviatedNumber(scenario.result.npv.p50)} median NPV • Payback{" "}
-                  {scenario.result.paybackPeriod.p50.toFixed(1)} months
-                </button>
-              </div>
+                draftName={draftName}
+                isActive={isActive}
+                isCompared={isCompared}
+                isEditing={editingScenarioId === scenario.id}
+                scenario={scenario}
+                onBeginRename={beginRenameScenario}
+                onCancelRename={cancelRenameScenario}
+                onCommitRename={commitRenameScenario}
+                onDraftNameChange={updateDraftName}
+                onSelectScenario={onSelectScenario}
+                onToggleCompare={toggleScenarioComparison}
+              />
             )
           })}
         </div>
@@ -232,36 +348,36 @@ export function ResultsTab({
       <section className="grid grid-cols-1 gap-4 md:grid-cols-4">
         <div className="rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface-elevated)] p-4 shadow-sm">
           <div className="text-sm text-[var(--color-text-muted)]">Median NPV (3-Year)</div>
-          <div className="mt-1 text-2xl font-bold text-[var(--color-text-primary)]">
+          <div className="mt-1 text-2xl font-bold text-[var(--color-text-primary)] tabular-nums">
             {formatAbbreviatedNumber(activeScenario.result.npv.p50)}
           </div>
-          <div className="mt-1 text-xs text-[var(--color-text-muted)]">
+          <div className="mt-1 text-xs text-[var(--color-text-muted)] tabular-nums">
             Mean: {formatAbbreviatedNumber(activeScenario.result.npv.mean)}
           </div>
         </div>
         <div className="rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface-elevated)] p-4 shadow-sm">
           <div className="text-sm text-[var(--color-text-muted)]">90% Confidence Interval</div>
-          <div className="mt-1 text-lg font-semibold text-[var(--color-text-primary)]">
+          <div className="mt-1 text-lg font-semibold text-[var(--color-text-primary)] tabular-nums">
             {formatAbbreviatedNumber(activeScenario.result.npv.p10)} –{" "}
             {formatAbbreviatedNumber(activeScenario.result.npv.p90)}
           </div>
-          <div className="mt-1 text-xs text-[var(--color-text-muted)]">
+          <div className="mt-1 text-xs text-[var(--color-text-muted)] tabular-nums">
             Std Dev: {formatAbbreviatedNumber(activeScenario.result.npv.std)}
           </div>
         </div>
         <div className="rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface-elevated)] p-4 shadow-sm">
           <div className="text-sm text-[var(--color-text-muted)]">Payback Period</div>
-          <div className="mt-1 text-2xl font-bold text-[var(--color-text-primary)]">
+          <div className="mt-1 text-2xl font-bold text-[var(--color-text-primary)] tabular-nums">
             {activeScenario.result.paybackPeriod.p50.toFixed(1)} months
           </div>
           <div className="mt-1 text-xs text-green-600">Median estimate</div>
         </div>
         <div className="rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface-elevated)] p-4 shadow-sm">
           <div className="text-sm text-[var(--color-text-muted)]">Simulation Details</div>
-          <div className="mt-1 text-lg font-semibold text-[var(--color-text-primary)]">
+          <div className="mt-1 text-lg font-semibold text-[var(--color-text-primary)] tabular-nums">
             {activeScenario.result.metadata.iterations.toLocaleString()} iterations
           </div>
-          <div className="mt-1 text-xs text-[var(--color-text-muted)]">
+          <div className="mt-1 text-xs text-[var(--color-text-muted)] tabular-nums">
             Runtime {activeScenario.result.metadata.calculationTimeMs} ms
           </div>
         </div>
@@ -277,10 +393,10 @@ export function ResultsTab({
                 className="rounded-xl border border-[var(--color-border-soft)] bg-[var(--color-surface-elevated)] p-4 shadow-sm"
               >
                 <div className="text-sm font-semibold text-[var(--color-text-primary)]">{entry.name}</div>
-                <p className={`mt-1 text-xs ${entry.delta >= 0 ? "text-green-600" : "text-red-500"}`}>
+                <p className={`mt-1 text-xs tabular-nums ${entry.delta >= 0 ? "text-green-600" : "text-red-500"}`}>
                   NPV delta {formatAbbreviatedNumber(entry.delta)}
                 </p>
-                <p className={`text-xs ${entry.paybackDiff <= 0 ? "text-green-600" : "text-red-500"}`}>
+                <p className={`text-xs tabular-nums ${entry.paybackDiff <= 0 ? "text-green-600" : "text-red-500"}`}>
                   Payback {entry.paybackDiff.toFixed(1)} months vs active
                 </p>
               </div>
@@ -313,7 +429,9 @@ export function ResultsTab({
 
       <footer className="rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface-muted)]/60 p-4 text-xs text-[var(--color-text-muted)]">
         <div className="flex flex-wrap items-center justify-between gap-4">
-          <span>Simulation completed: {new Date(activeScenario.result.metadata.timestamp).toLocaleString()}</span>
+          <span className="tabular-nums">
+            Simulation completed: {new Date(activeScenario.result.metadata.timestamp).toLocaleString()}
+          </span>
           <span>Method: Monte Carlo with Beta PERT sampling</span>
         </div>
       </footer>

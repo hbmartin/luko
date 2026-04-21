@@ -117,13 +117,6 @@ export function WorksheetTab({ notebook, onNotebookChange, density, simulationRe
   const referenceableItemsReference = useLatest<ReadonlyMap<string, ReferenceableNotebookItem>>(referenceableItems)
   const indexMapsReference = useLatest(indexMaps)
 
-  useEffect(() => {
-    const existing = historyReference.current[historyIndexReference.current]
-    if (existing?.updatedAt === notebook.updatedAt) return
-    historyReference.current = [...historyReference.current.slice(0, historyIndexReference.current + 1), notebook]
-    historyIndexReference.current = historyReference.current.length - 1
-  }, [notebook])
-
   const commitNotebook = useCallback(
     (nextNotebook: NotebookUpdate) => {
       onNotebookChange((previous) => {

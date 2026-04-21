@@ -5,6 +5,8 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useEffectEvent,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -44,8 +46,6 @@ export interface NotebookActions {
   handleRunSimulation(this: void): Promise<void>
   handleRenameScenario(this: void, scenarioId: string, name: string): void
 }
-
-type NotebookContextType = NotebookState & NotebookActions
 
 interface NotebookStore {
   actions: NotebookActions
@@ -114,7 +114,7 @@ export function NotebookProvider({
   const stateReference = useRef(stateSnapshot)
   stateReference.current = stateSnapshot
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     for (const listener of listenersReference.current) {
       listener()
     }
@@ -146,9 +146,9 @@ export function NotebookProvider({
     )
   }, [])
 
-  const applySystemTheme = useCallback((event: MediaQueryList | MediaQueryListEvent) => {
+  const applySystemTheme = useEffectEvent((event: MediaQueryList | MediaQueryListEvent) => {
     setTheme(event.matches ? "dark" : "light")
-  }, [])
+  })
 
   useEffect(() => {
     document.title = `Luko - ${notebook.name}`
@@ -176,7 +176,7 @@ export function NotebookProvider({
         mediaQuery.removeListener(applySystemTheme)
       }
     }
-  }, [applySystemTheme])
+  }, [])
 
   useEffect(() => {
     if (typeof document === "undefined") return
@@ -287,10 +287,4 @@ export function useNotebookSelector<T>(selector: (state: NotebookState) => T): T
 
 export function useNotebookActions() {
   return useNotebookStore().actions
-}
-
-export function useNotebook(): NotebookContextType {
-  const state = useNotebookSelector((snapshot) => snapshot)
-  const actions = useNotebookActions()
-  return useMemo(() => ({ ...state, ...actions }), [actions, state])
 }

@@ -36,6 +36,12 @@ export const NotebookHeader = memo(function NotebookHeader({ notebookId }: Noteb
   const { setTheme } = useNotebookActions()
 
   const currentPage = useMemo(() => pathname.split("/").pop() || "results", [pathname])
+  const updatedAtLabel = useMemo(() => dateFormatter.format(new Date(updatedAt)), [updatedAt])
+  const simulationIterationsLabel = useMemo(() => numberFormatter.format(simulationIterations), [simulationIterations])
+  const simulationTimestampLabel = useMemo(
+    () => (simulationTimestamp ? dateFormatter.format(new Date(simulationTimestamp)) : "Not yet run"),
+    [simulationTimestamp]
+  )
   const toggleTheme = useCallback(() => {
     setTheme(theme === "light" ? "dark" : "light")
   }, [setTheme, theme])
@@ -43,7 +49,7 @@ export const NotebookHeader = memo(function NotebookHeader({ notebookId }: Noteb
   return (
     <header className="from-background absolute top-0 right-0 left-0 border-b border-[var(--color-border-soft)] bg-gradient-to-b to-(--secondary)/[10%]">
       <div className="bg-secondary text-secondary-foreground py-1 text-center text-sm">
-        {notebookName}
+        <span className="mx-auto block max-w-[calc(100%-12rem)] truncate px-4">{notebookName}</span>
         <div className="absolute top-0 right-0 flex items-center gap-2 px-4 py-1">
           <button
             type="button"
@@ -70,12 +76,12 @@ export const NotebookHeader = memo(function NotebookHeader({ notebookId }: Noteb
               alt="worksheet"
               width={64}
               height={64}
-              className={`transition-transform ${currentPage === "worksheet" ? "" : "group-hover:scale-110"}`}
+              className={`motion-safe:transition-transform ${currentPage === "worksheet" ? "" : "motion-safe:group-hover:scale-110"}`}
             />
-            <div className="gap-1/2 flex flex-col">
+            <div className="gap-1/2 flex flex-col tabular-nums">
               <p>{metricCount} metrics</p>
               <p>{categoryCount} categories</p>
-              <p>{dateFormatter.format(new Date(updatedAt))}</p>
+              <p>{updatedAtLabel}</p>
             </div>
           </Link>
           <Link
@@ -89,15 +95,15 @@ export const NotebookHeader = memo(function NotebookHeader({ notebookId }: Noteb
               alt="results"
               width={64}
               height={64}
-              className={`transition-transform ${currentPage !== "results" && currentPage !== notebookId ? "group-hover:scale-110" : ""}`}
+              className={`motion-safe:transition-transform ${currentPage !== "results" && currentPage !== notebookId ? "motion-safe:group-hover:scale-110" : ""}`}
             />
-            <div className="gap-1/2 flex flex-col">
+            <div className="gap-1/2 flex flex-col tabular-nums">
               <p>
                 {dirtyMetricCount} change
                 {dirtyMetricCount === 1 ? "" : "s"}
               </p>
-              <p>{numberFormatter.format(simulationIterations)} iterations</p>
-              <p>{simulationTimestamp ? dateFormatter.format(new Date(simulationTimestamp)) : "Not yet run"}</p>
+              <p>{simulationIterationsLabel} iterations</p>
+              <p>{simulationTimestampLabel}</p>
             </div>
           </Link>
           <Link
@@ -111,9 +117,9 @@ export const NotebookHeader = memo(function NotebookHeader({ notebookId }: Noteb
               alt="download"
               width={64}
               height={64}
-              className={`transition-transform ${currentPage === "export" ? "" : "group-hover:scale-110"}`}
+              className={`motion-safe:transition-transform ${currentPage === "export" ? "" : "motion-safe:group-hover:scale-110"}`}
             />
-            <div className="gap-1/2 flex flex-col">
+            <div className="gap-1/2 flex flex-col tabular-nums">
               <p>2 teams sharing</p>
               <p>10 recent changes</p>
               <p>7 past exports</p>

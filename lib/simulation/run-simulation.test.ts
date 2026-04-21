@@ -91,6 +91,30 @@ describe("runSimulation", () => {
     )
   })
 
+  it("keeps back-to-back notebook simulations independent", async () => {
+    const baseNotebook = createDeterministicNotebook()
+    const zeroBenefitNotebook: Notebook = {
+      ...createDeterministicNotebook(),
+      id: "zero-benefit-notebook",
+      formulas: baseNotebook.formulas.map((formula) =>
+        formula.id === "formula_total_annual_benefits" ||
+        formula.id === "formula_time_savings_total" ||
+        formula.id === "formula_quality_savings" ||
+        formula.id === "formula_product_revenue_impact" ||
+        formula.id === "formula_retention_savings"
+          ? { ...formula, expression: "0" }
+          : { ...formula }
+      ),
+    }
+
+    const baseResult = await runSimulation(baseNotebook, 1)
+    const zeroBenefitResult = await runSimulation(zeroBenefitNotebook, 1)
+    const repeatedBaseResult = await runSimulation(createDeterministicNotebook(), 1)
+
+    expect(zeroBenefitResult.npv.p50).not.toBeCloseTo(baseResult.npv.p50)
+    expect(repeatedBaseResult.npv.p50).toBeCloseTo(baseResult.npv.p50)
+  })
+
   it("rejects invalid metric distributions", async () => {
     const deterministicNotebook = createDeterministicNotebook()
     const invalidNotebook: Notebook = {

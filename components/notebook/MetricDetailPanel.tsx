@@ -75,7 +75,7 @@ export function MetricDetailPanel({ notebook, metric, formula = null, onFormulaC
           {metric.formula && (
             <section className="rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface-elevated)] p-[var(--space-400)]">
               <h4 className="text-sm font-semibold text-[var(--color-text-primary)]">Formula</h4>
-              <pre className="mt-2 overflow-auto rounded-lg bg-slate-900/90 p-3 text-xs text-slate-100">
+              <pre className="mt-2 overflow-auto rounded-lg bg-slate-900/90 p-3 text-xs text-slate-100" translate="no">
                 {metric.formula}
               </pre>
             </section>
