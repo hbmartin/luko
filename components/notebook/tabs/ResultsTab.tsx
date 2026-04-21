@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useMemo, useState } from "react"
 import { SimulationResult } from "@/lib/types/notebook"
 import { formatAbbreviatedNumber } from "@/lib/utils/grid-helpers"
 import { NPVChart, type NPVSeries } from "../charts/NPVChart"
@@ -34,12 +34,11 @@ export function ResultsTab({
   onSelectScenario,
   onRenameScenario,
 }: ResultsTabProperties) {
-  const { handleRunSimulation, isSimulating } = useNotebook()
+  const { handleRunSimulation, isSimulating, simulationError } = useNotebook()
 
   const [comparisonIds, setComparisonIds] = useState<string[]>([])
   const [editingScenarioId, setEditingScenarioId] = useState<string | null>(null)
   const [draftName, setDraftName] = useState("")
-  const hasRequestedInitialRun = useRef(false)
 
   const activeScenario = useMemo(() => {
     if (scenarios.length === 0) return null
@@ -49,8 +48,9 @@ export function ResultsTab({
     return scenarios.at(-1)
   }, [activeScenarioId, scenarios])
 
-  const comparisonScenarios = scenarios.filter(
-    (scenario) => scenario.id !== activeScenario?.id && comparisonIds.includes(scenario.id)
+  const comparisonScenarios = useMemo(
+    () => scenarios.filter((scenario) => scenario.id !== activeScenario?.id && comparisonIds.includes(scenario.id)),
+    [activeScenario?.id, comparisonIds, scenarios]
   )
 
   const chartSeries: NPVSeries[] = useMemo(() => {
@@ -70,25 +70,21 @@ export function ResultsTab({
     return [base, ...overlays]
   }, [activeScenario, comparisonScenarios])
 
-  useEffect(() => {
-    if ((simulationResult && activeScenario) || isSimulating) {
-      hasRequestedInitialRun.current = false
-      return
-    }
-
-    if (hasRequestedInitialRun.current) return
-
-    hasRequestedInitialRun.current = true
-    handleRunSimulation().finally(() => {
-      hasRequestedInitialRun.current = false
-    })
-  }, [simulationResult, activeScenario, isSimulating, handleRunSimulation])
+  const runSimulation = useCallback(() => {
+    void handleRunSimulation()
+  }, [handleRunSimulation])
 
   if (!simulationResult || !activeScenario || isSimulating) {
     return (
-      <div className="flex h-full items-center justify-center">
+      <div className="flex h-full items-center justify-center" aria-live="polite">
         <div className="text-center">
-          <svg className="mx-auto mb-4 size-16 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <svg
+            className="mx-auto mb-4 size-16 text-gray-400"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            aria-hidden="true"
+          >
             <path
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -96,7 +92,25 @@ export function ResultsTab({
               d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
             />
           </svg>
-          <h3 className="text-lg font-medium text-gray-900">Running simulation…</h3>
+          <h3 className="text-lg font-medium text-[var(--color-text-primary)]">
+            {isSimulating ? "Running Simulation…" : "No Simulation Yet"}
+          </h3>
+          <p className="mt-2 text-sm text-[var(--color-text-muted)]">
+            Run the current notebook snapshot to generate scenario charts.
+          </p>
+          <button
+            type="button"
+            onClick={runSimulation}
+            disabled={isSimulating}
+            className="bg-primary text-primary-foreground mt-5 inline-flex items-center justify-center rounded-md px-5 py-2 text-sm font-semibold shadow-sm transition hover:brightness-95 focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {isSimulating ? "Running…" : "Run Simulation"}
+          </button>
+          {simulationError ? (
+            <p className="mt-4 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700" role="alert">
+              {simulationError}
+            </p>
+          ) : null}
         </div>
       </div>
     )
@@ -124,13 +138,9 @@ export function ResultsTab({
             const isActive = scenario.id === activeScenario.id
             const isCompared = comparisonIds.includes(scenario.id)
             return (
-              <button
+              <div
                 key={scenario.id}
-                type="button"
-                onClick={() => {
-                  onSelectScenario(scenario.id)
-                }}
-                className={`min-w-[180px] rounded-2xl border px-4 py-3 text-left transition ${
+                className={`min-w-[180px] rounded-md border px-4 py-3 text-left transition ${
                   isActive
                     ? "border-blue-500 bg-blue-50"
                     : "border-[var(--color-border-soft)] bg-[var(--color-surface-muted)] hover:border-blue-300"
@@ -139,12 +149,10 @@ export function ResultsTab({
                 <div className="flex items-center justify-between">
                   {editingScenarioId === scenario.id ? (
                     <input
-                      className="focus-visible:data-[focus=strong] rounded border border-blue-200 bg-white px-2 py-1 text-xs font-semibold text-[var(--color-text-primary)]"
+                      aria-label="Scenario name"
+                      className="rounded border border-blue-200 bg-white px-2 py-1 text-xs font-semibold text-[var(--color-text-primary)] focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:outline-none"
                       value={draftName}
                       autoFocus
-                      onClick={(event) => {
-                        event.stopPropagation()
-                      }}
                       onChange={(event) => {
                         setDraftName(event.target.value)
                       }}
@@ -165,8 +173,12 @@ export function ResultsTab({
                       }}
                     />
                   ) : (
-                    <span
-                      className="text-sm font-semibold text-[var(--color-text-primary)]"
+                    <button
+                      type="button"
+                      className="min-w-0 truncate text-left text-sm font-semibold text-[var(--color-text-primary)] focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:outline-none"
+                      onClick={() => {
+                        onSelectScenario(scenario.id)
+                      }}
                       onDoubleClick={(event) => {
                         event.stopPropagation()
                         setEditingScenarioId(scenario.id)
@@ -174,7 +186,7 @@ export function ResultsTab({
                       }}
                     >
                       {scenario.name}
-                    </span>
+                    </button>
                   )}
                   <label className="flex items-center gap-2 text-[10px] tracking-wide text-[var(--color-text-muted)] uppercase">
                     <input
@@ -189,18 +201,21 @@ export function ResultsTab({
                           return current.filter((id) => id !== scenario.id)
                         })
                       }}
-                      onClick={(event) => {
-                        event.stopPropagation()
-                      }}
                     />
                     Compare
                   </label>
                 </div>
-                <p className="mt-1 text-xs text-[var(--color-text-muted)]">
+                <button
+                  type="button"
+                  className="mt-1 block text-left text-xs text-[var(--color-text-muted)] focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:outline-none"
+                  onClick={() => {
+                    onSelectScenario(scenario.id)
+                  }}
+                >
                   {formatAbbreviatedNumber(scenario.result.npv.p50)} median NPV • Payback{" "}
                   {scenario.result.paybackPeriod.p50.toFixed(1)} months
-                </p>
-              </button>
+                </button>
+              </div>
             )
           })}
         </div>

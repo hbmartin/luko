@@ -1,14 +1,16 @@
-import type { Session } from "@supabase/supabase-js"
 import { NextResponse } from "next/server"
 import { z } from "zod"
 
 import { createServerSupabaseClient } from "@/lib/supabase/server"
 
+const sessionSyncSchema = z.object({
+  access_token: z.string().min(1),
+  refresh_token: z.string().min(1),
+})
+
 const callbackSchema = z.object({
   event: z.enum(["INITIAL_SESSION", "SIGNED_IN", "SIGNED_OUT", "TOKEN_REFRESHED", "USER_UPDATED", "PASSWORD_RECOVERY"]),
-  session: z
-    .custom<Session | null>((value) => value === null || typeof value === "object", "Invalid session")
-    .optional(),
+  session: sessionSyncSchema.nullable().optional(),
 })
 
 export async function POST(request: Request) {
@@ -30,14 +32,30 @@ export async function POST(request: Request) {
   const supabase = await createServerSupabaseClient()
 
   if (event === "SIGNED_OUT") {
-    await supabase.auth.signOut()
+    const { error } = await supabase.auth.signOut()
+    if (error) {
+      return NextResponse.json({ success: false, error: "Unable to sign out" }, { status: 500 })
+    }
+    return NextResponse.json({ success: true })
   }
 
-  if (
-    (event === "TOKEN_REFRESHED" || event === "SIGNED_IN" || event === "USER_UPDATED" || event === "INITIAL_SESSION") &&
-    session
-  ) {
-    await supabase.auth.setSession(session)
+  if (!session) {
+    return NextResponse.json({ success: false, error: "Missing session" }, { status: 400 })
+  }
+
+  const { error: setSessionError } = await supabase.auth.setSession(session)
+  if (setSessionError) {
+    return NextResponse.json({ success: false, error: "Invalid session" }, { status: 401 })
+  }
+
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser()
+
+  if (userError || !user) {
+    await supabase.auth.signOut()
+    return NextResponse.json({ success: false, error: "Invalid session" }, { status: 401 })
   }
 
   return NextResponse.json({ success: true })

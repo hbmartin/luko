@@ -46,8 +46,7 @@ export const validateFormulaExpression = ({
       const node = parseFormula(dependency)
       node.compile().evaluate({})
       return false
-    } catch (error) {
-      console.error(error)
+    } catch {
       return true
     }
   })
@@ -63,7 +62,6 @@ export const validateFormulaExpression = ({
   try {
     parseFormula(trimmed)
   } catch (error) {
-    console.error(error)
     return {
       type: "error",
       message: error instanceof Error ? error.message : "Formula is invalid",

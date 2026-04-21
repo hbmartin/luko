@@ -80,6 +80,7 @@ export const CategorySchema = z.object({
   order: z.number(),
   isExpanded: z.boolean().default(true),
   totalFormula: z.string().optional(), // required formula for total calculation
+  outputFormulaId: z.string().optional(),
 })
 
 export type Category = z.infer<typeof CategorySchema>
@@ -104,46 +105,27 @@ export type Formula = z.infer<typeof FormulaSchema>
 // Simulation Types
 // ============================================================================
 
+export const SimulationStatsSchema = z.object({
+  p10: z.number(),
+  p25: z.number(),
+  p50: z.number(),
+  p75: z.number(),
+  p90: z.number(),
+  mean: z.number(),
+  std: z.number(),
+})
+
+export type SimulationStats = z.infer<typeof SimulationStatsSchema>
+
 export const SimulationResultSchema = z.object({
-  npv: z.object({
-    p10: z.number(),
-    p25: z.number(),
-    p50: z.number(),
-    p75: z.number(),
-    p90: z.number(),
-    mean: z.number(),
-    std: z.number(),
-  }),
-  paybackPeriod: z.object({
-    p50: z.number(), // in months
-  }),
+  npv: SimulationStatsSchema,
+  paybackPeriod: SimulationStatsSchema, // in months
   yearlyResults: z.array(
     z.object({
       year: z.number(),
-      benefits: z.object({
-        p10: z.number(),
-        p25: z.number(),
-        p50: z.number(),
-        p75: z.number(),
-        p90: z.number(),
-        mean: z.number(),
-      }),
-      costs: z.object({
-        p10: z.number(),
-        p25: z.number(),
-        p50: z.number(),
-        p75: z.number(),
-        p90: z.number(),
-        mean: z.number(),
-      }),
-      net: z.object({
-        p10: z.number(),
-        p25: z.number(),
-        p50: z.number(),
-        p75: z.number(),
-        p90: z.number(),
-        mean: z.number(),
-      }),
+      benefits: SimulationStatsSchema,
+      costs: SimulationStatsSchema,
+      net: SimulationStatsSchema,
     })
   ),
   categoryContributions: z.array(

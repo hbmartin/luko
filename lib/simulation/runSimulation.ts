@@ -1,9 +1,9 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 
-import { compileMetricFormulas, evaluateFormulas } from "@/lib/formulas"
-import { Metric, Notebook, SimulationResult } from "@/lib/types/notebook"
+import { compileNotebookFormulas, evaluateFormulas } from "@/lib/formulas"
+import { Category, Metric, Notebook, SimulationResult } from "@/lib/types/notebook"
 
-const DEFAULT_ITERATIONS = 5000
+const DEFAULT_ITERATIONS = 100_000
 
 const sampleGamma = (alpha: number): number => {
   if (alpha < 1) {
@@ -37,7 +37,7 @@ const sampleGamma = (alpha: number): number => {
 }
 
 const normalSample = () => {
-  const u1 = Math.random()
+  const u1 = Math.max(Math.random(), Number.EPSILON)
   const u2 = Math.random()
   return Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2)
 }
@@ -50,15 +50,14 @@ const samplePert = (min: number, mode: number, max: number): number => {
   return min + betaSample * (max - min)
 }
 
-const quantile = (values: number[], q: number): number => {
-  if (values.length === 0) return 0
-  const sorted = values.toSorted((a, b) => a - b)
-  const index = (sorted.length - 1) * q
+const quantile = (sortedValues: number[], q: number): number => {
+  if (sortedValues.length === 0) return 0
+  const index = (sortedValues.length - 1) * q
   const lower = Math.floor(index)
   const upper = Math.ceil(index)
-  if (lower === upper) return sorted[lower]!
+  if (lower === upper) return sortedValues[lower]!
   const weight = index - lower
-  return sorted[lower]! * (1 - weight) + sorted[upper]! * weight
+  return sortedValues[lower]! * (1 - weight) + sortedValues[upper]! * weight
 }
 
 const mean = (values: number[]) =>
@@ -73,6 +72,68 @@ const stddev = (values: number[]) => {
 }
 
 const isFinancialMetric = (metric: Metric) => metric.unit?.includes("$")
+
+const assertFinite = (value: number, label: string) => {
+  if (!Number.isFinite(value)) {
+    throw new TypeError(`${label} must be a finite number.`)
+  }
+}
+
+const sampleMetricValue = (metric: Metric): number => {
+  if (!metric.distribution) {
+    const value = metric.value ?? 0
+    assertFinite(value, metric.name)
+    return value
+  }
+
+  const { min, mode, max } = metric.distribution
+  if (min === undefined || mode === undefined || max === undefined) {
+    throw new Error(`Distribution for ${metric.name} must include min, mode, and max.`)
+  }
+  assertFinite(min, `${metric.name} min`)
+  assertFinite(mode, `${metric.name} most likely`)
+  assertFinite(max, `${metric.name} max`)
+
+  if (min > mode || mode > max) {
+    throw new Error(`Distribution for ${metric.name} must satisfy min <= mode <= max.`)
+  }
+
+  return samplePert(min, mode, max)
+}
+
+const fallbackCategoryOutput = (
+  category: Category,
+  metrics: Metric[],
+  evaluatedValues: Record<string, number>,
+  sampledValues: Record<string, number>
+) => {
+  return metrics
+    .filter((metric) => metric.categoryId === category.id)
+    .reduce((accumulator, metric) => {
+      const value = evaluatedValues[metric.id] ?? sampledValues[metric.id] ?? 0
+      if (!isFinancialMetric(metric)) return accumulator
+      return accumulator + value
+    }, 0)
+}
+
+const getCategoryOutput = (
+  category: Category,
+  metrics: Metric[],
+  evaluatedValues: Record<string, number>,
+  sampledValues: Record<string, number>
+) => {
+  if (category.type === "facts") return 0
+
+  if (category.outputFormulaId) {
+    const value = evaluatedValues[category.outputFormulaId]
+    if (typeof value !== "number" || !Number.isFinite(value)) {
+      throw new TypeError(`Category ${category.name} output formula could not be evaluated.`)
+    }
+    return value
+  }
+
+  return fallbackCategoryOutput(category, metrics, evaluatedValues, sampledValues)
+}
 
 const correlation = (x: number[], y: number[]) => {
   if (x.length === 0 || x.length !== y.length) return 0
@@ -104,7 +165,7 @@ export async function runSimulation(
   notebook: Notebook,
   iterations: number = DEFAULT_ITERATIONS
 ): Promise<SimulationResult> {
-  const registry = compileMetricFormulas(notebook.metrics)
+  const registry = compileNotebookFormulas(notebook)
   const metricSamples: Record<string, MetricSampleTrack> = {}
   const categorySamples: Record<string, number[]> = {}
   const yearlyBenefitsSamples = Array.from({ length: 3 }, () => [] as number[])
@@ -117,10 +178,7 @@ export async function runSimulation(
     const sampledValues: Record<string, number> = {}
 
     for (const metric of notebook.metrics) {
-      let value = metric.value ?? 0
-      if (metric.distribution) {
-        value = samplePert(metric.distribution.min ?? 0, metric.distribution.mode ?? 0.5, metric.distribution.max ?? 1)
-      }
+      const value = sampleMetricValue(metric)
 
       sampledValues[metric.id] = value
       if (!metricSamples[metric.id]) {
@@ -135,17 +193,13 @@ export async function runSimulation(
     const costsTotals: number[] = []
 
     for (const category of notebook.categories) {
-      const metricsInCategory = notebook.metrics.filter((metric) => metric.categoryId === category.id)
-      const contribution = metricsInCategory.reduce((accumulator, metric) => {
-        const value = evaluatedValues[metric.id] ?? sampledValues[metric.id] ?? 0
-        if (!isFinancialMetric(metric)) return accumulator
-        return accumulator + value
-      }, 0)
+      const rawContribution = getCategoryOutput(category, notebook.metrics, evaluatedValues, sampledValues)
+      const contribution = category.type === "cost" ? -Math.abs(rawContribution) : rawContribution
       if (!categorySamples[category.id]) categorySamples[category.id] = []
       categorySamples[category.id]!.push(contribution)
 
-      if (category.type === "benefit") benefitsTotals.push(contribution)
-      if (category.type === "cost") costsTotals.push(contribution)
+      if (category.type === "benefit") benefitsTotals.push(Math.max(0, rawContribution))
+      if (category.type === "cost") costsTotals.push(Math.abs(rawContribution))
     }
 
     const totalBenefits = benefitsTotals.reduce((accumulator, value) => accumulator + value, 0)
@@ -203,9 +257,7 @@ export async function runSimulation(
 
   return {
     npv: npvStats,
-    paybackPeriod: {
-      p50: quantile(paybackSamples, 0.5),
-    },
+    paybackPeriod: createStats(paybackSamples),
     yearlyResults,
     categoryContributions,
     sensitivityAnalysis: sensitivity,
@@ -218,6 +270,10 @@ export async function runSimulation(
 }
 
 const estimatePaybackMonths = (benefits: number[], costs: number[]): number => {
+  if (costs.every((cost) => cost <= 0)) {
+    return 0
+  }
+
   let cumulative = -costs[0]!
   let month = 0
   for (let year = 0; year < 3; year += 1) {
@@ -234,12 +290,16 @@ const estimatePaybackMonths = (benefits: number[], costs: number[]): number => {
   return 36
 }
 
-const createStats = (samples: number[]) => ({
-  p10: quantile(samples, 0.1),
-  p25: quantile(samples, 0.25),
-  p50: quantile(samples, 0.5),
-  p75: quantile(samples, 0.75),
-  p90: quantile(samples, 0.9),
-  mean: mean(samples),
-  std: stddev(samples),
-})
+const createStats = (samples: number[]) => {
+  const sortedSamples = samples.toSorted((a, b) => a - b)
+
+  return {
+    p10: quantile(sortedSamples, 0.1),
+    p25: quantile(sortedSamples, 0.25),
+    p50: quantile(sortedSamples, 0.5),
+    p75: quantile(sortedSamples, 0.75),
+    p90: quantile(sortedSamples, 0.9),
+    mean: mean(samples),
+    std: stddev(samples),
+  }
+}

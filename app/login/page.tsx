@@ -17,10 +17,10 @@ type LoginPageProperties = {
 export default async function LoginPage({ searchParams }: LoginPageProperties) {
   const supabase = await createServerSupabaseClient()
   const {
-    data: { session },
-  } = await supabase.auth.getSession()
+    data: { user },
+  } = await supabase.auth.getUser()
 
-  if (session) {
+  if (user) {
     redirect("/")
   }
 
@@ -34,7 +34,7 @@ export default async function LoginPage({ searchParams }: LoginPageProperties) {
           <p className="text-sm text-[var(--color-text-muted)]">Sign in with email or Microsoft SSO.</p>
         </div>
         {errorMessage && (
-          <div className="mt-6 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          <div className="mt-6 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700" role="alert">
             {errorMessage}
           </div>
         )}

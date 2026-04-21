@@ -10,7 +10,11 @@ interface SimulationSummaryPanelProperties {
 }
 
 export function SimulationSummaryPanel({ notebook, result }: SimulationSummaryPanelProperties) {
-  const { handleRunSimulation, isSimulating } = useNotebook()
+  const { handleRunSimulation, isSimulating, simulationError } = useNotebook()
+
+  const runSimulation = () => {
+    void handleRunSimulation()
+  }
 
   return (
     <div className="rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface-elevated)] p-4 shadow-sm">
@@ -70,17 +74,33 @@ export function SimulationSummaryPanel({ notebook, result }: SimulationSummaryPa
               </div>
             </dl>
           </div>
+
+          <button
+            type="button"
+            onClick={runSimulation}
+            disabled={isSimulating}
+            className="bg-primary text-primary-foreground inline-flex w-full items-center justify-center rounded-md px-4 py-2 text-sm font-medium transition-transform hover:scale-[1.01] focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {isSimulating ? "Running…" : "Run Updated Simulation"}
+          </button>
         </div>
       ) : (
         <div className="rounded-xl bg-[var(--color-surface-muted)] p-4 text-center text-sm text-[var(--color-text-muted)]">
           <button
-            onClick={handleRunSimulation}
+            type="button"
+            onClick={runSimulation}
             disabled={isSimulating}
-            className={`bg-primary mx-auto flex items-center gap-2 rounded-full px-5 py-2 text-sm font-medium text-white transition-all ${isSimulating ? "cursor-not-allowed opacity-75" : "hover:scale-105"} `}
+            className={`bg-primary mx-auto flex items-center gap-2 rounded-md px-5 py-2 text-sm font-medium text-white transition-transform ${isSimulating ? "cursor-not-allowed opacity-75" : "hover:scale-105"} focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:ring-offset-2`}
           >
             {isSimulating ? (
               <>
-                <svg className="size-4 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <svg
+                  className="size-4 animate-spin"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                >
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                   <path
                     className="opacity-75"
@@ -98,6 +118,12 @@ export function SimulationSummaryPanel({ notebook, result }: SimulationSummaryPa
           </button>
         </div>
       )}
+
+      {simulationError ? (
+        <p className="mt-3 rounded-md border border-red-200 bg-red-50 p-3 text-xs text-red-700" role="alert">
+          {simulationError}
+        </p>
+      ) : null}
 
       {notebook.isDirty && (
         <div className="mt-[var(--space-400)] rounded-xl border border-yellow-300 bg-yellow-50 p-3 text-xs">
