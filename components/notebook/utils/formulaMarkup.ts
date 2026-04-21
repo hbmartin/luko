@@ -17,7 +17,7 @@ export function buildFormulaMarkup(expression: string, referenceableIds: Referen
     return expression
   }
 
-  const sortedIds = [...detected].sort((a, b) => b.length - a.length)
+  const sortedIds = [...detected].toSorted((a, b) => b.length - a.length)
 
   return sortedIds.reduce((accumulator, id) => {
     const display = referenceableIds[id]?.name ?? id

@@ -338,16 +338,13 @@ div[role="columnheader"][aria-selected="true"] {
     color: var(--primary-foreground);
   }
 
-  :focus {
-    outline: none;
+  :where(a, button, input, select, textarea, [tabindex]):focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
   }
 
-  :focus-visible {
+  :where(a, button, input, select, textarea, [tabindex]):focus-visible[data-focus="strong"] {
     outline: none;
-    box-shadow: none;
-  }
-
-  :focus-visible[data-focus="strong"] {
     box-shadow: 0 0 0 3px var(--ring);
   }
 

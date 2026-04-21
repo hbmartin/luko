@@ -23,7 +23,7 @@ export type MetricMentionItem = MentionDataItem<MetricMentionExtra>
 
 export function FormulaEditorSingleLine({ notebook, formulaId, className }: FormulaEditorSingleLineProperties) {
   const mentionOptions = useMemo<MetricMentionItem[]>(() => {
-    const sortedCategories = [...notebook.categories].sort((a, b) => a.order - b.order)
+    const sortedCategories = notebook.categories.toSorted((a, b) => a.order - b.order)
     return sortedCategories.flatMap((category) => {
       const categoryMetrics = notebook.metrics.filter((candidate) => candidate.categoryId === category.id)
       return categoryMetrics.map<MetricMentionItem>((candidate) => ({

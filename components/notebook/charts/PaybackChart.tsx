@@ -1,65 +1,31 @@
 "use client"
 
+import type { SimulationStats } from "@/lib/types/notebook"
+
 interface PaybackChartProperties {
-  paybackPeriod: {
-    p50: number // in months
-  }
+  paybackPeriod: SimulationStats
 }
 
 export function PaybackChart({ paybackPeriod }: PaybackChartProperties) {
   const width = 600
-  const height = 300
+  const height = 260
   const padding = { top: 40, right: 40, bottom: 60, left: 60 }
   const chartWidth = width - padding.left - padding.right
   const chartHeight = height - padding.top - padding.bottom
 
-  // Generate mock distribution data around the median
-  // In a real implementation, this would come from the simulation
-  const months = Array.from({ length: 24 }, (_, index) => index + 1)
-  const median = paybackPeriod.p50
-
-  // Create a normal-ish distribution around the median
-  const distribution = months.map((month) => {
-    const distance = Math.abs(month - median)
-    const probability = Math.exp(-Math.pow(distance / 2, 2)) * 100
-    return { month, probability }
-  })
-
-  const maxProbability = Math.max(...distribution.map((d) => d.probability))
-
-  // Scaling functions
-  const barWidth = chartWidth / months.length
-  const xScale = (index: number) => index * barWidth
-  const yScale = (value: number) => chartHeight - (value / maxProbability) * chartHeight
-
-  // Calculate cumulative probability curve
-  let cumulative = 0
-  const cumulativeData = distribution.map((d) => {
-    cumulative += d.probability / 100
-    return { month: d.month, cumulative: Math.min(cumulative / 5, 1) } // normalized
-  })
-
-  const cumulativePath = cumulativeData
-    .map((d, index) => {
-      const x = xScale(index) + barWidth / 2
-      const y = chartHeight - d.cumulative * chartHeight
-      return index === 0 ? `M ${x},${y}` : `L ${x},${y}`
-    })
-    .join(" ")
+  const maxMonth = Math.max(12, Math.ceil(paybackPeriod.p90 * 1.15))
+  const xScale = (month: number) => (month / maxMonth) * chartWidth
+  const bandY = chartHeight / 2
+  const ticks = [0, 0.25, 0.5, 0.75, 1].map((ratio) => Math.round(maxMonth * ratio))
 
   return (
     <div className="relative">
-      <svg viewBox={`0 0 ${width} ${height}`} className="w-full">
-        {/* Y-axis */}
-        <line
-          x1={padding.left}
-          y1={padding.top}
-          x2={padding.left}
-          y2={height - padding.bottom}
-          stroke="#e5e7eb"
-          strokeWidth="1"
-        />
-
+      <svg
+        viewBox={`0 0 ${width} ${height}`}
+        className="w-full"
+        role="img"
+        aria-label="Payback period percentile chart"
+      >
         {/* X-axis */}
         <line
           x1={padding.left}
@@ -71,106 +37,106 @@ export function PaybackChart({ paybackPeriod }: PaybackChartProperties) {
         />
 
         {/* Grid lines */}
-        {[0, 0.25, 0.5, 0.75, 1].map((t) => {
-          const y = padding.top + chartHeight - t * chartHeight
+        {ticks.map((month) => {
+          const x = padding.left + xScale(month)
           return (
-            <line key={t} x1={padding.left} y1={y} x2={width - padding.right} y2={y} stroke="#f3f4f6" strokeWidth="1" />
+            <g key={month}>
+              <line x1={x} y1={padding.top} x2={x} y2={height - padding.bottom} stroke="#f3f4f6" strokeWidth="1" />
+              <text x={x} y={height - padding.bottom + 20} textAnchor="middle" className="fill-gray-600 text-xs">
+                {month}
+              </text>
+            </g>
           )
         })}
 
-        {/* Bars (histogram) */}
         <g transform={`translate(${padding.left}, ${padding.top})`}>
-          {distribution.map((d, index) => {
-            const x = xScale(index)
-            const barH = chartHeight - yScale(d.probability)
-            const isMedian = Math.abs(d.month - median) < 0.5
-
-            return (
-              <rect
-                key={index}
-                x={x}
-                y={yScale(d.probability)}
-                width={barWidth * 0.9}
-                height={barH}
-                fill={isMedian ? "#1e40af" : "#93c5fd"}
-                opacity="0.8"
-              />
-            )
-          })}
+          <line x1={0} y1={bandY} x2={chartWidth} y2={bandY} stroke="#e5e7eb" strokeWidth="8" strokeLinecap="round" />
+          <line
+            x1={xScale(paybackPeriod.p10)}
+            y1={bandY}
+            x2={xScale(paybackPeriod.p90)}
+            y2={bandY}
+            stroke="#93c5fd"
+            strokeWidth="24"
+            strokeLinecap="round"
+          />
+          <line
+            x1={xScale(paybackPeriod.p25)}
+            y1={bandY}
+            x2={xScale(paybackPeriod.p75)}
+            y2={bandY}
+            stroke="#3b82f6"
+            strokeWidth="24"
+            strokeLinecap="round"
+          />
 
           {/* Median line */}
           <line
-            x1={xScale(median - 1) + barWidth / 2}
-            y1={0}
-            x2={xScale(median - 1) + barWidth / 2}
-            y2={chartHeight}
+            x1={xScale(paybackPeriod.p50)}
+            y1={bandY - 42}
+            x2={xScale(paybackPeriod.p50)}
+            y2={bandY + 42}
             stroke="#1e40af"
+            strokeWidth="3"
+          />
+
+          <line
+            x1={xScale(paybackPeriod.mean)}
+            y1={bandY - 32}
+            x2={xScale(paybackPeriod.mean)}
+            y2={bandY + 32}
+            stroke="#10b981"
             strokeWidth="2"
             strokeDasharray="4 4"
           />
 
-          {/* Median label */}
           <text
-            x={xScale(median - 1) + barWidth / 2}
-            y={-10}
+            x={xScale(paybackPeriod.p50)}
+            y={bandY - 54}
             textAnchor="middle"
             className="fill-blue-900 text-xs font-semibold"
           >
-            Median: {median.toFixed(1)} months
+            Median: {paybackPeriod.p50.toFixed(1)} months
           </text>
-
-          {/* Cumulative probability curve */}
-          <path d={cumulativePath} stroke="#10b981" strokeWidth="2" fill="none" opacity="0.8" />
+          <text
+            x={xScale(paybackPeriod.mean)}
+            y={bandY + 58}
+            textAnchor="middle"
+            className="fill-emerald-700 text-xs font-semibold"
+          >
+            Mean: {paybackPeriod.mean.toFixed(1)}
+          </text>
+          <text x={xScale(paybackPeriod.p10)} y={bandY + 38} textAnchor="middle" className="fill-gray-600 text-xs">
+            p10
+          </text>
+          <text x={xScale(paybackPeriod.p90)} y={bandY + 38} textAnchor="middle" className="fill-gray-600 text-xs">
+            p90
+          </text>
         </g>
-
-        {/* X-axis labels (every 3 months) */}
-        {months
-          .filter((m) => m % 3 === 0)
-          .map((month) => {
-            const x = padding.left + xScale(month - 1) + barWidth / 2
-            return (
-              <text
-                key={month}
-                x={x}
-                y={height - padding.bottom + 20}
-                textAnchor="middle"
-                className="fill-gray-600 text-xs"
-              >
-                {month}
-              </text>
-            )
-          })}
 
         {/* X-axis title */}
         <text x={width / 2} y={height - 10} textAnchor="middle" className="fill-gray-700 text-sm font-medium">
           Months to Payback
-        </text>
-
-        {/* Y-axis title */}
-        <text
-          x={15}
-          y={height / 2}
-          textAnchor="middle"
-          transform={`rotate(-90, 15, ${height / 2})`}
-          className="fill-gray-700 text-sm font-medium"
-        >
-          Probability
         </text>
       </svg>
 
       {/* Legend */}
       <div className="mt-4 flex flex-wrap items-center gap-4 text-xs">
         <div className="flex items-center gap-2">
-          <div className="h-4 w-3 bg-blue-300"></div>
-          <span className="text-gray-600">Probability Distribution</span>
+          <div className="h-2 w-6 rounded bg-blue-300"></div>
+          <span className="text-gray-600">p10-p90</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="h-0.5 w-6 bg-green-500"></div>
-          <span className="text-gray-600">Cumulative Probability</span>
+          <div className="h-2 w-6 rounded bg-blue-500"></div>
+          <span className="text-gray-600">p25-p75</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="h-0.5 w-6 border-t-2 border-dashed border-blue-900"></div>
+          <div className="h-4 w-0.5 bg-blue-900"></div>
           <span className="text-gray-600">Median</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="h-0.5 w-6 border-t-2 border-dashed border-emerald-600"></div>
+          <span className="text-gray-600">Mean</span>
         </div>
       </div>
     </div>

@@ -107,11 +107,14 @@ export function CredentialsForm({ submitLabel, submittingLabel, onSubmit }: Cred
             autoComplete="email"
             className="focus-visible:ring-primary/40 block w-full rounded-lg border border-[var(--color-border-soft)] bg-[var(--color-surface)] px-4 py-2.5 text-sm text-[var(--color-text-primary)] shadow-sm transition outline-none focus-visible:ring-2"
             placeholder="you@example.com"
+            spellCheck={false}
           />
         </div>
 
         {feedbackMessage ? (
           <p
+            aria-live="polite"
+            role={feedbackMessage.type === "error" ? "alert" : "status"}
             className={`text-sm ${
               feedbackMessage.type === "error" ? "text-[var(--color-danger)]" : "text-[var(--color-success)]"
             }`}

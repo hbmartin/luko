@@ -1,6 +1,6 @@
 "use client"
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react"
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react"
 import { Notebook, SimulationResult, SimulationResultSchema } from "@/lib/types/notebook"
 import { applyNotebookValidations } from "@/lib/utils/notebook-validation"
 
@@ -31,6 +31,31 @@ interface NotebookContextType {
 
 const NotebookContext = createContext<NotebookContextType | undefined>(undefined)
 
+const parseSimulationResponseBody = async (response: Response): Promise<unknown> => {
+  const contentType = response.headers.get("content-type")
+  if (!contentType?.includes("application/json")) {
+    return undefined
+  }
+
+  try {
+    return await response.json()
+  } catch (error) {
+    if (response.ok) {
+      throw error
+    }
+    return undefined
+  }
+}
+
+const getSimulationErrorMessage = (body: unknown) => {
+  if (typeof body !== "object" || !body || !("error" in body)) {
+    return "Simulation failed"
+  }
+
+  const { error } = body as { error?: unknown }
+  return typeof error === "string" ? error : "Simulation failed"
+}
+
 export function NotebookProvider({
   children,
   notebook: initialNotebook,
@@ -46,6 +71,7 @@ export function NotebookProvider({
   const [density, setDensity] = useState<"comfortable" | "compact">("comfortable")
   const [scenarios, setScenarios] = useState<Scenario[]>([])
   const [activeScenarioId, setActiveScenarioId] = useState<string | null>(null)
+  const isSimulatingReference = useRef(false)
 
   const setNotebook = useCallback((nextNotebook: Notebook) => {
     setNotebookState(applyNotebookValidations(nextNotebook))
@@ -96,11 +122,16 @@ export function NotebookProvider({
   }, [theme, density])
 
   const handleRunSimulation = useCallback(async () => {
+    if (isSimulatingReference.current) {
+      return
+    }
+
+    isSimulatingReference.current = true
     setIsSimulating(true)
     setSimulationError(null)
 
     try {
-      const response = await fetch(`/api/notebooks/${encodeURIComponent(notebook.id)}/simulation`, {
+      const response = await globalThis.fetch(`/api/notebooks/${encodeURIComponent(notebook.id)}/simulation`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -108,13 +139,9 @@ export function NotebookProvider({
         body: JSON.stringify({ notebook }),
       })
 
-      const body: unknown = await response.json()
+      const body = await parseSimulationResponseBody(response)
       if (!response.ok) {
-        const message =
-          typeof body === "object" && body !== null && "error" in body && typeof body.error === "string"
-            ? body.error
-            : "Simulation failed"
-        throw new Error(message)
+        throw new Error(getSimulationErrorMessage(body))
       }
 
       const augmentedResult = SimulationResultSchema.parse(body)
@@ -143,6 +170,7 @@ export function NotebookProvider({
     } catch (error) {
       setSimulationError(error instanceof Error ? error.message : "Simulation failed")
     } finally {
+      isSimulatingReference.current = false
       setIsSimulating(false)
     }
   }, [notebook])
