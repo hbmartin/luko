@@ -19,6 +19,8 @@ export interface FormulaEvaluationPlan {
 
 type DependencyMap = Record<string, Set<string>>
 
+const MAX_NOTEBOOK_FORMULA_REGISTRY_CACHE_SIZE = 64
+const notebookFormulaRegistryCache = new Map<string, FormulaRegistry>()
 const evaluationPlanCache = new WeakMap<FormulaRegistry, Map<string, FormulaEvaluationPlan>>()
 
 const extractDependencies = (node: MathNode): string[] => {
@@ -32,6 +34,24 @@ const extractDependencies = (node: MathNode): string[] => {
 }
 
 const getAllowedKeysSignature = (allowedKeys: ReadonlySet<string>) => [...allowedKeys].toSorted().join("\u0000")
+
+const getNotebookFormulaSignature = (notebook: Pick<Notebook, "metrics" | "formulas">): string =>
+  JSON.stringify([
+    notebook.metrics.map((metric) => [metric.id, metric.formula?.trim() ?? ""]),
+    notebook.formulas.map((formula) => [formula.id, formula.expression.trim()]),
+  ])
+
+const rememberNotebookFormulaRegistry = (signature: string, registry: FormulaRegistry) => {
+  if (notebookFormulaRegistryCache.size >= MAX_NOTEBOOK_FORMULA_REGISTRY_CACHE_SIZE) {
+    const oldestKey = notebookFormulaRegistryCache.keys().next().value
+    if (oldestKey !== undefined) {
+      notebookFormulaRegistryCache.delete(oldestKey)
+    }
+  }
+
+  notebookFormulaRegistryCache.set(signature, registry)
+  return registry
+}
 
 const buildDependencyMap = (registry: FormulaRegistry, allowedKeys: ReadonlySet<string>): DependencyMap => {
   const map: DependencyMap = {}
@@ -186,10 +206,20 @@ export const compileFormulaRows = (formulas: Formula[]): FormulaRegistry => {
   return registry
 }
 
-export const compileNotebookFormulas = (notebook: Notebook): FormulaRegistry => ({
-  ...compileMetricFormulas(notebook.metrics),
-  ...compileFormulaRows(notebook.formulas),
-})
+export const compileNotebookFormulas = (notebook: Notebook): FormulaRegistry => {
+  const signature = getNotebookFormulaSignature(notebook)
+  const cachedRegistry = notebookFormulaRegistryCache.get(signature)
+  if (cachedRegistry) {
+    notebookFormulaRegistryCache.delete(signature)
+    notebookFormulaRegistryCache.set(signature, cachedRegistry)
+    return cachedRegistry
+  }
+
+  return rememberNotebookFormulaRegistry(signature, {
+    ...compileMetricFormulas(notebook.metrics),
+    ...compileFormulaRows(notebook.formulas),
+  })
+}
 
 export const planEvaluation = (
   registry: FormulaRegistry,
@@ -222,7 +252,7 @@ export const evaluatePlan = (
   baseValues: Record<string, number>,
   target: Record<string, number> = {}
 ): Record<string, number> => {
-  for (const key in baseValues) {
+  for (const key of Object.keys(baseValues)) {
     const value = baseValues[key]
     if (value !== undefined) {
       target[key] = value

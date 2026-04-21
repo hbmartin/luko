@@ -27,10 +27,10 @@ describe("LogoutButton", () => {
     )
 
     mockUseSupabase.mockReturnValue({
-      supabase: { auth: { signOut } },
-      session: undefined,
+      supabase: { auth: { signOut } } as ReturnType<typeof useSupabase>["supabase"],
+      session: null,
       setSession: vi.fn(),
-    } as unknown as ReturnType<typeof useSupabase>)
+    })
 
     render(<LogoutButton />)
 

@@ -4,6 +4,8 @@ import { compileNotebookFormulas, evaluatePlan, planEvaluation } from "@/lib/for
 import { Category, Metric, Notebook, SimulationResult } from "@/lib/types/notebook"
 
 const DEFAULT_ITERATIONS = 100_000
+const MIN_SIMULATION_ITERATIONS = 1
+const MAX_SIMULATION_ITERATIONS = 250_000
 const SIMULATION_YEAR_COUNT = 3
 const SIMULATION_YIELD_INTERVAL = 500
 const EMPTY_SAMPLES = new Float64Array(0)
@@ -268,10 +270,23 @@ const yieldToEventLoop = () =>
     globalThis.setTimeout(resolve, 0)
   })
 
+const assertValidIterationCount = (iterations: number) => {
+  if (
+    !Number.isFinite(iterations) ||
+    !Number.isInteger(iterations) ||
+    iterations < MIN_SIMULATION_ITERATIONS ||
+    iterations > MAX_SIMULATION_ITERATIONS
+  ) {
+    throw new RangeError("Simulation iterations must be an integer between 1 and 250000.")
+  }
+}
+
 export async function runSimulation(
   notebook: Notebook,
   iterations: number = DEFAULT_ITERATIONS
 ): Promise<SimulationResult> {
+  assertValidIterationCount(iterations)
+
   const metrics = notebook.metrics
   const registry = compileNotebookFormulas(notebook)
   const allowedFormulaKeys = new Set([...Object.keys(registry), ...metrics.map((metric) => metric.id)])

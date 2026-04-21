@@ -25,8 +25,13 @@ const preHydrationThemeScript = `
     root.dataset.density = density;
     root.style.colorScheme = theme;
   } catch {
-    document.documentElement.dataset.theme = "light";
-    document.documentElement.dataset.density = "comfortable";
+    const prefersDark =
+      typeof globalThis.matchMedia === "function" && globalThis.matchMedia("(prefers-color-scheme: dark)").matches;
+    const theme = prefersDark ? "dark" : "light";
+    const root = document.documentElement;
+    root.dataset.theme = theme;
+    root.dataset.density = "comfortable";
+    root.style.colorScheme = theme;
   }
 })();
 `

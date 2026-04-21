@@ -1,20 +1,18 @@
 "use client"
 
-import { memo, type MouseEvent as ReactMouseEvent, useCallback, useEffect, useMemo, useRef, useState } from "react"
-import {
-  type CellMouseArgs,
-  type CellMouseEvent,
-  type CellSelectArgs,
-  type Column,
-  type DataGridHandle,
-  type RenderCellProps,
-  type RenderEditCellProps,
-  type RenderGroupCellProps,
-  renderTextEditor,
-  renderValue,
-  type RowsChangeData,
-  ToggleGroup,
-  TreeDataGrid,
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react"
+import type { DragEvent as ReactDragEvent, MouseEvent as ReactMouseEvent } from "react"
+import { renderTextEditor, renderValue, ToggleGroup, TreeDataGrid } from "react-data-grid"
+import type {
+  CellMouseArgs,
+  CellMouseEvent,
+  CellSelectArgs,
+  Column,
+  DataGridHandle,
+  RenderCellProps,
+  RenderEditCellProps,
+  RenderGroupCellProps,
+  RowsChangeData,
 } from "react-data-grid"
 import { Button } from "@/components/ui/button"
 import {
@@ -28,8 +26,13 @@ import {
 import { parseNumeric } from "@/lib/math-utils"
 import type { CategoryRow, GridRow, MetricRow, Notebook } from "@/lib/types/notebook"
 import { notebookToGridRows } from "@/lib/utils/grid-helpers"
-import { buildReferenceableIds, type ReferenceableNotebookItem } from "@/lib/utils/notebook-indices"
-import { FormulaEditorSingleLine, type MetricMentionItem } from "./FormulaEditorSingleLine"
+import {
+  buildMentionOptions,
+  buildReferenceableIds,
+  type MetricMentionItem,
+  type ReferenceableNotebookItem,
+} from "@/lib/utils/notebook-indices"
+import { FormulaEditorSingleLine } from "./formula-editor-single-line"
 
 // GroupRow type from react-data-grid (not exported)
 interface GroupRow<TRow> {
@@ -111,6 +114,7 @@ const appendMetricReference = (expression: string, metricId: string) => {
 }
 
 const rowGrouper = (rows: readonly GridRow[], columnKey: string) => {
+  const initialGroups = Object.create(null) as Record<string, GridRow[]>
   return rows.reduce<Record<string, GridRow[]>>((groups, row) => {
     const rawKey = (row as unknown as Record<string, unknown>)[columnKey]
     const key = rawKey == undefined ? "__ungrouped__" : String(rawKey)
@@ -119,12 +123,12 @@ const rowGrouper = (rows: readonly GridRow[], columnKey: string) => {
     }
     groups[key].push(row)
     return groups
-  }, {})
+  }, initialGroups)
 }
 
 const UnitCell = memo(function UnitCell(properties: RenderCellProps<GridRow>) {
   if (isFormulaRow(properties.row)) {
-    return null
+    return
   }
 
   return renderValue({
@@ -162,6 +166,10 @@ interface GroupCellHeaderProperties {
   categoryName: string
   groupCellProperties: RenderGroupCellProps<GridRow>
   onContextMenu: (categoryId: string, categoryName: string, event: ReactMouseEvent) => void
+  onDragEnd: () => void
+  onDragOver: (targetId: string, event: ReactDragEvent<HTMLDivElement>) => void
+  onDragStart: (sourceId: string, event: ReactDragEvent<HTMLDivElement>) => void
+  onDrop: (targetId: string, event: ReactDragEvent<HTMLDivElement>) => void
 }
 
 const GroupCellHeader = memo(function GroupCellHeader({
@@ -169,6 +177,10 @@ const GroupCellHeader = memo(function GroupCellHeader({
   categoryName,
   groupCellProperties,
   onContextMenu,
+  onDragEnd,
+  onDragOver,
+  onDragStart,
+  onDrop,
 }: GroupCellHeaderProperties) {
   const handleContextMenu = useCallback(
     (event: ReactMouseEvent) => {
@@ -176,9 +188,35 @@ const GroupCellHeader = memo(function GroupCellHeader({
     },
     [categoryId, categoryName, onContextMenu]
   )
+  const handleDragStart = useCallback(
+    (event: ReactDragEvent<HTMLDivElement>) => {
+      onDragStart(categoryId, event)
+    },
+    [categoryId, onDragStart]
+  )
+  const handleDragOver = useCallback(
+    (event: ReactDragEvent<HTMLDivElement>) => {
+      onDragOver(categoryId, event)
+    },
+    [categoryId, onDragOver]
+  )
+  const handleDrop = useCallback(
+    (event: ReactDragEvent<HTMLDivElement>) => {
+      onDrop(categoryId, event)
+    },
+    [categoryId, onDrop]
+  )
 
   return (
-    <div className="flex w-full items-center justify-between gap-2 pr-2" onContextMenu={handleContextMenu}>
+    <div
+      className="flex w-full items-center justify-between gap-2 pr-2"
+      draggable
+      onContextMenu={handleContextMenu}
+      onDragEnd={onDragEnd}
+      onDragOver={handleDragOver}
+      onDragStart={handleDragStart}
+      onDrop={handleDrop}
+    >
       <div className="min-w-0 flex-1">
         <ToggleGroup {...groupCellProperties} groupKey={categoryName} />
       </div>
@@ -208,6 +246,57 @@ const GroupMenuButton = memo(function GroupMenuButton({
     <Button variant="outline" onClick={handleClick}>
       Add row
     </Button>
+  )
+})
+
+interface NameCellProperties {
+  onDragEnd: () => void
+  onDragOver: (targetId: string, event: ReactDragEvent<HTMLDivElement>) => void
+  onDragStart: (sourceId: string, event: ReactDragEvent<HTMLDivElement>) => void
+  onDrop: (targetId: string, event: ReactDragEvent<HTMLDivElement>) => void
+  row: GridRow
+}
+
+const NameCell = memo(function NameCell({ onDragEnd, onDragOver, onDragStart, onDrop, row }: NameCellProperties) {
+  const isMetric = isMetricRow(row)
+  const handleDragOver = useCallback(
+    (event: ReactDragEvent<HTMLDivElement>) => {
+      if (isMetric) {
+        onDragOver(row.id, event)
+      }
+    },
+    [isMetric, onDragOver, row.id]
+  )
+  const handleDragStart = useCallback(
+    (event: ReactDragEvent<HTMLDivElement>) => {
+      if (isMetric) {
+        onDragStart(row.id, event)
+      }
+    },
+    [isMetric, onDragStart, row.id]
+  )
+  const handleDrop = useCallback(
+    (event: ReactDragEvent<HTMLDivElement>) => {
+      if (isMetric) {
+        onDrop(row.id, event)
+      }
+    },
+    [isMetric, onDrop, row.id]
+  )
+
+  return (
+    <div
+      className="spreadsheet-metric"
+      draggable={isMetric}
+      onDragEnd={onDragEnd}
+      onDragOver={handleDragOver}
+      onDragStart={handleDragStart}
+      onDrop={handleDrop}
+    >
+      <div>
+        <p className="spreadsheet-metric-name">{row.name}</p>
+      </div>
+    </div>
   )
 })
 
@@ -325,6 +414,7 @@ export const DataGridComponent = memo(function DataGridComponent({
   notebook,
   density,
   onMetricChange,
+  onRowReorder,
   onMetricRename,
   onOpenDetails,
   onAddMetric,
@@ -343,41 +433,39 @@ export const DataGridComponent = memo(function DataGridComponent({
   const [contextMenuState, setContextMenuState] = useState<GridContextMenuState | null>(null)
   const [activeFormulaId, setActiveFormulaId] = useState<string | null>(null)
   const [highlightedMetricId, setHighlightedMetricId] = useState<string | null>(null)
-  const latestCategoriesReference = useRef(notebook.categories)
-  latestCategoriesReference.current = notebook.categories
+  const previousNotebookIdReference = useRef(notebook.id)
+  const draggedRowIdReference = useRef<string | null>(null)
+  const categoryIds = useMemo(() => notebook.categories.map((category) => category.id), [notebook.categories])
 
   useEffect(() => {
-    setExpandedGroupIds(new Set<unknown>(latestCategoriesReference.current.map((category) => category.id)))
-  }, [notebook.id])
+    if (previousNotebookIdReference.current !== notebook.id) {
+      previousNotebookIdReference.current = notebook.id
+      setExpandedGroupIds(new Set<unknown>(categoryIds))
+      return
+    }
+
+    setExpandedGroupIds((previous) => {
+      const categoryIdSet = new Set(categoryIds)
+      const next = new Set<unknown>()
+      for (const id of previous) {
+        if (typeof id === "string" && categoryIdSet.has(id)) {
+          next.add(id)
+        }
+      }
+      for (const id of categoryIds) {
+        next.add(id)
+      }
+      return next
+    })
+  }, [categoryIds, notebook.id])
   useEffect(() => {
     setContextMenuState(null)
   }, [notebook.id])
   const rows = useMemo(() => notebookToGridRows(notebook), [notebook])
-  const mentionOptions = useMemo<MetricMentionItem[]>(() => {
-    const metricsByCategoryId = new Map<string, Notebook["metrics"]>()
-    for (const metric of notebook.metrics) {
-      const categoryMetrics = metricsByCategoryId.get(metric.categoryId)
-      if (categoryMetrics) {
-        categoryMetrics.push(metric)
-      } else {
-        metricsByCategoryId.set(metric.categoryId, [metric])
-      }
-    }
-
-    return notebook.categories
-      .toSorted((a, b) => a.order - b.order)
-      .flatMap((category) =>
-        (metricsByCategoryId.get(category.id) ?? []).map<MetricMentionItem>((metric) => ({
-          id: metric.id,
-          display: metric.name,
-          categoryId: category.id,
-          categoryName: category.name,
-          categoryType: category.type,
-          unit: metric.unit,
-          description: metric.description,
-        }))
-      )
-  }, [notebook.categories, notebook.metrics])
+  const mentionOptions = useMemo<MetricMentionItem[]>(
+    () => buildMentionOptions(notebook),
+    [notebook.categories, notebook.metrics]
+  )
   const referenceableIds = useMemo(
     () => buildReferenceableIds({ metrics: notebook.metrics, formulas: notebook.formulas }),
     [notebook.formulas, notebook.metrics]
@@ -397,6 +485,31 @@ export const DataGridComponent = memo(function DataGridComponent({
   const safeActiveFormulaId = activeFormulaId && formulasById.has(activeFormulaId) ? activeFormulaId : null
   const safeHighlightedMetricId =
     highlightedMetricId && metricsById.has(highlightedMetricId) ? highlightedMetricId : null
+  const handleDragStart = useCallback((sourceId: string, event: ReactDragEvent<HTMLDivElement>) => {
+    draggedRowIdReference.current = sourceId
+    event.dataTransfer.effectAllowed = "move"
+    event.dataTransfer.setData("text/plain", sourceId)
+  }, [])
+  const handleDragOver = useCallback((targetId: string, event: ReactDragEvent<HTMLDivElement>) => {
+    const sourceId = draggedRowIdReference.current
+    if (!sourceId || sourceId === targetId) return
+    event.preventDefault()
+    event.dataTransfer.dropEffect = "move"
+  }, [])
+  const handleDragEnd = useCallback(() => {
+    draggedRowIdReference.current = null
+  }, [])
+  const handleDrop = useCallback(
+    (targetId: string, event: ReactDragEvent<HTMLDivElement>) => {
+      const sourceId = draggedRowIdReference.current ?? event.dataTransfer.getData("text/plain")
+      draggedRowIdReference.current = null
+      if (!sourceId || sourceId === targetId) return
+      event.preventDefault()
+      event.stopPropagation()
+      onRowReorder(sourceId, targetId)
+    },
+    [onRowReorder]
+  )
   const openCategoryContextMenu = useCallback(
     (categoryId: string, categoryName: string) => {
       setContextMenuState({
@@ -483,6 +596,10 @@ export const DataGridComponent = memo(function DataGridComponent({
             categoryName={label}
             groupCellProperties={properties}
             onContextMenu={handleGroupContextMenu}
+            onDragEnd={handleDragEnd}
+            onDragOver={handleDragOver}
+            onDragStart={handleDragStart}
+            onDrop={handleDrop}
           />
         )
       },
@@ -496,15 +613,15 @@ export const DataGridComponent = memo(function DataGridComponent({
         frozen: true,
         cellClass: "spreadsheet-cell-name",
         renderEditCell: safeTextEditor,
-        renderCell: ({ row }) => {
-          return (
-            <div className="spreadsheet-metric">
-              <div>
-                <p className="spreadsheet-metric-name">{row.name}</p>
-              </div>
-            </div>
-          )
-        },
+        renderCell: ({ row }) => (
+          <NameCell
+            row={row}
+            onDragEnd={handleDragEnd}
+            onDragOver={handleDragOver}
+            onDragStart={handleDragStart}
+            onDrop={handleDrop}
+          />
+        ),
         renderGroupCell: ({ groupKey }: RenderGroupCellProps<GridRow>) => {
           const rawKey = groupKey == undefined ? "" : String(groupKey)
           const label = categoryLabels.get(rawKey) ?? rawKey ?? "Uncategorized"
@@ -559,6 +676,10 @@ export const DataGridComponent = memo(function DataGridComponent({
     return [groupColumn, ...baseColumns]
   }, [
     categoryLabels,
+    handleDragEnd,
+    handleDragOver,
+    handleDragStart,
+    handleDrop,
     handleGroupContextMenu,
     handleGroupMenuButtonClick,
     mentionOptions,

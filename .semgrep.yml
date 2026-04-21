@@ -1,0 +1,48 @@
+rules:
+  - id: next-api-auth-before-json-body
+    languages:
+      - typescript
+    severity: ERROR
+    message: Parse request JSON only after the route has rejected unauthenticated users.
+    paths:
+      include:
+        - /app/api/**/route.ts
+    patterns:
+      - pattern-inside: |
+          export async function $METHOD($REQUEST: Request, ...) {
+            ...
+          }
+      - pattern: $REQUEST.json(...)
+      - pattern-not-inside: |
+          if (!$USER) {
+            ...
+          }
+          ...
+          $REQUEST.json(...)
+
+  - id: simulation-validate-iterations-before-allocation
+    languages:
+      - typescript
+    severity: ERROR
+    message: Validate simulation iterations before allocating Float64Array samples.
+    paths:
+      include:
+        - /lib/simulation/**/*.ts
+    patterns:
+      - pattern: new Float64Array(iterations)
+      - pattern-not-inside: |
+          async function $FUNCTION(...) {
+            ...
+            assertValidIterationCount(iterations)
+            ...
+            new Float64Array(iterations)
+            ...
+          }
+      - pattern-not-inside: |
+          function $FUNCTION(...) {
+            ...
+            assertValidIterationCount(iterations)
+            ...
+            new Float64Array(iterations)
+            ...
+          }

@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest"
 import { mockNotebook } from "@/lib/mock-data"
 import type { Notebook } from "@/lib/types/notebook"
 
-import { runSimulation } from "./runSimulation"
+import { runSimulation } from "./run-simulation"
 
 const createDeterministicNotebook = (): Notebook => ({
   ...mockNotebook,
@@ -131,5 +131,14 @@ describe("runSimulation", () => {
     }
 
     await expect(runSimulation(invalidNotebook, 1)).rejects.toThrow("min <= mode <= max")
+  })
+
+  it("rejects invalid iteration counts before allocating samples", async () => {
+    await expect(runSimulation(createDeterministicNotebook(), 0)).rejects.toThrow(
+      "Simulation iterations must be an integer between 1 and 250000."
+    )
+    await expect(runSimulation(createDeterministicNotebook(), 250_001)).rejects.toThrow(
+      "Simulation iterations must be an integer between 1 and 250000."
+    )
   })
 })

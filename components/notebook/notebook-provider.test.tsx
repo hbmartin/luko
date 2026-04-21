@@ -9,6 +9,7 @@ import { NotebookProvider, useNotebookActions, useNotebookSelector } from "./Not
 describe("NotebookProvider selector store", () => {
   beforeEach(() => {
     Object.defineProperty(globalThis, "matchMedia", {
+      configurable: true,
       writable: true,
       value: vi.fn().mockReturnValue({
         matches: false,

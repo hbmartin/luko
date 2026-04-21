@@ -199,6 +199,7 @@ export function NotebookProvider({
 
     try {
       const currentNotebook = stateReference.current.notebook
+      const simulatedUpdatedAt = currentNotebook.updatedAt
       const response = await globalThis.fetch(`/api/notebooks/${encodeURIComponent(currentNotebook.id)}/simulation`, {
         method: "POST",
         headers: {
@@ -226,15 +227,24 @@ export function NotebookProvider({
         }
         return [...previous, scenario]
       })
-      setNotebookState((previous) =>
-        applyNotebookValidations({
-          ...previous,
-          isDirty: false,
-          dirtyMetrics: [],
-          dirtyFormulas: [],
-          lastSimulationId: scenarioId,
-        })
-      )
+      setNotebookState((previous) => {
+        if (previous.id !== currentNotebook.id) return previous
+
+        return applyNotebookValidations(
+          previous.updatedAt === simulatedUpdatedAt
+            ? {
+                ...previous,
+                isDirty: false,
+                dirtyMetrics: [],
+                dirtyFormulas: [],
+                lastSimulationId: scenarioId,
+              }
+            : {
+                ...previous,
+                lastSimulationId: scenarioId,
+              }
+        )
+      })
     } catch (error) {
       setSimulationError(error instanceof Error ? error.message : "Simulation failed")
     } finally {
