@@ -96,6 +96,14 @@ function isFormulaRow(row: GridRow): row is Extract<GridRow, { type: "formula" }
   return row.type === "formula"
 }
 
+const appendMetricReference = (expression: string, metricId: string) => {
+  const trimmed = expression.trim()
+  if (!trimmed) return metricId
+
+  const canAppendDirectly = /[(*+/-]\s*$/.test(trimmed)
+  return canAppendDirectly ? `${trimmed} ${metricId}` : `${trimmed} + ${metricId}`
+}
+
 export function DataGridComponent({
   notebook,
   density,
@@ -345,7 +353,7 @@ export function DataGridComponent({
     categoryLabels,
     handleGroupContextMenu,
     handleGroupMenuButtonClick,
-    notebook.metrics,
+    notebook,
     activeFormulaId,
     onFormulaChange,
     safeTextEditor,
@@ -371,7 +379,6 @@ export function DataGridComponent({
 
   const triggerDetails = useCallback(
     (rowId: string) => {
-      console.log("triggering details for", rowId)
       const now = Date.now()
       const lastTrigger = lastDetailsTriggerReference.current
       if (lastTrigger && lastTrigger.id === rowId && now - lastTrigger.time < 100) {
@@ -388,9 +395,7 @@ export function DataGridComponent({
       if (!activeFormulaId) return false
       const formula = notebook.formulas.find((candidate) => candidate.id === activeFormulaId)
       if (!formula) return false
-      // const existingTokens = expressionToTokens(formula.expression)
-      // const nextTokens: ExpressionToken[] = [...existingTokens, { type: "metric", metricId }]
-      // onFormulaChange(activeFormulaId, tokensToExpression(nextTokens))
+      onFormulaChange(activeFormulaId, appendMetricReference(formula.expression, metricId))
       setHighlightedMetricId(metricId)
       return true
     },
@@ -399,7 +404,6 @@ export function DataGridComponent({
 
   const handleFormulaRowSelection = useCallback(
     (row: Extract<GridRow, { type: "formula" }>) => {
-      console.log("formula row selected", row)
       setActiveFormulaId(row.id)
       triggerDetails(row.id)
     },
@@ -408,16 +412,16 @@ export function DataGridComponent({
 
   const handleMetricRowSelection = useCallback(
     (row: MetricRow) => {
-      console.log("metric row selected", row)
-      addMetricToActiveFormula(row.id)
-      triggerDetails(row.id)
+      const didAddToFormula = addMetricToActiveFormula(row.id)
+      if (!didAddToFormula) {
+        triggerDetails(row.id)
+      }
     },
     [addMetricToActiveFormula, triggerDetails]
   )
 
   const handleCellClick = useCallback(
     ({ row }: CellMouseArgs<GridRow>) => {
-      console.log("cell clicked", row)
       if (isMetricRow(row)) {
         handleMetricRowSelection(row)
         return
@@ -431,23 +435,20 @@ export function DataGridComponent({
 
   const handleCellFocus = useCallback(
     ({ row }: CellSelectArgs<GridRow>) => {
-      console.log("cell focused", row)
       if (!row) return
       if (isFormulaRow(row)) {
         handleFormulaRowSelection(row)
         return
       }
-      if (isMetricRow(row)) {
+      if (isMetricRow(row) && !activeFormulaId) {
         triggerDetails(row.id)
       }
     },
-    [handleFormulaRowSelection, triggerDetails]
+    [activeFormulaId, handleFormulaRowSelection, triggerDetails]
   )
 
   const handleRowsChange = useCallback(
     (updatedRows: readonly GridRow[], data: RowsChangeData<GridRow>) => {
-      console.log("rows changed data", data)
-      console.log("rows changed updatedRows", updatedRows)
       const columnKey = data.column?.key
 
       for (const rowIndex of data.indexes) {

@@ -25,8 +25,8 @@ const reorder = <T,>(items: T[], sourceIndex: number, targetIndex: number): T[] 
 }
 
 const createFormulaId = () => {
-  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
-    return crypto.randomUUID()
+  if (typeof globalThis.crypto !== "undefined" && "randomUUID" in globalThis.crypto) {
+    return globalThis.crypto.randomUUID()
   }
   return `formula_${Math.random().toString(36).slice(2, 10)}`
 }
@@ -46,26 +46,6 @@ export function WorksheetTab({ notebook, onNotebookChange, density, simulationRe
     historyReference.current = [...historyReference.current.slice(0, historyIndexReference.current + 1), notebook]
     historyIndexReference.current = historyReference.current.length - 1
   }, [notebook])
-
-  useEffect(() => {
-    const handleKey = (event: KeyboardEvent) => {
-      const controlOrMeta = event.metaKey || event.ctrlKey
-      if (!controlOrMeta) return
-      if (event.key === "z" && !event.shiftKey) {
-        event.preventDefault()
-        undo()
-      }
-      if ((event.key === "z" && event.shiftKey) || event.key === "y") {
-        event.preventDefault()
-        redo()
-      }
-    }
-
-    globalThis.addEventListener("keydown", handleKey)
-    return () => {
-      globalThis.removeEventListener("keydown", handleKey)
-    }
-  })
 
   const commitNotebook = useCallback(
     (nextNotebook: Notebook) => {
@@ -91,6 +71,26 @@ export function WorksheetTab({ notebook, onNotebookChange, density, simulationRe
     historyIndexReference.current += 1
     onNotebookChange(historyReference.current[historyIndexReference.current]!)
   }, [onNotebookChange])
+
+  useEffect(() => {
+    const handleKey = (event: KeyboardEvent) => {
+      const controlOrMeta = event.metaKey || event.ctrlKey
+      if (!controlOrMeta) return
+      if (event.key === "z" && !event.shiftKey) {
+        event.preventDefault()
+        undo()
+      }
+      if ((event.key === "z" && event.shiftKey) || event.key === "y") {
+        event.preventDefault()
+        redo()
+      }
+    }
+
+    globalThis.addEventListener("keydown", handleKey)
+    return () => {
+      globalThis.removeEventListener("keydown", handleKey)
+    }
+  }, [redo, undo])
 
   const handleMetricChange = useCallback(
     (metricId: string, field: "min" | "mode" | "max" | "value", value: number) => {
@@ -191,9 +191,8 @@ export function WorksheetTab({ notebook, onNotebookChange, density, simulationRe
       const formulas = notebook.formulas.map((formula) => {
         if (formula.id !== formulaId) return formula
 
-        const { error: _oldError, ...baseFormula } = formula
         const updatedFormula = {
-          ...baseFormula,
+          ...formula,
           expression,
           updatedAt: new Date().toISOString(),
         }
@@ -202,6 +201,7 @@ export function WorksheetTab({ notebook, onNotebookChange, density, simulationRe
           return { ...updatedFormula, error: validation.message }
         }
 
+        delete updatedFormula.error
         return updatedFormula
       })
 
@@ -367,7 +367,7 @@ export function WorksheetTab({ notebook, onNotebookChange, density, simulationRe
         </div> */}
       </div>
 
-      <div className="sr-only" aria-hidden>
+      <div className="sr-only">
         {notebook.metrics.map((metric) => {
           const fields = metric.validation?.fields
           if (!fields) return null

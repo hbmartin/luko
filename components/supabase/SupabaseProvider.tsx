@@ -1,7 +1,7 @@
 "use client"
 
 import type { Session, SupabaseClient } from "@supabase/supabase-js"
-import { createContext, type ReactNode, useContext, useState } from "react"
+import { createContext, type ReactNode, useContext, useMemo, useState } from "react"
 
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser"
 
@@ -16,12 +16,12 @@ const SupabaseContext = createContext<SupabaseContextValue | undefined>(undefine
 export function SupabaseProvider({ children, session }: { children: ReactNode; session: Session | null }) {
   const [supabase] = useState(() => createBrowserSupabaseClient())
   const [currentSession, setCurrentSession] = useState<Session | null>(session)
-
-  return (
-    <SupabaseContext.Provider value={{ supabase, session: currentSession, setSession: setCurrentSession }}>
-      {children}
-    </SupabaseContext.Provider>
+  const contextValue = useMemo(
+    () => ({ supabase, session: currentSession, setSession: setCurrentSession }),
+    [currentSession, supabase]
   )
+
+  return <SupabaseContext.Provider value={contextValue}>{children}</SupabaseContext.Provider>
 }
 
 export function useSupabase() {

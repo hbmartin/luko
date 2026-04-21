@@ -133,44 +133,11 @@ describe("detectDependencies", () => {
   })
 
   describe("error handling", () => {
-    it("should throw an error for expressions with mismatched parentheses (missing closing)", () => {
-      expect(() => detectDependencies("(x + y")).toThrow()
-    })
-
-    it("should throw an error for expressions with mismatched parentheses (missing opening)", () => {
-      expect(() => detectDependencies("x + y)")).toThrow()
-    })
-
-    it("should throw an error for expressions with incomplete operators", () => {
-      expect(() => detectDependencies("x +")).toThrow()
-    })
-
-    it("should throw an error for expressions with division by nothing", () => {
-      expect(() => detectDependencies("x /")).toThrow()
-    })
-
-    it("should throw an error for expressions with multiplication by nothing", () => {
-      expect(() => detectDependencies("x *")).toThrow()
-    })
-
-    it("should throw an error for expressions with invalid characters", () => {
-      expect(() => detectDependencies("x @ y")).toThrow()
-    })
-
-    it("should throw an error for expressions with incomplete function calls", () => {
-      expect(() => detectDependencies("sqrt(")).toThrow()
-    })
-
-    it("should throw an error for expressions with mismatched brackets", () => {
-      expect(() => detectDependencies("values[0")).toThrow()
-    })
-
-    it("should throw an error for expressions with multiple consecutive dots", () => {
-      expect(() => detectDependencies("3..14 * x")).toThrow()
-    })
-
-    it("should throw an error for expressions with invalid exponent syntax", () => {
-      expect(() => detectDependencies("x ^")).toThrow()
-    })
+    it.each(["(x + y", "x + y)", "x +", "x /", "x *", "x @ y", "sqrt(", "values[0", "3..14 * x", "x ^"])(
+      "should return undefined for invalid expression %s",
+      (expression) => {
+        expect(detectDependencies(expression)).toBeUndefined()
+      }
+    )
   })
 })

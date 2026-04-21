@@ -95,7 +95,7 @@ export function NPVChart({ series }: NPVChartProperties) {
 
   return (
     <div className="relative">
-      <svg viewBox={`0 0 ${width} ${height}`} className="w-full">
+      <svg viewBox={`0 0 ${width} ${height}`} className="w-full" role="img" aria-label="NPV over time chart">
         {/* Y-axis */}
         <line
           x1={padding.left}

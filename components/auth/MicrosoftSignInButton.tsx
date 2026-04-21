@@ -43,7 +43,7 @@ export function MicrosoftSignInButton({ onErrorChange, className }: MicrosoftSig
         className
       )}
     >
-      {isLoading ? "Redirecting..." : "Sign in with Microsoft"}
+      {isLoading ? "Redirecting…" : "Sign in with Microsoft"}
     </button>
   )
 }

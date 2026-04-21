@@ -90,7 +90,7 @@ export default function Home() {
           <div id="features" className="grid grid-cols-1 gap-6 md:grid-cols-3">
             <div className="group rounded-3xl border border-[var(--color-border-soft)] bg-[var(--color-surface-elevated)] p-6 shadow-md transition hover:-translate-y-1 hover:shadow-xl">
               <div className="mb-4 flex size-12 items-center justify-center rounded-xl bg-[color-mix(in_oklch,var(--color-primary)_18%,transparent)] text-[var(--color-primary)] transition group-hover:scale-105">
-                <svg className="size-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="size-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -107,7 +107,7 @@ export default function Home() {
 
             <div className="group rounded-3xl border border-[var(--color-border-soft)] bg-[var(--color-surface-elevated)] p-6 shadow-md transition hover:-translate-y-1 hover:shadow-xl">
               <div className="mb-4 flex size-12 items-center justify-center rounded-xl bg-[color-mix(in_oklch,var(--color-success)_18%,transparent)] text-[var(--color-success)] transition group-hover:scale-105">
-                <svg className="size-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="size-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -124,7 +124,7 @@ export default function Home() {
 
             <div className="group rounded-3xl border border-[var(--color-border-soft)] bg-[var(--color-surface-elevated)] p-6 shadow-md transition hover:-translate-y-1 hover:shadow-xl">
               <div className="mb-4 flex size-12 items-center justify-center rounded-xl bg-[color-mix(in_oklch,var(--color-info)_18%,transparent)] text-[var(--color-info)] transition group-hover:scale-105">
-                <svg className="size-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="size-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"

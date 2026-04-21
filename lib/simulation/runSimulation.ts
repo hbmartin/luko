@@ -4,6 +4,8 @@ import { compileNotebookFormulas, evaluateFormulas } from "@/lib/formulas"
 import { Category, Metric, Notebook, SimulationResult } from "@/lib/types/notebook"
 
 const DEFAULT_ITERATIONS = 100_000
+const SIMULATION_YEAR_COUNT = 3
+const SIMULATION_YIELD_INTERVAL = 500
 
 const sampleGamma = (alpha: number): number => {
   if (alpha < 1) {
@@ -135,6 +137,69 @@ const getCategoryOutput = (
   return fallbackCategoryOutput(category, metrics, evaluatedValues, sampledValues)
 }
 
+const normalizeFormulaKey = (value: string) => value.toLowerCase().replaceAll(/[\s-]+/g, "_")
+
+const getEvaluatedFormulaNumber = (evaluatedValues: Record<string, number>, formulaId: string) => {
+  const value = evaluatedValues[formulaId]
+  return typeof value === "number" && Number.isFinite(value) ? value : undefined
+}
+
+const findYearFormulaId = (notebook: Notebook, year: number, term: string) => {
+  const yearKey = String(year)
+  const normalizedCandidates = new Set([
+    `formula_year_${yearKey}_${term}`,
+    `year_${yearKey}_${term}`,
+    `formula_year_${yearKey}_${term}_cash_flow`,
+    `year_${yearKey}_${term}_cash_flow`,
+  ])
+
+  const formulaById = notebook.formulas.find((formula) => normalizedCandidates.has(normalizeFormulaKey(formula.id)))
+  if (formulaById) {
+    return formulaById.id
+  }
+
+  return notebook.formulas.find((formula) => {
+    const normalizedNameParts = normalizeFormulaKey(formula.name).split("_")
+    return (
+      normalizedNameParts.includes("year") &&
+      normalizedNameParts.includes(yearKey) &&
+      normalizedNameParts.includes(term)
+    )
+  })?.id
+}
+
+const getExplicitYearNetValues = (notebook: Notebook, evaluatedValues: Record<string, number>) =>
+  Array.from({ length: SIMULATION_YEAR_COUNT }, (_value, index) => {
+    const formulaId = findYearFormulaId(notebook, index + 1, "net")
+    return formulaId ? getEvaluatedFormulaNumber(evaluatedValues, formulaId) : undefined
+  })
+
+const createYearlyCashFlows = (
+  notebook: Notebook,
+  evaluatedValues: Record<string, number>,
+  totalBenefits: number,
+  totalCosts: number
+) => {
+  const explicitYearNetValues = getExplicitYearNetValues(notebook, evaluatedValues)
+
+  return explicitYearNetValues.map((netValue) => {
+    if (typeof netValue === "number") {
+      const costs = Math.max(0, totalBenefits - netValue)
+      return {
+        benefits: totalBenefits,
+        costs,
+        net: netValue,
+      }
+    }
+
+    return {
+      benefits: totalBenefits,
+      costs: totalCosts,
+      net: totalBenefits - totalCosts,
+    }
+  })
+}
+
 const correlation = (x: number[], y: number[]) => {
   if (x.length === 0 || x.length !== y.length) return 0
   const meanX = mean(x)
@@ -160,7 +225,16 @@ interface MetricSampleTrack {
   values: number[]
 }
 
-// eslint-disable-next-line @typescript-eslint/require-await
+const yieldToEventLoop = () =>
+  new Promise<void>((resolve) => {
+    if (typeof globalThis.setImmediate === "function") {
+      globalThis.setImmediate(resolve)
+      return
+    }
+
+    globalThis.setTimeout(resolve, 0)
+  })
+
 export async function runSimulation(
   notebook: Notebook,
   iterations: number = DEFAULT_ITERATIONS
@@ -175,6 +249,10 @@ export async function runSimulation(
   const paybackSamples: number[] = []
 
   for (let index = 0; index < iterations; index += 1) {
+    if (index > 0 && index % SIMULATION_YIELD_INTERVAL === 0) {
+      await yieldToEventLoop()
+    }
+
     const sampledValues: Record<string, number> = {}
 
     for (const metric of notebook.metrics) {
@@ -205,12 +283,10 @@ export async function runSimulation(
     const totalBenefits = benefitsTotals.reduce((accumulator, value) => accumulator + value, 0)
     const totalCosts = costsTotals.reduce((accumulator, value) => accumulator + value, 0)
 
-    const growthMultiplier = [1, 1.07, 1.15]
-    const efficiencyMultiplier = [1, 0.95, 0.9]
-
-    const yearlyBenefits = growthMultiplier.map((multiplier) => totalBenefits * multiplier)
-    const yearlyCosts = efficiencyMultiplier.map((multiplier) => totalCosts * multiplier)
-    const yearlyNet = yearlyBenefits.map((benefit, index) => benefit - yearlyCosts[index]!)
+    const yearlyCashFlows = createYearlyCashFlows(notebook, evaluatedValues, totalBenefits, totalCosts)
+    const yearlyBenefits = yearlyCashFlows.map((cashFlow) => cashFlow.benefits)
+    const yearlyCosts = yearlyCashFlows.map((cashFlow) => cashFlow.costs)
+    const yearlyNet = yearlyCashFlows.map((cashFlow) => cashFlow.net)
 
     for (const [index, value] of yearlyBenefits.entries()) yearlyBenefitsSamples[index]!.push(value)
     for (const [index, value] of yearlyCosts.entries()) yearlyCostsSamples[index]!.push(value)

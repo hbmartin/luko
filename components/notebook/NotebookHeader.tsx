@@ -38,11 +38,11 @@ export function NotebookHeader({ notebookId }: NotebookHeaderProperties) {
             onClick={() => {
               setTheme(theme === "light" ? "dark" : "light")
             }}
-            className="transition-opacity hover:opacity-80"
+            className="rounded-md transition-opacity hover:opacity-80 focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:outline-none"
           >
-            {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
+            {theme === "dark" ? <Sun size={18} aria-hidden="true" /> : <Moon size={18} aria-hidden="true" />}
           </button>
-          <CircleUserRound size={18} />
+          <CircleUserRound size={18} aria-hidden="true" />
           <LogoutButton variant="icon" />
         </div>
       </div>
@@ -59,7 +59,7 @@ export function NotebookHeader({ notebookId }: NotebookHeaderProperties) {
               alt="worksheet"
               width={64}
               height={64}
-              className={`transition-all ${currentPage === "worksheet" ? "" : "group-hover:scale-110"}`}
+              className={`transition-transform ${currentPage === "worksheet" ? "" : "group-hover:scale-110"}`}
             />
             <div className="gap-1/2 flex flex-col">
               <p>{notebook.metrics.length} metrics</p>
@@ -78,7 +78,7 @@ export function NotebookHeader({ notebookId }: NotebookHeaderProperties) {
               alt="results"
               width={64}
               height={64}
-              className={`transition-all ${currentPage !== "results" && currentPage !== notebookId ? "group-hover:scale-110" : ""}`}
+              className={`transition-transform ${currentPage !== "results" && currentPage !== notebookId ? "group-hover:scale-110" : ""}`}
             />
             <div className="gap-1/2 flex flex-col">
               <p>
@@ -102,7 +102,7 @@ export function NotebookHeader({ notebookId }: NotebookHeaderProperties) {
               alt="download"
               width={64}
               height={64}
-              className={`transition-all ${currentPage === "export" ? "" : "group-hover:scale-110"}`}
+              className={`transition-transform ${currentPage === "export" ? "" : "group-hover:scale-110"}`}
             />
             <div className="gap-1/2 flex flex-col">
               <p>2 teams sharing</p>

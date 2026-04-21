@@ -28,7 +28,7 @@ export function TornadoChart({ data }: TornadoChartProperties) {
 
   return (
     <div className="relative">
-      <svg viewBox={`0 0 ${width} ${height}`} className="w-full">
+      <svg viewBox={`0 0 ${width} ${height}`} className="w-full" role="img" aria-label="Sensitivity tornado chart">
         {/* Center line */}
         <line
           x1={padding.left + chartWidth / 2}

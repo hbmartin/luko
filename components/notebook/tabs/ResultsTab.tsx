@@ -110,7 +110,7 @@ export function ResultsTab({
             <p className="mt-4 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700" role="alert">
               {simulationError}
             </p>
-          ) : null}
+          ) : undefined}
         </div>
       </div>
     )
@@ -220,6 +220,12 @@ export function ResultsTab({
           })}
         </div>
       </section>
+
+      {simulationError ? (
+        <p className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700" role="alert">
+          {simulationError}
+        </p>
+      ) : undefined}
 
       <section className="grid grid-cols-1 gap-4 md:grid-cols-4">
         <div className="rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface-elevated)] p-4 shadow-sm">

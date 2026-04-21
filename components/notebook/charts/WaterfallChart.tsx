@@ -62,7 +62,12 @@ export function WaterfallChart({ data }: WaterfallChartProperties) {
 
   return (
     <div className="relative">
-      <svg viewBox={`0 0 ${width} ${height}`} className="w-full">
+      <svg
+        viewBox={`0 0 ${width} ${height}`}
+        className="w-full"
+        role="img"
+        aria-label="Category contribution waterfall chart"
+      >
         {/* Y-axis */}
         <line
           x1={padding.left}
