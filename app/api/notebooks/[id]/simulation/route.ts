@@ -1,4 +1,5 @@
-import { NextResponse } from "next/server"
+import { trace } from "@opentelemetry/api"
+import { after, NextResponse } from "next/server"
 import { z } from "zod"
 
 import { runSimulation } from "@/lib/simulation/runSimulation"
@@ -19,22 +20,26 @@ type SimulationRouteContext = {
 export async function POST(request: Request, { params }: SimulationRouteContext) {
   const { id: notebookId } = await params
   const supabase = await createServerSupabaseClient()
+  const userPromise = supabase.auth.getUser()
+  const bodyPromise = request
+    .json()
+    .then((body: unknown) => ({ body, ok: true as const }))
+    .catch(() => ({ ok: false as const }))
+
+  const [userResult, bodyResult] = await Promise.all([userPromise, bodyPromise])
   const {
     data: { user },
-  } = await supabase.auth.getUser()
+  } = userResult
 
   if (!user) {
     return NextResponse.json({ error: "Authentication required" }, { status: 401 })
   }
 
-  let body: unknown
-  try {
-    body = await request.json()
-  } catch {
+  if (!bodyResult.ok) {
     return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 })
   }
 
-  const parsedBody = simulationRequestSchema.safeParse(body)
+  const parsedBody = simulationRequestSchema.safeParse(bodyResult.body)
   if (!parsedBody.success) {
     return NextResponse.json({ error: "Invalid simulation payload" }, { status: 400 })
   }
@@ -47,12 +52,21 @@ export async function POST(request: Request, { params }: SimulationRouteContext)
   try {
     const start = Date.now()
     const result = await runSimulation(notebook, iterations)
+    const calculationTimeMs = Date.now() - start
+
+    after(() => {
+      const span = trace.getTracer("next-enterprise").startSpan("simulation.completed")
+      span.setAttribute("simulation.calculation_time_ms", calculationTimeMs)
+      span.setAttribute("simulation.iterations", result.metadata.iterations)
+      span.setAttribute("notebook.id", notebook.id)
+      span.end()
+    })
 
     return NextResponse.json({
       ...result,
       metadata: {
         ...result.metadata,
-        calculationTimeMs: Date.now() - start,
+        calculationTimeMs,
       },
     })
   } catch (error) {

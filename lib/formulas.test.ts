@@ -167,11 +167,43 @@ describe("notebook formula evaluation", () => {
     const plan = planEvaluation(registry)
     const target: Record<string, number> = { stale_formula: 123 }
     const plannedValues = evaluatePlan(plan, baseValues, target)
+    const { stale_formula: staleFormula, ...plannedFormulaValues } = plannedValues
 
     expect(plannedValues).toBe(target)
-    expect("stale_formula" in target).toBe(false)
-    expect(plannedValues).toEqual(expected)
+    expect(staleFormula).toBe(123)
+    expect(plannedFormulaValues).toEqual(expected)
     expect(planEvaluation(registry)).toBe(plan)
+  })
+
+  it("filters dependency graph entries to allowed formula and metric keys", () => {
+    const notebook: Notebook = {
+      ...createFocusedNotebook(),
+      metrics: [
+        {
+          id: "salary",
+          name: "Salary",
+          unit: "$/year",
+          distribution: null,
+          value: 208_000,
+          categoryId: "cat-facts",
+        },
+      ],
+      formulas: [
+        {
+          id: "formula_with_global",
+          name: "Formula with global",
+          categoryId: "cat-facts",
+          expression: "salary + pi",
+          updatedAt: "2026-01-01T00:00:00.000Z",
+        },
+      ],
+    }
+    const registry = compileNotebookFormulas(notebook)
+    const plan = planEvaluation(registry, new Set([...Object.keys(registry), "salary"]))
+
+    expect(plan.order).toContain("salary")
+    expect(plan.order).toContain("formula_with_global")
+    expect(plan.order).not.toContain("pi")
   })
 
   it("rejects circular dependencies across formula rows", () => {

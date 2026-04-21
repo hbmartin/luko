@@ -27,25 +27,27 @@ export function SimulationSummaryPanel({ notebook, result }: SimulationSummaryPa
         <div className="space-y-4">
           <div className="bg-accent rounded-xl p-4">
             <div className="text-primary text-xs font-semibold tracking-wide uppercase">Median 3-Year NPV</div>
-            <div className="text-primary mt-1 text-2xl font-semibold">{formatAbbreviatedNumber(result.npv.p50)}</div>
+            <div className="text-primary mt-1 text-2xl font-semibold tabular-nums">
+              {formatAbbreviatedNumber(result.npv.p50)}
+            </div>
           </div>
 
           <div className="space-y-2 p-4 text-sm">
             <div className="flex items-center justify-between">
               <span className="text-muted-foreground">Payback Period</span>
-              <span className="font-medium text-[var(--color-text-primary)]">
+              <span className="font-medium text-[var(--color-text-primary)] tabular-nums">
                 {result.paybackPeriod.p50.toFixed(1)} months
               </span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-[var(--color-text-muted)]">Iterations</span>
-              <span className="font-medium text-[var(--color-text-primary)]">
+              <span className="font-medium text-[var(--color-text-primary)] tabular-nums">
                 {result.metadata.iterations.toLocaleString()}
               </span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-[var(--color-text-muted)]">Runtime</span>
-              <span className="font-medium text-[var(--color-text-primary)]">
+              <span className="font-medium text-[var(--color-text-primary)] tabular-nums">
                 {result.metadata.calculationTimeMs} ms
               </span>
             </div>
@@ -56,23 +58,23 @@ export function SimulationSummaryPanel({ notebook, result }: SimulationSummaryPa
             <dl className="grid grid-cols-2 gap-2 text-xs text-[var(--color-text-muted)]">
               <div>
                 <dt>p90</dt>
-                <dd className="font-medium text-[var(--color-text-primary)]">
+                <dd className="font-medium text-[var(--color-text-primary)] tabular-nums">
                   {formatAbbreviatedNumber(result.npv.p90)}
                 </dd>
               </div>
               <div>
                 <dt>p10</dt>
-                <dd className="font-medium text-[var(--color-text-primary)]">
+                <dd className="font-medium text-[var(--color-text-primary)] tabular-nums">
                   {formatAbbreviatedNumber(result.npv.p10)}
                 </dd>
               </div>
               <div>
                 <dt>p75</dt>
-                <dd>{formatAbbreviatedNumber(result.npv.p75)}</dd>
+                <dd className="tabular-nums">{formatAbbreviatedNumber(result.npv.p75)}</dd>
               </div>
               <div>
                 <dt>p25</dt>
-                <dd>{formatAbbreviatedNumber(result.npv.p25)}</dd>
+                <dd className="tabular-nums">{formatAbbreviatedNumber(result.npv.p25)}</dd>
               </div>
             </dl>
           </div>
@@ -81,7 +83,7 @@ export function SimulationSummaryPanel({ notebook, result }: SimulationSummaryPa
             type="button"
             onClick={runSimulation}
             disabled={isSimulating}
-            className="bg-primary text-primary-foreground inline-flex w-full items-center justify-center rounded-md px-4 py-2 text-sm font-medium transition-transform hover:scale-[1.01] focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+            className="bg-primary text-primary-foreground inline-flex w-full items-center justify-center rounded-md px-4 py-2 text-sm font-medium focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 motion-safe:transition-transform motion-safe:hover:scale-[1.01]"
           >
             {isSimulating ? "Running…" : "Run Updated Simulation"}
           </button>
@@ -92,12 +94,12 @@ export function SimulationSummaryPanel({ notebook, result }: SimulationSummaryPa
             type="button"
             onClick={runSimulation}
             disabled={isSimulating}
-            className={`bg-primary mx-auto flex items-center gap-2 rounded-md px-5 py-2 text-sm font-medium text-white transition-transform ${isSimulating ? "cursor-not-allowed opacity-75" : "hover:scale-105"} focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:ring-offset-2`}
+            className={`bg-primary mx-auto flex items-center gap-2 rounded-md px-5 py-2 text-sm font-medium text-white motion-safe:transition-transform ${isSimulating ? "cursor-not-allowed opacity-75" : "motion-safe:hover:scale-105"} focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:ring-offset-2`}
           >
             {isSimulating ? (
               <>
                 <svg
-                  className="size-4 animate-spin"
+                  className="size-4 motion-safe:animate-spin"
                   xmlns="http://www.w3.org/2000/svg"
                   fill="none"
                   viewBox="0 0 24 24"

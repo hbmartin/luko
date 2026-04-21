@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-non-null-assertion */
+/* eslint-disable @typescript-eslint/no-non-null-assertion, unicorn/no-for-loop */
 
 import { compileNotebookFormulas, evaluatePlan, planEvaluation } from "@/lib/formulas"
 import { Category, Metric, Notebook, SimulationResult } from "@/lib/types/notebook"
@@ -6,6 +6,9 @@ import { Category, Metric, Notebook, SimulationResult } from "@/lib/types/notebo
 const DEFAULT_ITERATIONS = 100_000
 const SIMULATION_YEAR_COUNT = 3
 const SIMULATION_YIELD_INTERVAL = 500
+const EMPTY_SAMPLES = new Float64Array(0)
+
+type NumberSamples = ArrayLike<number>
 
 const sampleGamma = (alpha: number): number => {
   if (alpha < 1) {
@@ -52,7 +55,7 @@ const samplePert = (min: number, mode: number, max: number): number => {
   return min + betaSample * (max - min)
 }
 
-const quantile = (sortedValues: number[], q: number): number => {
+const quantile = (sortedValues: NumberSamples, q: number): number => {
   if (sortedValues.length === 0) return 0
   const index = (sortedValues.length - 1) * q
   const lower = Math.floor(index)
@@ -62,14 +65,24 @@ const quantile = (sortedValues: number[], q: number): number => {
   return sortedValues[lower]! * (1 - weight) + sortedValues[upper]! * weight
 }
 
-const mean = (values: number[]) =>
-  values.length > 0 ? values.reduce((accumulator, value) => accumulator + value, 0) / values.length : 0
+const mean = (values: NumberSamples) => {
+  if (values.length === 0) return 0
+  let total = 0
+  for (let index = 0; index < values.length; index += 1) {
+    total += values[index]!
+  }
+  return total / values.length
+}
 
-const stddev = (values: number[]) => {
+const stddev = (values: NumberSamples) => {
   if (values.length <= 1) return 0
   const avg = mean(values)
-  const variance =
-    values.reduce((accumulator, value) => accumulator + Math.pow(value - avg, 2), 0) / (values.length - 1)
+  let squaredDeltaTotal = 0
+  for (let index = 0; index < values.length; index += 1) {
+    const delta = values[index]! - avg
+    squaredDeltaTotal += delta * delta
+  }
+  const variance = squaredDeltaTotal / (values.length - 1)
   return Math.sqrt(variance)
 }
 
@@ -193,9 +206,9 @@ const writeYearlyCashFlows = (
   evaluatedValues: Record<string, number>,
   totalBenefits: number,
   totalCosts: number,
-  yearlyBenefits: number[],
-  yearlyCosts: number[],
-  yearlyNet: number[]
+  yearlyBenefits: Float64Array,
+  yearlyCosts: Float64Array,
+  yearlyNet: Float64Array
 ) => {
   for (let index = 0; index < SIMULATION_YEAR_COUNT; index += 1) {
     const formulaId = explicitYearNetFormulaIds[index]
@@ -213,7 +226,7 @@ const writeYearlyCashFlows = (
   }
 }
 
-const correlation = (x: number[], y: number[]) => {
+const correlation = (x: NumberSamples, y: NumberSamples) => {
   if (x.length === 0 || x.length !== y.length) return 0
   const meanX = mean(x)
   const meanY = mean(y)
@@ -221,7 +234,8 @@ const correlation = (x: number[], y: number[]) => {
   let denomX = 0
   let denomY = 0
 
-  for (const [index, element] of x.entries()) {
+  for (let index = 0; index < x.length; index += 1) {
+    const element = x[index]!
     const dx = element - meanX
     const dy = y[index]! - meanY
     numerator += dx * dy
@@ -235,13 +249,13 @@ const correlation = (x: number[], y: number[]) => {
 
 interface MetricSampleTrack {
   metric: Metric
-  values: number[]
+  values: Float64Array
 }
 
 interface CategorySimulationPlan {
   category: Category
   financialMetrics: Metric[]
-  samples: number[]
+  samples: Float64Array
 }
 
 const yieldToEventLoop = () =>
@@ -258,8 +272,10 @@ export async function runSimulation(
   notebook: Notebook,
   iterations: number = DEFAULT_ITERATIONS
 ): Promise<SimulationResult> {
+  const metrics = notebook.metrics
   const registry = compileNotebookFormulas(notebook)
-  const evaluationPlan = planEvaluation(registry)
+  const allowedFormulaKeys = new Set([...Object.keys(registry), ...metrics.map((metric) => metric.id)])
+  const evaluationPlan = planEvaluation(registry, allowedFormulaKeys)
   const expectedPlannedFormulaCount = Object.keys(registry).length
   const plannedFormulaCount = evaluationPlan.order.reduce(
     (count, formulaId) => (registry[formulaId] ? count + 1 : count),
@@ -272,13 +288,14 @@ export async function runSimulation(
   const yearFormulaLookup = buildYearFormulaLookup(notebook)
   const explicitYearNetFormulaIds = getExplicitYearNetFormulaIds(yearFormulaLookup)
   const yieldInterval = SIMULATION_YIELD_INTERVAL
-  const metrics = notebook.metrics
 
   const metricSamples: Record<string, MetricSampleTrack> = {}
+  const metricSampleArrays = metrics.map(() => new Float64Array(iterations))
   const sampledValues: Record<string, number> = {}
   const evaluatedValues: Record<string, number> = {}
-  for (const metric of metrics) {
-    metricSamples[metric.id] = { metric, values: [] }
+  for (let metricIndex = 0; metricIndex < metrics.length; metricIndex += 1) {
+    const metric = metrics[metricIndex]!
+    metricSamples[metric.id] = { metric, values: metricSampleArrays[metricIndex]! }
   }
 
   const financialMetricsByCategoryId = new Map<string, Metric[]>()
@@ -292,11 +309,11 @@ export async function runSimulation(
     }
   }
 
-  const categorySamples: Record<string, number[]> = {}
+  const categorySamples: Record<string, Float64Array> = {}
   const benefitCategories: CategorySimulationPlan[] = []
   const costCategories: CategorySimulationPlan[] = []
   for (const category of notebook.categories) {
-    const samples: number[] = []
+    const samples = new Float64Array(iterations)
     categorySamples[category.id] = samples
     if (category.type === "facts") continue
 
@@ -312,25 +329,26 @@ export async function runSimulation(
     }
   }
 
-  const yearlyBenefitsSamples = Array.from({ length: SIMULATION_YEAR_COUNT }, () => [] as number[])
-  const yearlyCostsSamples = Array.from({ length: SIMULATION_YEAR_COUNT }, () => [] as number[])
-  const yearlyNetSamples = Array.from({ length: SIMULATION_YEAR_COUNT }, () => [] as number[])
-  const yearlyBenefits = Array.from({ length: SIMULATION_YEAR_COUNT }, () => 0)
-  const yearlyCosts = Array.from({ length: SIMULATION_YEAR_COUNT }, () => 0)
-  const yearlyNet = Array.from({ length: SIMULATION_YEAR_COUNT }, () => 0)
-  const npvSamples: number[] = []
-  const paybackSamples: number[] = []
+  const yearlyBenefitsSamples = Array.from({ length: SIMULATION_YEAR_COUNT }, () => new Float64Array(iterations))
+  const yearlyCostsSamples = Array.from({ length: SIMULATION_YEAR_COUNT }, () => new Float64Array(iterations))
+  const yearlyNetSamples = Array.from({ length: SIMULATION_YEAR_COUNT }, () => new Float64Array(iterations))
+  const yearlyBenefits = new Float64Array(SIMULATION_YEAR_COUNT)
+  const yearlyCosts = new Float64Array(SIMULATION_YEAR_COUNT)
+  const yearlyNet = new Float64Array(SIMULATION_YEAR_COUNT)
+  const npvSamples = new Float64Array(iterations)
+  const paybackSamples = new Float64Array(iterations)
 
   for (let index = 0; index < iterations; index += 1) {
     if (index > 0 && index % yieldInterval === 0) {
       await yieldToEventLoop()
     }
 
-    for (const metric of metrics) {
+    for (let metricIndex = 0; metricIndex < metrics.length; metricIndex += 1) {
+      const metric = metrics[metricIndex]!
       const value = sampleMetricValue(metric)
 
       sampledValues[metric.id] = value
-      metricSamples[metric.id]!.values.push(value)
+      metricSampleArrays[metricIndex]![index] = value
     }
 
     evaluatePlan(evaluationPlan, sampledValues, evaluatedValues)
@@ -340,14 +358,14 @@ export async function runSimulation(
 
     for (const { category, financialMetrics, samples } of benefitCategories) {
       const rawContribution = getCategoryOutput(category, financialMetrics, evaluatedValues, sampledValues)
-      samples.push(rawContribution)
+      samples[index] = rawContribution
       totalBenefits += Math.max(0, rawContribution)
     }
 
     for (const { category, financialMetrics, samples } of costCategories) {
       const rawContribution = getCategoryOutput(category, financialMetrics, evaluatedValues, sampledValues)
       const cost = Math.abs(rawContribution)
-      samples.push(-cost)
+      samples[index] = -cost
       totalCosts += cost
     }
 
@@ -362,17 +380,20 @@ export async function runSimulation(
     )
 
     const discountRate = evaluatedValues.discount_rate ?? sampledValues.discount_rate ?? 0.25
+    const inverseDiscountFactor = 1 / (1 + discountRate)
+    let discountFactor = inverseDiscountFactor
     let npvValue = 0
     for (let yearIndex = 0; yearIndex < SIMULATION_YEAR_COUNT; yearIndex += 1) {
       const net = yearlyNet[yearIndex]!
-      yearlyBenefitsSamples[yearIndex]!.push(yearlyBenefits[yearIndex]!)
-      yearlyCostsSamples[yearIndex]!.push(yearlyCosts[yearIndex]!)
-      yearlyNetSamples[yearIndex]!.push(net)
-      npvValue += net / Math.pow(1 + discountRate, yearIndex + 1)
+      yearlyBenefitsSamples[yearIndex]![index] = yearlyBenefits[yearIndex]!
+      yearlyCostsSamples[yearIndex]![index] = yearlyCosts[yearIndex]!
+      yearlyNetSamples[yearIndex]![index] = net
+      npvValue += net * discountFactor
+      discountFactor *= inverseDiscountFactor
     }
-    npvSamples.push(npvValue)
+    npvSamples[index] = npvValue
 
-    paybackSamples.push(estimatePaybackMonths(yearlyBenefits, yearlyCosts))
+    paybackSamples[index] = estimatePaybackMonths(yearlyBenefits, yearlyCosts)
   }
 
   const npvStats = createStats(npvSamples)
@@ -389,7 +410,7 @@ export async function runSimulation(
     .map(({ metricId, metricName, impact }) => ({ metricId, metricName, impact }))
 
   const categoryContributions = notebook.categories.map((category) => {
-    const values = categorySamples[category.id] ?? []
+    const values = categorySamples[category.id] ?? EMPTY_SAMPLES
     const contribution = mean(values)
     return {
       categoryId: category.id,
@@ -420,8 +441,16 @@ export async function runSimulation(
   }
 }
 
-const estimatePaybackMonths = (benefits: number[], costs: number[]): number => {
-  if (costs.every((cost) => cost <= 0)) {
+const estimatePaybackMonths = (benefits: NumberSamples, costs: NumberSamples): number => {
+  let hasPositiveCost = false
+  for (let index = 0; index < costs.length; index += 1) {
+    if (costs[index]! > 0) {
+      hasPositiveCost = true
+      break
+    }
+  }
+
+  if (!hasPositiveCost) {
     return 0
   }
 
@@ -441,8 +470,9 @@ const estimatePaybackMonths = (benefits: number[], costs: number[]): number => {
   return 36
 }
 
-const createStats = (samples: number[]) => {
-  const sortedSamples = samples.toSorted((a, b) => a - b)
+const createStats = (samples: NumberSamples) => {
+  const sortedSamples = new Float64Array(samples)
+  sortedSamples.sort()
 
   return {
     p10: quantile(sortedSamples, 0.1),

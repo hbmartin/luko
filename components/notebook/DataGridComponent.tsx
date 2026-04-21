@@ -10,9 +10,9 @@ import {
   type RenderCellProps,
   type RenderEditCellProps,
   type RenderGroupCellProps,
-  type RowsChangeData,
   renderTextEditor,
   renderValue,
+  type RowsChangeData,
   ToggleGroup,
   TreeDataGrid,
 } from "react-data-grid"
@@ -28,7 +28,8 @@ import {
 import { parseNumeric } from "@/lib/math-utils"
 import type { CategoryRow, GridRow, MetricRow, Notebook } from "@/lib/types/notebook"
 import { notebookToGridRows } from "@/lib/utils/grid-helpers"
-import { FormulaEditorSingleLine } from "./FormulaEditorSingleLine"
+import { buildReferenceableIds, type ReferenceableNotebookItem } from "@/lib/utils/notebook-indices"
+import { FormulaEditorSingleLine, type MetricMentionItem } from "./FormulaEditorSingleLine"
 
 // GroupRow type from react-data-grid (not exported)
 interface GroupRow<TRow> {
@@ -123,7 +124,7 @@ const rowGrouper = (rows: readonly GridRow[], columnKey: string) => {
 
 const UnitCell = memo(function UnitCell(properties: RenderCellProps<GridRow>) {
   if (isFormulaRow(properties.row)) {
-    return <FormulaEditorSingleLine formulaId={properties.row.id} />
+    return null
   }
 
   return renderValue({
@@ -132,7 +133,83 @@ const UnitCell = memo(function UnitCell(properties: RenderCellProps<GridRow>) {
   })
 })
 
-const renderUnitCell = (properties: RenderCellProps<GridRow>) => <UnitCell {...properties} />
+interface FormulaUnitCellProperties extends RenderCellProps<GridRow> {
+  mentionOptions: MetricMentionItem[]
+  referenceableIds: ReadonlyMap<string, ReferenceableNotebookItem>
+}
+
+const FormulaUnitCell = memo(function FormulaUnitCell({
+  mentionOptions,
+  referenceableIds,
+  ...properties
+}: FormulaUnitCellProperties) {
+  if (!isFormulaRow(properties.row)) {
+    return <UnitCell {...properties} />
+  }
+
+  return (
+    <FormulaEditorSingleLine
+      formulaId={properties.row.id}
+      expression={properties.row.expression}
+      mentionOptions={mentionOptions}
+      referenceableIds={referenceableIds}
+    />
+  )
+})
+
+interface GroupCellHeaderProperties {
+  categoryId: string
+  categoryName: string
+  groupCellProperties: RenderGroupCellProps<GridRow>
+  onContextMenu: (categoryId: string, categoryName: string, event: ReactMouseEvent) => void
+}
+
+const GroupCellHeader = memo(function GroupCellHeader({
+  categoryId,
+  categoryName,
+  groupCellProperties,
+  onContextMenu,
+}: GroupCellHeaderProperties) {
+  const handleContextMenu = useCallback(
+    (event: ReactMouseEvent) => {
+      onContextMenu(categoryId, categoryName, event)
+    },
+    [categoryId, categoryName, onContextMenu]
+  )
+
+  return (
+    <div className="flex w-full items-center justify-between gap-2 pr-2" onContextMenu={handleContextMenu}>
+      <div className="min-w-0 flex-1">
+        <ToggleGroup {...groupCellProperties} groupKey={categoryName} />
+      </div>
+    </div>
+  )
+})
+
+interface GroupMenuButtonProperties {
+  categoryId: string
+  categoryName: string
+  onClick: (categoryId: string, categoryName: string, event: ReactMouseEvent<HTMLButtonElement>) => void
+}
+
+const GroupMenuButton = memo(function GroupMenuButton({
+  categoryId,
+  categoryName,
+  onClick,
+}: GroupMenuButtonProperties) {
+  const handleClick = useCallback(
+    (event: ReactMouseEvent<HTMLButtonElement>) => {
+      onClick(categoryId, categoryName, event)
+    },
+    [categoryId, categoryName, onClick]
+  )
+
+  return (
+    <Button variant="outline" onClick={handleClick}>
+      Add row
+    </Button>
+  )
+})
 
 interface GridContextMenuProperties {
   state: GridContextMenuState | null
@@ -276,6 +353,35 @@ export const DataGridComponent = memo(function DataGridComponent({
     setContextMenuState(null)
   }, [notebook.id])
   const rows = useMemo(() => notebookToGridRows(notebook), [notebook])
+  const mentionOptions = useMemo<MetricMentionItem[]>(() => {
+    const metricsByCategoryId = new Map<string, Notebook["metrics"]>()
+    for (const metric of notebook.metrics) {
+      const categoryMetrics = metricsByCategoryId.get(metric.categoryId)
+      if (categoryMetrics) {
+        categoryMetrics.push(metric)
+      } else {
+        metricsByCategoryId.set(metric.categoryId, [metric])
+      }
+    }
+
+    return notebook.categories
+      .toSorted((a, b) => a.order - b.order)
+      .flatMap((category) =>
+        (metricsByCategoryId.get(category.id) ?? []).map<MetricMentionItem>((metric) => ({
+          id: metric.id,
+          display: metric.name,
+          categoryId: category.id,
+          categoryName: category.name,
+          categoryType: category.type,
+          unit: metric.unit,
+          description: metric.description,
+        }))
+      )
+  }, [notebook.categories, notebook.metrics])
+  const referenceableIds = useMemo(
+    () => buildReferenceableIds({ metrics: notebook.metrics, formulas: notebook.formulas }),
+    [notebook.formulas, notebook.metrics]
+  )
   const categoryLabels = useMemo(() => {
     const map = new Map<string, string>()
     for (const category of notebook.categories) {
@@ -372,16 +478,12 @@ export const DataGridComponent = memo(function DataGridComponent({
           return <ToggleGroup {...properties} groupKey={label} />
         }
         return (
-          <div
-            className="flex w-full items-center justify-between gap-2 pr-2"
-            onContextMenu={(event) => {
-              handleGroupContextMenu(rawKey, label, event)
-            }}
-          >
-            <div className="min-w-0 flex-1">
-              <ToggleGroup {...properties} groupKey={label} />
-            </div>
-          </div>
+          <GroupCellHeader
+            categoryId={rawKey}
+            categoryName={label}
+            groupCellProperties={properties}
+            onContextMenu={handleGroupContextMenu}
+          />
         )
       },
     }
@@ -407,16 +509,7 @@ export const DataGridComponent = memo(function DataGridComponent({
           const rawKey = groupKey == undefined ? "" : String(groupKey)
           const label = categoryLabels.get(rawKey) ?? rawKey ?? "Uncategorized"
 
-          return (
-            <Button
-              variant="outline"
-              onClick={(event) => {
-                handleGroupMenuButtonClick(rawKey, label, event)
-              }}
-            >
-              Add new...
-            </Button>
-          )
+          return <GroupMenuButton categoryId={rawKey} categoryName={label} onClick={handleGroupMenuButtonClick} />
         },
       },
       {
@@ -430,7 +523,9 @@ export const DataGridComponent = memo(function DataGridComponent({
           if (arguments_.row.type === "formula") return 4
           return 1
         },
-        renderCell: renderUnitCell,
+        renderCell: (properties) => (
+          <FormulaUnitCell {...properties} mentionOptions={mentionOptions} referenceableIds={referenceableIds} />
+        ),
         renderEditCell: ({ row, column, onRowChange, rowIdx, onClose }: RenderEditCellProps<GridRow>) => {
           if (isFormulaRow(row)) {
             return String(row.expression)
@@ -462,7 +557,14 @@ export const DataGridComponent = memo(function DataGridComponent({
     ]
 
     return [groupColumn, ...baseColumns]
-  }, [categoryLabels, handleGroupContextMenu, handleGroupMenuButtonClick, safeTextEditor])
+  }, [
+    categoryLabels,
+    handleGroupContextMenu,
+    handleGroupMenuButtonClick,
+    mentionOptions,
+    referenceableIds,
+    safeTextEditor,
+  ])
 
   const rowClass = useCallback(
     (row: GridRow) => {

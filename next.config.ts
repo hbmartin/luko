@@ -6,6 +6,9 @@ import { type NextConfig } from "next"
 import { env } from "./env.mjs"
 
 const config: NextConfig = {
+  experimental: {
+    optimizePackageImports: ["lucide-react", "recharts", "mathjs"],
+  },
   reactStrictMode: true,
   logging: {
     fetches: {
