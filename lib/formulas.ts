@@ -1,5 +1,5 @@
 import { all, create, EvalFunction, FactoryFunctionMap, MathNode, MathType } from "mathjs"
-import type { Metric } from "@/lib/types/notebook"
+import type { Formula, Metric, Notebook } from "@/lib/types/notebook"
 
 const math = create(all as FactoryFunctionMap)
 
@@ -50,12 +50,19 @@ const detectCircularDependencies = (dependencyMap: DependencyMap): string[] => {
     visited.add(node)
     stack.add(node)
 
-    dependencyMap[node]?.forEach(visit)
+    const dependencies = dependencyMap[node]
+    if (dependencies) {
+      for (const dependency of dependencies) {
+        visit(dependency)
+      }
+    }
 
     stack.delete(node)
   }
 
-  Object.keys(dependencyMap).forEach(visit)
+  for (const node of Object.keys(dependencyMap)) {
+    visit(node)
+  }
 
   return cycles
 }
@@ -68,8 +75,12 @@ const topologicalSort = (dependencyMap: DependencyMap): string[] => {
     if (!inDegree.has(node)) inDegree.set(node, 0)
     for (const dependency of dependencies) {
       inDegree.set(node, (inDegree.get(node) ?? 0) + 1)
-      if (!dependents.has(dependency)) dependents.set(dependency, new Set())
-      dependents.get(dependency)!.add(node)
+      let dependencyDependents = dependents.get(dependency)
+      if (!dependencyDependents) {
+        dependencyDependents = new Set()
+        dependents.set(dependency, dependencyDependents)
+      }
+      dependencyDependents.add(node)
       if (!inDegree.has(dependency)) inDegree.set(dependency, 0)
     }
   }
@@ -85,11 +96,13 @@ const topologicalSort = (dependencyMap: DependencyMap): string[] => {
     if (!node) continue
     order.push(node)
 
-    dependents.get(node)?.forEach((dependent) => {
+    const nodeDependents = dependents.get(node)
+    if (!nodeDependents) continue
+    for (const dependent of nodeDependents) {
       const nextDegree = (inDegree.get(dependent) ?? 0) - 1
       inDegree.set(dependent, nextDegree)
       if (nextDegree === 0) queue.push(dependent)
-    })
+    }
   }
 
   return order
@@ -149,6 +162,29 @@ export const compileMetricFormulas = (metrics: Metric[]): FormulaRegistry => {
   return registry
 }
 
+export const compileFormulaRows = (formulas: Formula[]): FormulaRegistry => {
+  const registry: FormulaRegistry = {}
+
+  for (const formula of formulas) {
+    const rawFormula = formula.expression.trim()
+    if (!rawFormula) continue
+    const node = parseFormula(rawFormula)
+    registry[formula.id] = {
+      raw: rawFormula,
+      node,
+      compiled: node.compile(),
+      dependencies: extractDependencies(node),
+    }
+  }
+
+  return registry
+}
+
+export const compileNotebookFormulas = (notebook: Notebook): FormulaRegistry => ({
+  ...compileMetricFormulas(notebook.metrics),
+  ...compileFormulaRows(notebook.formulas),
+})
+
 export const evaluateFormulas = (
   registry: FormulaRegistry,
   baseValues: Record<string, number>
@@ -166,7 +202,7 @@ export const evaluateFormulas = (
   for (const metricId of order) {
     const compilation = registry[metricId]
     if (!compilation) continue
-    const value = compilation.compiled.evaluate(evaluated)
+    const value = compilation.compiled.evaluate(evaluated) as unknown as MathType
     evaluated[metricId] = toNumber(value)
   }
 

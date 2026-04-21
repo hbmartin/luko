@@ -20,6 +20,7 @@ export const mockCategories: Category[] = [
     type: "benefit",
     order: 1,
     isExpanded: true,
+    outputFormulaId: "formula_time_savings_total",
   },
   {
     id: "cat-quality",
@@ -28,6 +29,7 @@ export const mockCategories: Category[] = [
     type: "benefit",
     order: 2,
     isExpanded: true,
+    outputFormulaId: "formula_quality_savings",
   },
   {
     id: "cat-product-delivery",
@@ -36,6 +38,7 @@ export const mockCategories: Category[] = [
     type: "benefit",
     order: 3,
     isExpanded: true,
+    outputFormulaId: "formula_product_revenue_impact",
   },
   {
     id: "cat-retention",
@@ -44,6 +47,7 @@ export const mockCategories: Category[] = [
     type: "benefit",
     order: 4,
     isExpanded: true,
+    outputFormulaId: "formula_retention_savings",
   },
   {
     id: "cat-costs",
@@ -52,6 +56,7 @@ export const mockCategories: Category[] = [
     type: "cost",
     order: 5,
     isExpanded: true,
+    outputFormulaId: "formula_ongoing_costs",
   },
   {
     id: "cat-facts",
@@ -394,7 +399,13 @@ export const mockSimulationResult: SimulationResult = {
     std: 450_000,
   },
   paybackPeriod: {
+    p10: 3.1,
+    p25: 3.7,
     p50: 4.2, // months
+    p75: 5.1,
+    p90: 6.4,
+    mean: 4.6,
+    std: 1.1,
   },
   yearlyResults: [
     {
@@ -406,6 +417,7 @@ export const mockSimulationResult: SimulationResult = {
         p75: 1_250_000,
         p90: 1_400_000,
         mean: 1_100_000,
+        std: 210_000,
       },
       costs: {
         p10: 380_000,
@@ -414,6 +426,7 @@ export const mockSimulationResult: SimulationResult = {
         p75: 500_000,
         p90: 540_000,
         mean: 460_000,
+        std: 58_000,
       },
       net: {
         p10: 320_000,
@@ -422,6 +435,7 @@ export const mockSimulationResult: SimulationResult = {
         p75: 780_000,
         p90: 920_000,
         mean: 640_000,
+        std: 180_000,
       },
     },
     {
@@ -433,6 +447,7 @@ export const mockSimulationResult: SimulationResult = {
         p75: 1_300_000,
         p90: 1_450_000,
         mean: 1_150_000,
+        std: 220_000,
       },
       costs: {
         p10: 340_000,
@@ -441,6 +456,7 @@ export const mockSimulationResult: SimulationResult = {
         p75: 460_000,
         p90: 500_000,
         mean: 420_000,
+        std: 52_000,
       },
       net: {
         p10: 400_000,
@@ -449,6 +465,7 @@ export const mockSimulationResult: SimulationResult = {
         p75: 880_000,
         p90: 1_020_000,
         mean: 730_000,
+        std: 185_000,
       },
     },
     {
@@ -460,6 +477,7 @@ export const mockSimulationResult: SimulationResult = {
         p75: 1_350_000,
         p90: 1_500_000,
         mean: 1_200_000,
+        std: 230_000,
       },
       costs: {
         p10: 340_000,
@@ -468,6 +486,7 @@ export const mockSimulationResult: SimulationResult = {
         p75: 460_000,
         p90: 500_000,
         mean: 420_000,
+        std: 52_000,
       },
       net: {
         p10: 450_000,
@@ -476,6 +495,7 @@ export const mockSimulationResult: SimulationResult = {
         p75: 930_000,
         p90: 1_070_000,
         mean: 780_000,
+        std: 190_000,
       },
     },
   ],

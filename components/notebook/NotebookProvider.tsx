@@ -1,8 +1,7 @@
 "use client"
 
-import { createContext, useCallback, useContext, useEffect, useState } from "react"
-import { runSimulation } from "@/lib/simulation/runSimulation"
-import { Notebook, SimulationResult } from "@/lib/types/notebook"
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react"
+import { Notebook, SimulationResult, SimulationResultSchema } from "@/lib/types/notebook"
 import { applyNotebookValidations } from "@/lib/utils/notebook-validation"
 
 interface Scenario {
@@ -18,6 +17,7 @@ interface NotebookContextType {
   simulationResult: SimulationResult | null
   setSimulationResult: (result: SimulationResult | null) => void
   isSimulating: boolean
+  simulationError: string | null
   theme: "light" | "dark"
   setTheme: (theme: "light" | "dark") => void
   density: "comfortable" | "compact"
@@ -41,6 +41,7 @@ export function NotebookProvider({
   const [notebook, setNotebookState] = useState<Notebook>(() => applyNotebookValidations(initialNotebook))
   const [simulationResult, setSimulationResult] = useState<SimulationResult | null>(null)
   const [isSimulating, setIsSimulating] = useState(false)
+  const [simulationError, setSimulationError] = useState<string | null>(null)
   const [theme, setTheme] = useState<"light" | "dark">("light")
   const [density, setDensity] = useState<"comfortable" | "compact">("comfortable")
   const [scenarios, setScenarios] = useState<Scenario[]>([])
@@ -50,11 +51,11 @@ export function NotebookProvider({
     setNotebookState(applyNotebookValidations(nextNotebook))
   }, [])
 
-  const handleRenameScenario = (scenarioId: string, name: string) => {
+  const handleRenameScenario = useCallback((scenarioId: string, name: string) => {
     setScenarios((previous) =>
       previous.map((scenario) => (scenario.id === scenarioId ? { ...scenario, name: name || scenario.name } : scenario))
     )
-  }
+  }, [])
 
   useEffect(() => {
     document.title = `Luko - ${notebook.name}`
@@ -96,64 +97,90 @@ export function NotebookProvider({
 
   const handleRunSimulation = useCallback(async () => {
     setIsSimulating(true)
-    const start = performance.now()
-    const result = await runSimulation(notebook)
-    const elapsed = Math.round(performance.now() - start)
-    const augmentedResult: SimulationResult = {
-      ...result,
-      metadata: {
-        ...result.metadata,
-        calculationTimeMs: elapsed,
-      },
-    }
+    setSimulationError(null)
 
-    setSimulationResult(augmentedResult)
-    const scenarioId = `scenario-${Date.now()}`
-    setScenarios((previous) => {
-      const scenario: Scenario = {
-        id: scenarioId,
-        name: `Scenario ${previous.length + 1}`,
-        result: augmentedResult,
-        createdAt: augmentedResult.metadata.timestamp,
-      }
-      setActiveScenarioId(scenarioId)
-      return [...previous, scenario]
-    })
-    setNotebookState((previous) =>
-      applyNotebookValidations({
-        ...previous,
-        isDirty: false,
-        dirtyMetrics: [],
-        dirtyFormulas: [],
-        lastSimulationId: scenarioId,
+    try {
+      const response = await fetch(`/api/notebooks/${encodeURIComponent(notebook.id)}/simulation`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ notebook }),
       })
-    )
 
-    setIsSimulating(false)
+      const body: unknown = await response.json()
+      if (!response.ok) {
+        const message =
+          typeof body === "object" && body !== null && "error" in body && typeof body.error === "string"
+            ? body.error
+            : "Simulation failed"
+        throw new Error(message)
+      }
+
+      const augmentedResult = SimulationResultSchema.parse(body)
+
+      setSimulationResult(augmentedResult)
+      const scenarioId = `scenario-${Date.now()}`
+      setScenarios((previous) => {
+        const scenario: Scenario = {
+          id: scenarioId,
+          name: `Scenario ${previous.length + 1}`,
+          result: augmentedResult,
+          createdAt: augmentedResult.metadata.timestamp,
+        }
+        setActiveScenarioId(scenarioId)
+        return [...previous, scenario]
+      })
+      setNotebookState((previous) =>
+        applyNotebookValidations({
+          ...previous,
+          isDirty: false,
+          dirtyMetrics: [],
+          dirtyFormulas: [],
+          lastSimulationId: scenarioId,
+        })
+      )
+    } catch (error) {
+      setSimulationError(error instanceof Error ? error.message : "Simulation failed")
+    } finally {
+      setIsSimulating(false)
+    }
   }, [notebook])
 
-  return (
-    <NotebookContext.Provider
-      value={{
-        notebook,
-        setNotebook,
-        simulationResult,
-        setSimulationResult,
-        isSimulating,
-        theme,
-        setTheme,
-        density,
-        setDensity,
-        scenarios,
-        activeScenarioId,
-        setActiveScenarioId,
-        handleRunSimulation,
-        handleRenameScenario,
-      }}
-    >
-      {children}
-    </NotebookContext.Provider>
+  const contextValue = useMemo<NotebookContextType>(
+    () => ({
+      notebook,
+      setNotebook,
+      simulationResult,
+      setSimulationResult,
+      isSimulating,
+      simulationError,
+      theme,
+      setTheme,
+      density,
+      setDensity,
+      scenarios,
+      activeScenarioId,
+      setActiveScenarioId,
+      handleRunSimulation,
+      handleRenameScenario,
+    }),
+    [
+      activeScenarioId,
+      density,
+      handleRenameScenario,
+      handleRunSimulation,
+      isSimulating,
+      notebook,
+      scenarios,
+      setNotebook,
+      simulationError,
+      simulationResult,
+      theme,
+    ]
   )
+
+  return <NotebookContext.Provider value={contextValue}>{children}</NotebookContext.Provider>
 }
 
 export function useNotebook() {
