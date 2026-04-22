@@ -18,6 +18,7 @@ export interface FormulaEvaluationPlan {
 }
 
 type DependencyMap = Record<string, Set<string>>
+type FormulaSignatureEntry = readonly [string, string]
 
 const MAX_NOTEBOOK_FORMULA_REGISTRY_CACHE_SIZE = 64
 const notebookFormulaRegistryCache = new Map<string, FormulaRegistry>()
@@ -35,10 +36,17 @@ const extractDependencies = (node: MathNode): string[] => {
 
 const getAllowedKeysSignature = (allowedKeys: ReadonlySet<string>) => [...allowedKeys].toSorted().join("\u0000")
 
+const sortFormulaSignatureEntries = (entries: FormulaSignatureEntry[]) =>
+  entries.toSorted(([leftId], [rightId]) => leftId.localeCompare(rightId))
+
 const getNotebookFormulaSignature = (notebook: Pick<Notebook, "metrics" | "formulas">): string =>
   JSON.stringify([
-    notebook.metrics.map((metric) => [metric.id, metric.formula?.trim() ?? ""]),
-    notebook.formulas.map((formula) => [formula.id, formula.expression.trim()]),
+    sortFormulaSignatureEntries(
+      notebook.metrics.map((metric) => [metric.id, metric.formula?.trim() ?? ""] as FormulaSignatureEntry)
+    ),
+    sortFormulaSignatureEntries(
+      notebook.formulas.map((formula) => [formula.id, formula.expression.trim()] as FormulaSignatureEntry)
+    ),
   ])
 
 const rememberNotebookFormulaRegistry = (signature: string, registry: FormulaRegistry) => {

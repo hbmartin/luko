@@ -1,8 +1,8 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react"
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { useCallback } from "react"
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { mockNotebook } from "@/lib/mock-data"
+import { mockNotebook, mockSimulationResult } from "@/lib/mock-data"
 
 import { NotebookProvider, useNotebookActions, useNotebookSelector } from "./NotebookProvider"
 
@@ -19,6 +19,11 @@ describe("NotebookProvider selector store", () => {
         removeListener: vi.fn(),
       }),
     })
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+    vi.unstubAllGlobals()
   })
 
   it("re-renders only consumers whose selected value changes", async () => {
@@ -73,5 +78,156 @@ describe("NotebookProvider selector store", () => {
     expect(actionRenders).toBe(1)
     expect(metricCountRenders).toBe(1)
     expect(nameRenders).toBe(2)
+  })
+
+  it("clears dirty state when the completed simulation still matches the current notebook", async () => {
+    const metric = mockNotebook.metrics[0]
+    if (!metric) throw new Error("Expected a metric fixture")
+    const metricId = metric.id
+
+    vi.spyOn(Date, "now").mockReturnValue(12_345)
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(Response.json(mockSimulationResult)))
+    )
+
+    function ActionProbe() {
+      const { handleRunSimulation } = useNotebookActions()
+      const handleRun = useCallback(() => {
+        void handleRunSimulation()
+      }, [handleRunSimulation])
+
+      return (
+        <button type="button" onClick={handleRun}>
+          Run simulation
+        </button>
+      )
+    }
+
+    function DirtyStateProbe() {
+      const isDirty = useNotebookSelector((state) => state.notebook.isDirty)
+      const dirtyMetricCount = useNotebookSelector((state) => state.notebook.dirtyMetrics.length)
+      const lastSimulationId = useNotebookSelector((state) => state.notebook.lastSimulationId ?? "none")
+
+      return (
+        <>
+          <output aria-label="is dirty">{String(isDirty)}</output>
+          <output aria-label="dirty metric count">{dirtyMetricCount}</output>
+          <output aria-label="last simulation id">{lastSimulationId}</output>
+        </>
+      )
+    }
+
+    const dirtyNotebook = {
+      ...mockNotebook,
+      isDirty: true,
+      dirtyMetrics: [metricId],
+    }
+
+    render(
+      <NotebookProvider notebook={dirtyNotebook}>
+        <ActionProbe />
+        <DirtyStateProbe />
+      </NotebookProvider>
+    )
+
+    fireEvent.click(screen.getByRole("button", { name: "Run simulation" }))
+
+    await waitFor(() => {
+      expect(screen.getByLabelText("last simulation id")).toHaveTextContent("scenario-12345")
+    })
+
+    expect(screen.getByLabelText("is dirty")).toHaveTextContent("false")
+    expect(screen.getByLabelText("dirty metric count")).toHaveTextContent("0")
+  })
+
+  it("preserves local dirty state when the notebook changes while simulation is in flight", async () => {
+    const metric = mockNotebook.metrics[0]
+    if (!metric) throw new Error("Expected a metric fixture")
+    const metricId = metric.id
+
+    let simulationResponse: Response | undefined
+    const waitForSimulationResponse = async () => {
+      while (!simulationResponse) {
+        await new Promise((resolve) => {
+          globalThis.setTimeout(resolve, 0)
+        })
+      }
+      return simulationResponse
+    }
+    vi.spyOn(Date, "now").mockReturnValue(67_890)
+    const fetchMock = vi.fn(waitForSimulationResponse)
+    vi.stubGlobal("fetch", fetchMock)
+
+    function ActionProbe() {
+      const { handleRunSimulation, setNotebook } = useNotebookActions()
+      const handleRun = useCallback(() => {
+        void handleRunSimulation()
+      }, [handleRunSimulation])
+      const handleEdit = useCallback(() => {
+        setNotebook((current) => ({
+          ...current,
+          name: `${current.name} local edit`,
+          dirtyMetrics: [...new Set([...current.dirtyMetrics, metricId])],
+          isDirty: true,
+        }))
+      }, [metricId, setNotebook])
+
+      return (
+        <>
+          <button type="button" onClick={handleRun}>
+            Run simulation
+          </button>
+          <button type="button" onClick={handleEdit}>
+            Edit notebook
+          </button>
+        </>
+      )
+    }
+
+    function DirtyStateProbe() {
+      const isDirty = useNotebookSelector((state) => state.notebook.isDirty)
+      const dirtyMetrics = useNotebookSelector((state) => state.notebook.dirtyMetrics.join(","))
+      const lastSimulationId = useNotebookSelector((state) => state.notebook.lastSimulationId ?? "none")
+      const scenarioCount = useNotebookSelector((state) => state.scenarios.length)
+
+      return (
+        <>
+          <output aria-label="is dirty">{String(isDirty)}</output>
+          <output aria-label="dirty metrics">{dirtyMetrics}</output>
+          <output aria-label="last simulation id">{lastSimulationId}</output>
+          <output aria-label="scenario count">{scenarioCount}</output>
+        </>
+      )
+    }
+
+    render(
+      <NotebookProvider notebook={mockNotebook}>
+        <ActionProbe />
+        <DirtyStateProbe />
+      </NotebookProvider>
+    )
+
+    fireEvent.click(screen.getByRole("button", { name: "Run simulation" }))
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledTimes(1)
+    })
+
+    fireEvent.click(screen.getByRole("button", { name: "Edit notebook" }))
+    await waitFor(() => {
+      expect(screen.getByLabelText("is dirty")).toHaveTextContent("true")
+    })
+
+    act(() => {
+      simulationResponse = Response.json(mockSimulationResult)
+    })
+
+    await waitFor(() => {
+      expect(screen.getByLabelText("scenario count")).toHaveTextContent("1")
+    })
+
+    expect(screen.getByLabelText("is dirty")).toHaveTextContent("true")
+    expect(screen.getByLabelText("dirty metrics")).toHaveTextContent(metricId)
+    expect(screen.getByLabelText("last simulation id")).toHaveTextContent("none")
   })
 })

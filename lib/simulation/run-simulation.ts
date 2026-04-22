@@ -4,8 +4,15 @@ import { compileNotebookFormulas, evaluatePlan, planEvaluation } from "@/lib/for
 import { Category, Metric, Notebook, SimulationResult } from "@/lib/types/notebook"
 
 const DEFAULT_ITERATIONS = 100_000
-const MIN_SIMULATION_ITERATIONS = 1
-const MAX_SIMULATION_ITERATIONS = 250_000
+export const MIN_SIMULATION_ITERATIONS = 1
+export const MAX_SIMULATION_ITERATIONS = 250_000
+export const SIMULATION_ITERATION_BOUNDS_MESSAGE = [
+  "Simulation iterations must be an integer between ",
+  MIN_SIMULATION_ITERATIONS,
+  " and ",
+  MAX_SIMULATION_ITERATIONS,
+  ".",
+].join("")
 const SIMULATION_YEAR_COUNT = 3
 const SIMULATION_YIELD_INTERVAL = 500
 const EMPTY_SAMPLES = new Float64Array(0)
@@ -277,7 +284,7 @@ const assertValidIterationCount = (iterations: number) => {
     iterations < MIN_SIMULATION_ITERATIONS ||
     iterations > MAX_SIMULATION_ITERATIONS
   ) {
-    throw new RangeError("Simulation iterations must be an integer between 1 and 250000.")
+    throw new RangeError(SIMULATION_ITERATION_BOUNDS_MESSAGE)
   }
 }
 
