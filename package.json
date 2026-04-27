@@ -116,7 +116,7 @@
 		"jsdom": "^27.4.0",
 		"mkdirp": "^3.0.1",
 		"patch-package": "^8.0.1",
-		"postcss": "^8.5.10",
+		"postcss": "^8.5.12",
 		"postcss-import": "^16.1.1",
 		"postinstall-postinstall": "^2.1.0",
 		"prettier": "3.6.2",
